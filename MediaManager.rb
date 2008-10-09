@@ -73,7 +73,7 @@ class MediaManager
     if self.sanity_check == "sane"
       load $mmconfig
       
-       
+      File.load  
     else  # Failed sanity_check
       puts "Critical error: Failed sanity check!"
     end
