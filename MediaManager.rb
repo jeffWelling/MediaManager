@@ -17,6 +17,7 @@ class Configuration
         "MEDIA_SOURCES_DIR" => ""       #=begin Ex.  /foo/bar;/bar/foo; end=
       }
 
+
       counter = 0
       file = []
       File.open($mmconfig, "r") do |infile|
@@ -75,4 +76,4 @@ class MediaManager
       puts "Critical error: Failed sanity check!"
     end
   end
-end
+end #Jesus boots
