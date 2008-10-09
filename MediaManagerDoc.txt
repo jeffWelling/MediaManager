@@ -1,0 +1,19 @@
+Media Manager is a ruby script designed to collate all the media and video
+files into one central directory.  This is not done by copying the data
+into one central directory because that also places all of the media on
+one device which can/will fail in the future.  By leaving the various
+files in place, the storage is allocated at the user's discretion,
+and the central directory is built using directories and symlinks to the
+origional content.
+
+Media Manager also manages meta-data related to the files, Song and Artist
+info, Movie title, links to movie reviews, etc.  This information is stored
+in a MySQL database for accessability and to offload the concern of handling,
+storing, and protecting the data from corruption.  
+
+Options are configurable from a plaintext file, MediaManager.cfg .
+MYSQL_SERVERER=mimi
+MYSQL_USERNAME=
+MEDIA_LIBRARY_DIR=/var/media/Library
+MEDIA_SOURCES=/foo/bar/;/bar/foo/;
+
