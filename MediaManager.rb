@@ -71,9 +71,11 @@ class MediaManager
   end
   def import
     if self.sanity_check == "sane"
+      load $mmconfig
       
+       
     else  # Failed sanity_check
       puts "Critical error: Failed sanity check!"
     end
   end
-end   #      HON
+end
