@@ -63,7 +63,7 @@ class MediaManager
       sanity=FALSE
     end
 
-    if sanity= "sane"  # return "sane" if sanity check passed, else FALSE
+    if sanity== "sane"  # return "sane" if sanity check passed, else FALSE
       sanity
     else
       FALSE
