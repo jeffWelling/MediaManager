@@ -201,7 +201,27 @@ class MediaManager
 		
 
 
-	puts answers
+		puts answers
+	end
+
+end
+
+def gsearch(query)
+	bigstring=`php -f google_api_php.php "#{query}"`
+
+	bigstring=bigstring.split('<level1>')
+
+	counter=0
+	bigstring.each do |str|
+		counter1=0
+		hsh={}
+		bigstring[counter]=str.split('<level2>')
+		bigstring[counter].each do |str2|
+			tmp= bigstring[counter][counter1].split('<:>')
+			bigstring[counter][counter1]= {tmp[0]=>temp[1]}
+			counter1=counter1+1
+		end
+		counter=counter+1
 	end
 
 end
