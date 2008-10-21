@@ -69,6 +69,7 @@ class MediaManager
       puts "Warning! Critical Sanity Check Failed: #{$mmconfig} does not exist?  Is the file readable?"
       sanity=FALSE
     end
+		load $mmconfig
 
 		#PHP is installed and useable
 		sanity=`php -r "print('sane');"`
@@ -82,7 +83,6 @@ class MediaManager
 
   def import
     if self.sanity_check == "sane"
-      load $mmconfig
      	puts "Indexing files in #{$MEDIA_SOURCES_DIR},\n"
       puts "This may take some time.\n"
  			biglist = []
@@ -218,7 +218,7 @@ def gsearch(query)
 		bigstring[counter]=str.split('<level2>')
 		bigstring[counter].each do |str2|
 			tmp= bigstring[counter][counter1].split('<:>')
-			bigstring[counter][counter1]= {tmp[0]=>temp[1]}
+			bigstring[counter][counter1]= {tmp[0]=>tmp[1]}
 			counter1=counter1+1
 		end
 		counter=counter+1
