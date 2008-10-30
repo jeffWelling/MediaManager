@@ -17,3 +17,7 @@ MYSQL_USERNAME=
 MEDIA_LIBRARY_DIR=/var/media/Library
 MEDIA_SOURCES=/foo/bar/;/bar/foo/;
 
+
+Currenty, the script is intended to be run in it's current directory.
+It will return to this directory after processing.
+
