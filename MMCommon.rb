@@ -1,7 +1,9 @@
 module MediaManager
 	module MMCommon
 		#With credits to ct / kelora.org	
-	  def symbolize text
+		require 'rubygems'
+	 	require 'find'
+		def symbolize text
       raise "symbolize nil" if text.nil?
       return :empty if text.empty?
       return :quit if text =~ /^(q|quit)$/i
@@ -22,10 +24,18 @@ module MediaManager
       return default if :empty == answer
       answer
     end
-		#/credits 
+
+		require 'mechanize'
+    def agent
+      a = WWW::Mechanize.new
+      a.read_timeout = 5 
+      a   
+    end 
+
+		#/credits ct 
 	
 
-    def self.reloadConfig askOnFail = :yes
+    def reloadConfig askOnFail = :yes
       begin
 				load $MEDIA_CONFIG_FILE
 			rescue LoadError => e
@@ -89,6 +99,141 @@ module MediaManager
 		  return bigstring
 		end
 
+	  def filenameToInfo(filename, seperated=nil)   #FIXME  Handle seperated
+	    movieData={}
+			#Can't process escaped slashes yet, attempting to may cause inexplicable behaviour.
+			if filename.index('//') || filename.index('\/')
+	      raise "Not yet able to process files with '//' or escaped slashes such as '\/'.\n"
+				return :fail
+	    end 
+
+			#seperated into two lines so that is_movie? is run once not twice
+			it=is_movie?(filename, seperated)
+	    if it != FALSE then movieData = it end
+	
+	   #FIXME  Continue from here 
+	  end 
+
+		#This function does its  best to decide if the file passed to it is a movie or not
+		def is_movie?(fp, seperated=nil)
+			#Return False unless is movie, then
+			# return array of movie data
+	
+		  #Store the results from each assesment attempt
+		  #for reference and recalculation at end of function
+		  answers =[]
+	
+			#split the path to make it searchable, but retain full path
+			#file_path is array of the seperated names of each parent folder
+			file_path=fp.split('/')
+			counter=0
+	
+			#0.
+			#Does the path contain 'movie' in it?
+			file_path.each do |filepath_segment|
+				if filepath_segment.downcase.index("movie")
+					answers[0]= "TRUE"
+				else
+					answers[0] ||= nil
+				end
+			end
+	
+			#1.
+			#Does the path also contain 'tv' or 'television' in it?
+			file_path.each do |filepath_segment|
+				if filepath_segment.downcase.index("tv")
+					answers[1]= "tv"
+				elsif filepath_segment.downcase.index("television")
+					answers[1]= "television"
+				else
+					answers[1] ||= nil
+				end
+			end
+	
+			#2.
+			#What size is it? (in bytes)    >= 650 = movie
+			answers[2]= File.size?(fp)
+			if answers[2]==nil
+				print "Warning: File doesn't exist, or has zero size? #{fp}"
+			end
+	
+			#3.
+			#Is it in VIDEO_TS format?
+			fp.index("VIDEO_TS") != nil ? answers[3]=TRUE : answers[3]=FALSE
+	
+			#4.Is it in the IMDB database? 
+			#
+			puts fp
+			answers
+
+			#FIXME Decide if movie, return answers else FALSE
+		end
+
+		#This function is run on a directory to determine if it contains a split rar'ed archive
+		#return true if fPath contains a rar archive, false otherwise
+		def isRAR? fPath
+			path=[]
+
+			#Do not return true if the 'rar' files are more than one level deep
+			#aka dont return true if there are no 'rar' files in the immediate directory
+
+			#Find all files in that path to check them
+			Dir.open(fPath).each {|file|
+				path.push file unless file=='.'||file='..'
+			}
+			path.each_index {|arrIndx|
+				path[arrIndx] = pathToArray path[arrIndx]
+			}
+
+			#one of the files should have the 'rar' extention.        One but no more than, more than one indicated devilish trickery!
+			rar=nil
+			path.each_index {|i|
+				if path[i][0]=='.rar' && rar != nil
+					raise "Directory has more than one '.rar' master file! Aborting!"
+					return FALSE
+				end
+				unless rar then
+					rar=path[i] if path[i][0]=='.rar'
+				end
+			}
+
+			#Look for multiple files beginning with .r00 to .r01 and ascending
+			#get a list of these files for reference
+			rarParts=[]
+			path.each_index {|i|
+				rarParts << path[i] if path[i][0] =~ /^\.r[0-9][0-9]/ 
+			}
+			rarParts=rarParts.reverse
+
+			if rar && rarParts.length > 0 
+				return TRUE
+			else
+				return FALSE
+			end
+		
+		end
+
+		#take a full file path and turn it into an array, including turning the extention into the first element.
+		def pathToArray fPath
+			first=TRUE
+			fPath = fPath.split('/').reverse.collect {|pathSeg|
+				unless first==FALSE then
+					first=FALSE
+					extBegins= pathSeg=~/\.([^\.]+)$/
+					if extBegins then pathSeg = { pathSeg.slice(0,extBegins) => pathSeg.slice(extBegins,pathSeg.length) } end
+				end
+				pathSeg
+			}
+			fPath.pop
+
+			#Flatten it out again; make first element extention and second the file's name
+			clipboard=fPath[0].select { TRUE }[0].reverse
+			fPath = fPath.insert( 0,clipboard[0])
+			fPath = fPath.insert( 1, clipboard[1])
+			fPath.delete( fPath[2] )
+
+			return fPath
+		end
 
 	end #MMCommon
 end
