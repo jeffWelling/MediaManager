@@ -60,6 +60,16 @@ module MediaManager
       FileUtils.cd($MEDIA_CONFIG_DIR)
     end
 
+		#This is to be run during sanity_check to populate the blacklist
+		#It is required by the MM_IMDB file to operate properly
+		def loadBlacklist
+			if File.exist?($MMCONF_MOVIEDB_BLACKLIST)
+				$IMDB_BLACKLIST = File.readlines($MMCONF_MOVIEDB_BLACKLIST).map {|l| l.rstrip }
+			else
+				FALSE
+			end
+		end
+
     def sanity_check
       MediaManager::reloadConfig :yes			#reloadConfig will exit unless successful
 			sanity=:sane
@@ -70,6 +80,9 @@ module MediaManager
       #PHP is installed and useable
       #FIXME  Check for curl
       sanity=`php -r "print('sane');"`.to_sym
+
+			#load the blacklist
+			loadBlacklist
 
       return sanity if sanity==:sane
     end
@@ -163,6 +176,8 @@ module MediaManager
 	
 			#4.Is it in the IMDB database? 
 			#
+			
+
 			puts fp
 			answers
 
