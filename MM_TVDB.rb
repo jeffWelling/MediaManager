@@ -25,12 +25,22 @@ module MediaManager
 		end
 
 		#This function takes a string which is expected to represent an unaltered
-		#filename as downloaded from the interwebs.  Full-paths are acceptable.
+		#filename as downloaded from the interwebs, and searches the localized
+		#IMDB moviedb database for it.  Full-paths are acceptable.
 		def self.TVDB_include? fPath
-			#split the full path and reverse it, so that the extention is [0]
-			#with the full path parts climbing higher.
-			pathToArray
-			
+			queue[]    #The queue is searched until a suitable match is found, or is determinable.
+
+			#remove any sourceDirs from fpath
+			$MEDIA_SOURCES_DIR.each {|sourceDir|
+				if fpath.downcase.index( sourceDir.downcase )
+					fpath=fpath.slice(  )
+			}
+
+			filename=filenameToArray
+
+			#If a string has strange capitalization, chop the string off (not name)
+			if fpath
+
 
 		end
 	end
