@@ -249,6 +249,12 @@ module MediaManager
 
 			return fPath
 		end
+		
+		#This function returns true if the capitalization in the string argument is irregular.
+		#False otherwise.
+		def strangeCaps string
+			string.slice( 1,string.length ).downcase == string.slice( 1,string.length)
+		end
 
 	end #MMCommon
 end
