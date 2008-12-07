@@ -1,0 +1,27 @@
+This document helps set up the table in Mysql, after you have created a database for the table to reside in
+and updated your config accordingly.
+
+Below is the Mysql command I copied from PhpMyAdmin, which is what I initially used to configure the table.
+Anyone familiar with MySQL database design who is able to help streamline the database would be welcome
+to contribute, I an a total NOOB when it comes to MySQL database design.
+
+CREATE TABLE `mediaFiles` (
+`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Unique database ID',
+`Title` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. Harvey Birdman',
+`EpisodeID` VARCHAR( 12 ) NOT NULL COMMENT 'Eg. S2E04',
+`EpisodeName` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. Grape Juice',
+`Season` INT( 3 ) NOT NULL COMMENT 'Eg. 1',
+`URL` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. http://www.imdb.com/2',
+`Year` INT( 5 ) NOT NULL COMMENT 'Eg. 1942',
+`Categorization` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. Library:Movies:Thomas Crown Affair:X where X is ''epNum - EpName''',
+`Path` VARCHAR( 512 ) NOT NULL COMMENT 'Eg. /foo/bar',
+`Size` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. 37162491 (Size in bytes)',
+`SHA1` VARCHAR( 40 ) NOT NULL ,
+`DateAdded` DATETIME NOT NULL ,
+`DateModified` DATETIME NOT NULL ,
+INDEX ( `Title` , `EpisodeName` ) ,
+UNIQUE (
+`id` ,
+`SHA1`
+)
+) ENGINE = MYISAM ;
