@@ -26,8 +26,7 @@ module MediaManager
 			end
 
 			#I use a return statement instead of not using it at all is because the first return excludes the hash, so consistency
-			return formatTvdbResults( $TVDB_CACHE[nameHash] ) unless $TVDB_CACHE[nameHash].empty?
-			return ''
+			return formatTvdbResults( results )
 
 		end
 
