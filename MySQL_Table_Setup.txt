@@ -5,23 +5,61 @@ Below is the Mysql command I copied from PhpMyAdmin, which is what I initially u
 Anyone familiar with MySQL database design who is able to help streamline the database would be welcome
 to contribute, I an a total NOOB when it comes to MySQL database design.
 
+-- Database: `MediaManager`
+-- 
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `EpisodeCache`
+-- 
+
+CREATE TABLE `EpisodeCache` (
+  `uid` bigint(20) NOT NULL auto_increment COMMENT 'Simple field, unique per entry',
+  `Season` tinyint(3) NOT NULL COMMENT 'Season Number (Eg. 2)',
+  `EpisodeNumber` tinyint(3) NOT NULL COMMENT 'Episode Number (Eg. 12',
+  `EpisodeName` varchar(128) NOT NULL COMMENT 'Episode Name (Eg. ''Blackwatch Plaid'')',
+  `SeriesID` mediumint(7) NOT NULL COMMENT 'TheTVDB.com SeriedID number',
+  `DateAdded` datetime NOT NULL,
+  `LastModified` datetime NOT NULL,
+  PRIMARY KEY  (`uid`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=316 ;
+
+-- 
+-- Table structure for table `TvdbSeriesEpisodeCache`
+-- 
+
+CREATE TABLE `TvdbSeriesEpisodeCache` (
+  `DateAdded` datetime NOT NULL,
+  `SeriesID` varchar(32) NOT NULL COMMENT 'tvdb seriesID',
+  `allEpisodeURL` varchar(2048) NOT NULL COMMENT 'Scrape main seriesID page for this search string, and store.',
+  PRIMARY KEY  (`SeriesID`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- 
+-- Table structure for table `mediaFiles`
+-- 
+
 CREATE TABLE `mediaFiles` (
-`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Unique database ID',
-`Title` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. Harvey Birdman',
-`EpisodeID` VARCHAR( 12 ) NOT NULL COMMENT 'Eg. S2E04',
-`EpisodeName` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. Grape Juice',
-`Season` INT( 3 ) NOT NULL COMMENT 'Eg. 1',
-`URL` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. http://www.imdb.com/2',
-`Year` INT( 5 ) NOT NULL COMMENT 'Eg. 1942',
-`Categorization` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. Library:Movies:Thomas Crown Affair:X where X is ''epNum - EpName''',
-`Path` VARCHAR( 512 ) NOT NULL COMMENT 'Eg. /foo/bar',
-`Size` VARCHAR( 255 ) NOT NULL COMMENT 'Eg. 37162491 (Size in bytes)',
-`SHA1` VARCHAR( 40 ) NOT NULL ,
-`DateAdded` DATETIME NOT NULL ,
-`DateModified` DATETIME NOT NULL ,
-INDEX ( `Title` , `EpisodeName` ) ,
-UNIQUE (
-`id` ,
-`SHA1`
-)
-) ENGINE = MYISAM ;
+  `id` int(12) NOT NULL auto_increment,
+  `Title` varchar(255) NOT NULL,
+  `EpisodeID` varchar(255) NOT NULL COMMENT 'Eg. S01E12',
+  `EpisodeName` varchar(255) default NULL COMMENT 'Grape Juice',
+  `Season` int(24) NOT NULL COMMENT 'Eg. 2',
+  `URL` varchar(512) NOT NULL,
+  `Year` int(24) NOT NULL,
+  `Path` varchar(255) NOT NULL COMMENT 'Full Path relative to the local root',
+  `Size` int(24) NOT NULL COMMENT 'In Bytes',
+  `PlayCommand` varchar(512) NOT NULL default 'vlc',
+  `DateAdded` datetime NOT NULL,
+  `DateModified` datetime NOT NULL,
+  `FileSHA` varchar(256) NOT NULL,
+  `Categorization` varchar(255) NOT NULL default 'Library:' COMMENT 'Categorization in the form of ''Library:TVShows:HarveyBirdman:Season2:X where X is ''epNum - epName''',
+  `PathSHA` varchar(32) NOT NULL,
+  `tvdbSeriesID` varchar(32) NOT NULL,
+  `imdbID` varchar(32) NOT NULL,
+  UNIQUE KEY `Index` (`id`),
+  UNIQUE KEY `sha1` (`FileSHA`),
+  KEY `Title` (`Title`),
+  FULLTEXT KEY `Title_2` (`Title`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;

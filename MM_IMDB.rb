@@ -1,23 +1,38 @@
-require 'MMCommon'
+load 'MMCommon.rb'
 require 'digest/sha1'
 
 module MediaManager
 	module MM_IMDB
 		extend MMCommon
+		#Take a name, and search for it in IMDB
+		#Returns array of movies, or FALSE
+		#This function is called directly by a helper function,       db_include?( source, dbname)
+		#which takes the name, and continues searching until a
+		#result is found, or the source is exhausted.
+
 		def self.searchIMDB name, aka=nil
 			#THIS WOULD BE SO MUCH FUCKING EASIER IF THE IMDB SEARCH PROGRAM 
 			#WAS AT THE VERY LEAST, GIVING CONSISTENT OUTPUT!!!!!!!!!!!!!!1112
 	
 			#Don't process small words, or blacklisted words
-			return "" if inBlacklist? name || name.length < 4
+			return [] if inBlacklist? name || name.length < 4
 
 			#check the proxy
+			#FIXME This function can be called with an optional argument, aka. If
+			#this argument is called, the output of 'title' may be different than when
+			#previously invoked with the same name, but the
+			#proxy does not recognize this and may return old/invalid data.
 			nameHash = Digest::SHA1.hexdigest(name.downcase)
+			puts "retrieved from cache." if $IMDB_CACHE.include?(nameHash)
 			return $IMDB_CACHE[nameHash] if $IMDB_CACHE.include?(nameHash)
 
 			
 			command=$MMCONF_MOVIEDB_LOC+"title -t '#{name.downcase}' -s"
 			command << ' -aka' if aka
+
+			#FIXME Cannot yet handle single quotes, 'sh' gets confused and throws syntax errori
+			#double slashes ('\\') to escape quotes?
+			raise "Cannot handle quotes in filenames yet." if name.index("'") || name.index('"')
 
 			result=`#{command}`
 			ret = $?    #return codes
@@ -38,10 +53,8 @@ module MediaManager
 			elsif ret!=0
 				raise "Error:  WTF, unexpected error value from moviedb? #{ret.inspect}"
 			end
-
-			#Process result
-			return mdb2info(result)
 			
+			return $IMDB_CACHE[nameHash] = mdb2info(result)
 		end
 
 		#Check the blacklist for an item
@@ -66,17 +79,24 @@ module MediaManager
 			result=[]
 
 			#Need to know where all the 'page breaks' are for parsing
-			pageBreaks=[]
+			pageBreaks=[]   #Populate pageBreaks with a list of all the line numbers which contain page breaks
 			outputBlob.each_index {|index|
 				pageBreaks << index if outputBlob[index].match( /^[-]*$/ )
 			}	
 
 			if pageBreaks.length == 1  #One result
-				result[0]={ 'Titles' => [outputBlob[2].strip]} #This array can be used as a reference for a list of
+				result[0]={ 'Titles' => outputBlob[2].strip} #This array can be used as a reference for a list of
 				result[1]={ 'Title' => outputBlob[2].strip}        #all available titles.  It just makes processing
-				result[1].merge! { 'Url' =>  }													#the return value more streamline
+				#get url from output
+				urlLine=0
+				pp outputBlob
 				outputBlob.each_index {|index|
-					result[1].merge! { 'URL' => outputBlob[index+1].strip } if outputBlob[index].match( /URL:/ )
+					urlLine=index
+					break if outputBlob[index].match( /URL:/ )
+				}
+				result[1].merge!({'Url' => "#{outputBlob[urlLine+1].strip}"})												#the return value more streamline
+				outputBlob.each_index {|index|
+					result[1].merge!({'URL' => outputBlob[index+1].strip}) if outputBlob[index].match( /URL:/ )
 					break if result[1]['URL']
 				}
 				return result
@@ -96,7 +116,8 @@ module MediaManager
 			end
 
 			return result
-		end 
+		end
+
 
 	end
 end
