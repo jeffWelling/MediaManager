@@ -43,7 +43,7 @@ module MediaManager
     end
     def agent
       a = WWW::Mechanize.new
-      a.read_timeout = 5 
+#      a.read_timeout = 5 
       a   
     end 
 		#/credits ct 
