@@ -1,13 +1,21 @@
 module MediaManager
 	module MMCommon
 		load 'Hasher.rb'
-		require 'mysql'
-		require 'digest/sha1'
-		require 'rubygems'
-		require 'mechanize'
-		require 'dbi'
-		#With credits to ct / kelora.org	
-	 	require 'find'
+		begin
+			require 'mysql'
+			require 'digest/sha1'
+			require 'rubygems'
+			require 'mechanize'
+			require 'dbi'
+			#With credits to ct / kelora.org	
+	 		require 'find'
+		rescue LoadError => e
+			puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module installed?"
+			puts "Error is fatal, terminating."
+			exit
+		end
+		
+
 		def symbolize text
       raise "symbolize nil" if text.nil?
       return :empty if text.empty?
@@ -52,8 +60,9 @@ module MediaManager
 					else #Dont want to retry reading config
 						exit
 					end
+				else
+					exit #Cannot continue if cannot read config (and not asking for alternate location)
 				end
-				exit #Cannot continue if cannot read config (and not asking for alternate location)
 			rescue SyntaxError => e
 				puts "Your config file has syntax errors.\nGo read Why's Poignant Guide to Ruby, get a clue, and try again."
 				puts e.inspect
@@ -144,16 +153,39 @@ module MediaManager
 		#Returns info in the form of a hash conforming to movieInfo_Specification.rb
 		#isRar is :yes if the filename passed is a folder containing a rared file
 	  def filenameToInfo(filename, isRar=:no)
-	    movieData=$movieInfoSpec.clone
+	    puts "\nWorking on #{filename}"
+			movieData=$movieInfoSpec.clone
+			movieData['Path']=filename
 
-			movieData['FileSHA']=hash_file filename
-			#Get data from MySQL if possible
-			sqlresult=sqlSearch( "SELECT * FROM mediaFiles WHERE FileSHA = '#{movieData['FileSHA']}'" )
+			sqlresult=sqlSearch( "SELECT * FROM mediaFiles WHERE PathSHA = '#{hash_filename movieData['Path']}'" )
 			movieData=sqlresult[0] unless sqlresult.empty?
-			movieData['Path'] = filename
-			movieData['FileSHA']=hash_file filename
-			puts "File already in database, pulling info..." unless sqlresult.empty?
-			return movieData unless sqlresult.empty?
+			puts "Metainformation is available based on a hash of the filename." unless sqlresult.empty?
+			
+			if movieData['FileSHA'].empty?
+				movieData['FileSHA']=hash_file filename
+			end
+			
+			#Check the consistency of the file
+			filehash=hash_file filename
+			unless filehash==movieData['FileSHA']
+				raise "filenameToInfo: File hash has changed!" \
+					<< "\nIf you have not changed the file, it may have become corrupt."
+			end
+
+			#Don't need to update if they're the same...
+			#Get data from MySQL if possible
+			sqlresult2=''
+			sqlresult2=sqlSearch( "SELECT * FROM mediaFiles WHERE FileSHA = '#{movieData['FileSHA']}'" )
+			unless sqlresult2.empty?
+				unless sqlresult.empty?
+					if sqlresult[0]['id'] != sqlresult2[0]['id']
+						raise "filenameToInfo(): Lookup Conflict! filename based lookup and file based lookup product conflicting results."
+					end
+				end
+				movieData=sqlresult2[0]
+			end
+			puts "File already in database, using info..." unless movieData['id'].nil?
+			return movieData unless movieData['id'].nil?
 
 
 			#Can't process escaped slashes yet, attempting to may cause inexplicable behaviour.
@@ -163,7 +195,7 @@ module MediaManager
 	    end 
 
 			#seperated into two lines so that extractData() is run once not twice
-			it=extractData(movieData, isRar)
+			it= extractData(movieData, isRar)
 	    if it != FALSE then movieData = it end
 
 			#Save the size of the file for reference
@@ -236,10 +268,49 @@ module MediaManager
 			end
 
 			#Is it in IMDB/TVDB?
-			db_include?( :tvdb, movieData)
+			result=''
+			result= db_include?( :tvdb, movieData)
+			pp result
+			answers[5]=TRUE unless result.empty?
+			unless result.empty?
+				movieData['Title']= result[0]['Title']
+				movieData['EpisodeID']= result[0]['EpisodeID'].upcase
+				movieData['Season']= result[0]['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
+				movieData['EpisodeName']= result[0]['EpisodeName']
+				movieData['tvdbSeriesID']= result[0]['tvdbSeriesID']
+				movieData['imdbID']= result[0]['imdbID'] if result[0].has_key?('imdbID')
+			end
 			#db_include?( :imdb, movieData)
 			
 			#TODO Calculate results from answers obtained in above operations
+			if answers[0]==TRUE
+				cat='movie'
+				if answers[1]==TRUE
+					cat=''
+				end
+			end
+			if answers[1]==TRUE
+				cat='tv'
+				if answers[0]==TRUE
+					cat=''
+				end
+			end
+			if ((answers[2].to_i) /1024/1024) > 600
+				unless answers[1]
+					cat='movie'
+				end
+			end
+			if answers[4]
+				cat='tv'
+			end
+			if answers[5]
+				cat='tv'
+			end
+			if cat=='tv'
+				movieData['Categorization']='Library/TVShows'
+			elsif cat=='movie'
+				movieData['Categorization']='Library/Movies'
+			end
 
 			return FALSE
 
@@ -337,7 +408,7 @@ module MediaManager
 					values << "NOW(),"
 					next
 				end
-				values << "'" << "#{movieInfo[key]}" << "', "
+				values << "'" << "#{Mysql.escape_string(movieInfo[key].to_s)}" << "', "
 			}
 			sqlString << 'PathSHA, DateAdded '
 			values << "'#{hash_filename movieInfo['Path']}', NOW()  "
@@ -362,7 +433,7 @@ module MediaManager
 					sqlString << key << '=' << "'#{movieInfo[key].to_s}',"
 					next
 				end
-				(sqlString << key << '=' << ( movieInfo[key].nil? ? "''" : "'" << "#{movieInfo[key]}" << "'" )) << ', ' unless key=='id'
+				(sqlString << key << '=' << ( movieInfo[key].nil? ? "''" : "'" << "#{Mysql.escape_string(movieInfo[key].to_s)}" << "'" )) << ', ' unless key=='id'
 			}
 			sqlString.chomp!(', ')
 
@@ -453,15 +524,12 @@ module MediaManager
 			i=0
 			searchTerm=[]
 			loop do  #FIXME Can't this be optimized any further?
-				puts "queue:"; pp queue
 				searchTerm[i] ||= ''
 				ignore=FALSE
-				puts "Queue empty." if queue.empty?
 				break if queue.empty?
 				#break if searchTerm[i-1].nil?
 				break if queue.match(/[\w']*\b/i).nil?
 				searchTerm[i]=match= queue.match(/[\w']*\b/i); match=match[0]
-				puts 'match got: '; puts searchTerm[i][0]
 				unless searchTerm[i][0].match(/s[\d]+e[\d]+/i)    #Dont add the episode tag to the search string
 					searchTerm[i]=searchTerm[i][0] 
 					searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
@@ -474,7 +542,6 @@ module MediaManager
 			#searchTerm is now an array of search terms
 			#search for each, and store the results.
 			searchTerm=searchTerm.delete_if {|it| TRUE if it.empty? }
-			pp searchTerm
 			results={}
 			if source==:tvdb
 				searchTerm.each_index {|i|
@@ -507,7 +574,6 @@ module MediaManager
 			}
 			series={}
 			results.each {|listOfSeries|
-				$results= listOfSeries	
 				listOfSeries[1].each {|seriesHash|
 					unless series.has_key? seriesHash['tvdbSeriesID']
 						series.merge!({ seriesHash['tvdbSeriesID'] => seriesHash })
@@ -515,21 +581,55 @@ module MediaManager
 				}
 			}
 			occurance=occurance.sort {|a,b| a[1]<=>b[1]}.reverse
-			pp series
+			#No longer have to use results array, can use series.
+			matches=[]
+			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub(/s[\d]+e[\d]+/i, '')
+			series.each {|seriesHash|
+				unless seriesHash[1]['EpisodeList'].empty?
+					seriesHash[1]['EpisodeList'].each {|episode|
+						episode.merge!({ 
+							'Title' => seriesHash[1]['Title'][0],
+							'tvdbSeriesID' => seriesHash[1]['tvdbSeriesID'][0] 
+						})
+						episode.merge!({ 'imdbID' => seriesHash[1]['imdbID'][0] }) if seriesHash[1].has_key?('imdbID')
+						epName=episode['EpisodeName']
+						if name.match(Regexp.new(epName))
+							matches << episode
+							break
+						end						
 
-=begin
-			#FIXME This is supposed to search for all possible discernable names from the pathname
-			case source
-				when :tvdb
-					return MediaManager::MM_TVDB::searchTVDB(queue[0])
-				when :imdb
-					return MediaManager::MM_IMDB::searchIMDB(queue[0])
-				else #TODO  Maybe it should just search both if a source isn't specified
-					raise "db_include? must be called with 'source' database to search"
-					return FALSE
-			end
-=end	
-			return results
+						if epName.index(/\([\d]+\)/)
+							epName=episode['EpisodeName'].gsub(/[:;]/, '')
+							regex1= Regexp.new( epName.slice( 0,epName.index(/\([\d]+\)/) ))
+							regex2= Regexp.new( epName.slice( epName.index(/\([\d]+\)/)+epName.match(/\([\d]+\)/)[0].length,epName.length ))
+							if name.match(regex1) and name.match(regex2)
+								matches << episode
+								puts "Dis one has ( [\d] ) in the name!"; pp episode
+								break
+							end
+						end
+
+						if epName.index(':') #May be split into parts, try and match each side of the :
+							epName=episode['EpisodeName'].gsub(/\([\d]+\)/, '')   #Strip out any () parts
+							regex1= Regexp.new( epName.slice(0,epName.index(':')) )
+							regex2= Regexp.new( epName.slice(epName.index(':')+1,epName.length) )
+
+							if name.match(regex1) and name.match(regex2)
+								matches << episode.merge
+								puts "Dis one has : in it!"; pp episode
+								break
+							end
+						end
+
+						
+
+						#Break before here if already matched
+						#
+					}
+				end
+			}
+			raise "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this..." if matches.length != 1
+			return matches
 		end
 
 	end #MMCommon

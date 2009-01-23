@@ -12,20 +12,22 @@ module MediaManager
 			results=''
 			nameHash = Digest::SHA1.hexdigest(name.downcase)
 
-			#cause the thetvdb.com programmers api said so?    but still, wtf?	
-			unless $MMCONF_TVDB_MIRROR then
-				mirrors_xml = XmlSimple.xml_in agent.get("http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml").body
-				$MMCONF_TVDB_MIRROR= mirrors_xml['Mirror'][0]['mirrorpath'][0]
-			end
-			
-			if $TVDB_CACHE.include?(nameHash)
+			if $TVDB_CACHE.has_key?(nameHash)
 				results= $TVDB_CACHE[nameHash]
+				puts "searchTVDB(): #{name} already cached"
 			else
+				#cause the thetvdb.com programmers api said so?    but still, wtf?	
+				unless $MMCONF_TVDB_MIRROR then
+					mirrors_xml = XmlSimple.xml_in agent.get(str).body
+					$MMCONF_TVDB_MIRROR= mirrors_xml['Mirror'][0]['mirrorpath'][0]
+				end
+			
 				$TVDB_CACHE.merge!( nameHash => XmlSimple.xml_in( agent.get("#{$MMCONF_TVDB_MIRROR}/api/GetSeries.php?seriesname=#{ERB::Util.url_encode name}").body ))
+
 				results=$TVDB_CACHE[nameHash]
 			end
 
-			#I use a return statement instead of not using it at all is because the first return excludes the hash, so consistency
+			return '' if results.empty?
 			return formatTvdbResults( results )
 
 		end
@@ -59,7 +61,7 @@ module MediaManager
 				sqlResults.each {|episode|
 					episodeList<<{'EpisodeName'=>episode['EpisodeName'], 'EpisodeID'=>"S#{episode['Season']}E#{episode['EpisodeNumber']}" }
 				}
-				puts "getAllEpisodes: #{seriesID} from cache." unless episodeList.empty?
+				puts "getAllEpisodes(): #{seriesID} from cache." unless episodeList.empty?
 				return episodeList unless episodeList.empty?
 			end
 

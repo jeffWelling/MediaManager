@@ -21,92 +21,97 @@ load 'movieInfo_Specification.rb'
 
 module MediaManager
   extend MMCommon
-  def self.import numFiles=:nil
-	  begin
-			raise "Sanity check fail!" unless sanity_check==:sane
-			puts "Indexing files in #{$MEDIA_SOURCES_DIR},\n"
-			puts "This may take some time.\n"
-			biglist = []
-			$MEDIA_SOURCES_DIR.each do |source_dir| #For each source directory
-			Find.find(source_dir) do |fullFileName| #For each file in this source directory
-				return if numFiles==0
-				ignore=FALSE
-				seperated=nil
-				mediaInfo={}
+  def self.import(numFiles=:nil, newOnly=FALSE)
+	  catch :quit do
+			begin
+				raise "Sanity check fail!" unless sanity_check==:sane
+				puts "Indexing files in #{$MEDIA_SOURCES_DIR},\n"
+				puts "This may take some time.\n"
+				biglist = []
+				$MEDIA_SOURCES_DIR.each do |source_dir| #For each source directory
+					Find.find(source_dir) do |fullFileName| #For each file in this source directory
+						return if numFiles==0
+						ignore=FALSE
+						seperated=nil
+						mediaInfo={}
 
-				print '.'
-				$MEDIA_CONF_IGNORES.each_key do |ignore_pattern|
-					ignore=TRUE if fullFileName.downcase.index(ignore_pattern.downcase)
-				end
+						print '.'
+						$MEDIA_CONF_IGNORES.each_key do |ignore_pattern|
+							ignore=TRUE if fullFileName.downcase.index(ignore_pattern.downcase)
+						end
 
-				#Is directory?
-				begin
-					FileUtils.cd(fullFileName)
-					if isRAR? fullFileName
-						isRar=:yes
-					else
-						ignore=TRUE
-					end
-				rescue Errno::ENOENT
-					unless File.symlink?(fullFilename) then
-						raise $!
-					else
-						puts "Broken symlink found at #{fullFileName}"
-					end
-				rescue Errno::ENOTDIR #Isn't a dir.  Continue.
-				end
+						#Is directory?
+						begin
+							FileUtils.cd(fullFileName)
+							if isRAR? fullFileName
+								isRar=:yes
+							else
+								ignore=TRUE
+							end
+						rescue Errno::ENOENT
+							unless File.symlink?(fullFilename) then
+								raise $!
+							else
+								puts "Broken symlink found at #{fullFileName}"
+							end
+						rescue Errno::ENOTDIR #Isn't a dir.  Continue.
+						end
 
-				if ignore==TRUE
-					#Don't count files not processed towards the total count
-					#unless numFiles==:nil then
-					#	unless ignore==TRUE  then numFiles=numFiles-1 end
-					#end
-					next
-				end
+						if ignore==TRUE
+							#Don't count files not processed towards the total count
+							#unless numFiles==:nil then
+							#	unless ignore==TRUE  then numFiles=numFiles-1 end
+							#end
+							next
+						end
 
-				movieInfo=$movieInfoSpec.clone
-				movieInfo= filenameToInfo fullFileName
+						movieInfo=$movieInfoSpec.clone
+						movieInfo= filenameToInfo fullFileName
+						
+						#Skip if only supposed to process new files
+						next if movieInfo.has_key?('id') and newOnly
 
-				#See if this file has already had metadata stored
-				sqlresult=[]
-				sqlresult=sqlSearch( "SELECT * FROM mediaFiles WHERE PathSHA = '#{hash_filename movieInfo['Path']}'" )
-				movieInfo=sqlresult[0] unless sqlresult.empty?
+						#See if this file has already had metadata stored
+						sqlresult=[]
+						sqlresult=sqlSearch( "SELECT * FROM mediaFiles WHERE PathSHA = '#{hash_filename movieInfo['Path']}'" )
+						movieInfo=sqlresult[0] unless sqlresult.empty?
 
-				if (answr=ask( "#{movieInfo.inspect}\nSubmit?[Yes]" ))=='no'||answr=='n'||answr=='e'||answr=='edit'
-					movieInfo=userCorrect movieInfo
-				elsif answr=='skip'||answr=='drop'||answr=='d'||answr=='s' 
-					#User says drop the file
-					ignore=TRUE
-				elsif answr=='quit' || answr=='exit' || answr=='bye'
-					throw :quit
-				end
+						if (answr=ask( "#{movieInfo.inspect}\nSubmit?[Yes]" ))=='no'||answr=='n'||answr=='e'||answr=='edit'
+							movieInfo=userCorrect movieInfo
+						elsif answr=='skip'||answr=='drop'||answr=='d'||answr=='s' 
+							#User says drop the file
+							ignore=TRUE
+						elsif answr=='quit' || answr=='exit' || answr=='bye'
+							throw :quit
+						end
 
-				if ignore==TRUE
-					#Don't count files not processed towards the total count
-					#unless numFiles==:nil then
-					#	unless ignore==TRUE  then numFiles=numFiles-1 end
-					#end
-					next
-				end
+						if ignore==TRUE
+							#Don't count files not processed towards the total count
+							#unless numFiles==:nil then
+							#	unless ignore==TRUE  then numFiles=numFiles-1 end
+							#end
+							next
+						end
 
-				#Add to Mysql
-				sqlAddInfo(movieInfo) unless movieInfo.include? 'id'
-				sqlUpdateInfo(movieInfo) unless movieInfo.include?('id')!=TRUE
+						#Add to Mysql
+						sqlAddInfo(movieInfo) unless movieInfo.include? 'id'
+						sqlUpdateInfo(movieInfo) unless movieInfo.include?('id')!=TRUE
 
-				
-					
-				#Create symlink in Library for consolidation
-				makeSymLink movieInfo
+						
+							
+						#Create symlink in Library for consolidation
+						makeSymLink movieInfo
 
-				numFiles=numFiles-1 unless !numFiles.respond_to? '-'
-				
-			end # End of finding all files in source_dir
-			end #end $MEDIA_SOURCES_DIR.each
-
-			puts "Done.\n"
-		ensure #Always disconnect from database
-		#$dbh.disconnect if $dbh
-    end
+						numFiles=numFiles-1 unless !numFiles.respond_to? '-'
+						
+					end # End of finding all files in source_dir
+				end #end $MEDIA_SOURCES_DIR.each
+				puts "Done.\n"
+			ensure #Always disconnect from database
+			#$dbh.disconnect if $dbh
+			end #End of begin
+		end #End of catch :quit
+		puts "Finished."
   end #import
 
 	#This function is called by the user to create the Library tree of symlinks to all of the movies
