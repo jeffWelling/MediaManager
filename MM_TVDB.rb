@@ -18,7 +18,7 @@ module MediaManager
 			else
 				#cause the thetvdb.com programmers api said so?    but still, wtf?	
 				unless $MMCONF_TVDB_MIRROR then
-					mirrors_xml = XmlSimple.xml_in agent.get(str).body
+					mirrors_xml = XmlSimple.xml_in agent.get("http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml").body
 					$MMCONF_TVDB_MIRROR= mirrors_xml['Mirror'][0]['mirrorpath'][0]
 				end
 			
