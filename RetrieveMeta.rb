@@ -66,7 +66,7 @@ module MediaManager
 	  end 
 
 		#This function does its  best to extract information from the filename
-		def extractData(movieData, isRar=:no)
+		def self.extractData(movieData, isRar=:no)
 			puts "Reaching blindly into /dev/null and pulling out some meta-data...."
 			raise "OMG CANT HANDLE RARS YET!!FIXMEYOUIDIOT!!" if isRar!=:no
 			#Return False unless is movie, then
@@ -178,7 +178,7 @@ module MediaManager
 		end
 
 		#This function takes a source, either :tvdb or :imdb, and a filePath to search for within that DB
-		def db_include?( source, movieData )
+		def self.db_include?( source, movieData )
 			fpath = movieData['Path'] #FIXME  Just use movieData['Path'] everywhere instead of fpath
 
 			#remove any sourceDirs from fpath
@@ -485,6 +485,9 @@ module MediaManager
 					}
 				end
 			}
+
+			return matches if matches.length==1
+
 #			pp matches
 #			puts "Path is : " ; printf movieData['Path']
 			puts "No Results...?"  if matches.length < 1
@@ -492,6 +495,8 @@ module MediaManager
 			raise "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this..." if matches.length > 1
 			return matches
 		end
+
+		
 
 	end
 end
