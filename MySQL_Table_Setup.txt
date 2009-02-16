@@ -5,6 +5,11 @@ Below is the Mysql command I copied from PhpMyAdmin, which is what I initially u
 Anyone familiar with MySQL database design who is able to help streamline the database would be welcome
 to contribute, I an a total NOOB when it comes to MySQL database design.
 
+
+-- Generation Time: Feb 13, 2009 at 10:16 PM
+-- Server version: 5.0.32
+-- PHP Version: 5.2.0-8+etch13
+-- 
 -- Database: `MediaManager`
 -- 
 
@@ -23,7 +28,14 @@ CREATE TABLE `EpisodeCache` (
   `DateAdded` datetime NOT NULL,
   `LastModified` datetime NOT NULL,
   PRIMARY KEY  (`uid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=316 ;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- 
+-- Dumping data for table `EpisodeCache`
+-- 
+
+
+-- --------------------------------------------------------
 
 -- 
 -- Table structure for table `TvdbSeriesEpisodeCache`
@@ -35,6 +47,13 @@ CREATE TABLE `TvdbSeriesEpisodeCache` (
   `allEpisodeURL` varchar(2048) NOT NULL COMMENT 'Scrape main seriesID page for this search string, and store.',
   PRIMARY KEY  (`SeriesID`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- 
+-- Dumping data for table `TvdbSeriesEpisodeCache`
+-- 
+
+
+-- --------------------------------------------------------
 
 -- 
 -- Table structure for table `mediaFiles`
@@ -53,13 +72,17 @@ CREATE TABLE `mediaFiles` (
   `PlayCommand` varchar(512) NOT NULL default 'vlc',
   `DateAdded` datetime NOT NULL,
   `DateModified` datetime NOT NULL,
-  `FileSHA` varchar(256) NOT NULL,
+  `FileSHA` varchar(40) NOT NULL,
   `Categorization` varchar(255) NOT NULL default 'Library:' COMMENT 'Categorization in the form of ''Library:TVShows:HarveyBirdman:Season2:X where X is ''epNum - epName''',
-  `PathSHA` varchar(32) NOT NULL,
+  `PathSHA` varchar(40) NOT NULL,
   `tvdbSeriesID` varchar(32) NOT NULL,
   `imdbID` varchar(32) NOT NULL,
   UNIQUE KEY `Index` (`id`),
   UNIQUE KEY `sha1` (`FileSHA`),
   KEY `Title` (`Title`),
   FULLTEXT KEY `Title_2` (`Title`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- 
+-- Dumping data for table `mediaFiles`
+-- 

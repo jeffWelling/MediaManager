@@ -3,3 +3,5 @@ Developed by JSW
 
 - In extractData(), add ability to guess Catagorization
 - In Hasher.rb's hash_file()'s Cache, set an expirey on Cache items that are too old.  Note, define 'too old'.
+
+- 

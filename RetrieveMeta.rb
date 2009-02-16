@@ -490,9 +490,13 @@ module MediaManager
 
 #			pp matches
 #			puts "Path is : " ; printf movieData['Path']
+
 			puts "No Results...?"  if matches.length < 1
+			raise "FAIL! Did not get " if matches.length < 1
+
 			pp matches if matches.length > 1
-			raise "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this..." if matches.length > 1
+			puts "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this..." if matches.length > 1
+
 			return matches
 		end
 
