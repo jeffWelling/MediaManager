@@ -361,5 +361,40 @@ module MediaManager
 			pp peopleFriendly
 		end
 
+		#The purpose of this function is to take two strings and compare them
+		#Return true if they match, return false if they do not
+		#If they do not match as is, try stripping various special characters
+		#such as "'", ",", and ".". 
+		def name_match?(name, epName)
+			if name.match(Regexp.new(epName, TRUE))   #Basic name match
+				return TRUE
+			elsif name.include?("'")    #If the name includes as "'' then strip it out, it only makes trouble
+				if name.gsub("'", '').match(Regexp.new( epName, TRUE))
+					return TRUE
+				end
+			elsif epName.include?("'")
+				if name.match(Regexp.new(epName.gsub("'", ''), TRUE))
+					return TRUE
+				end
+			elsif epName.include?(",")
+				if name.match(Regexp.new(epName.gsub(",",''), TRUE))
+					return TRUE
+				end
+			elsif name.include?(',')
+				if name.gsub(',', '').match(Regexp.new(epName, TRUE))
+					return TRUE
+				end
+			elsif epName.include?('.')
+				if name.match(Regexp.new(epName.gsub('.', ''), TRUE))
+					return TRUE
+				end
+			elsif name.include?('.')
+				if name.gsub('.', '').match(Regexp.new(epName, TRUE))
+					return TRUE
+				end
+			end
+			return FALSE
+		end
+
 	end #MMCommon
 end

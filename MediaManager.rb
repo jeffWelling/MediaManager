@@ -69,12 +69,26 @@ module MediaManager
 			files.each_index { |filesP|
 				ignore=FALSE
 				movieInfo=MediaManager::RetrieveMeta.filenameToInfo files[filesP]
-				pp_movieInfo movieInfo
+				#pp_movieInfo movieInfo
+				
+				#If its a duplicate
+				if movieInfo.has_key?('id')==true
+					if movieInfo['Path']==files[filesP] and updateDuplicates != :yes
+						puts "Silently skipping..."
+						next
+					end
+					s="Duplicate found, OMG THINK OF SOME OPTIONS FOR HERE!"
+					raise s
+					#case MediaManager.prompt(s, :)
+					#	when 
+				end
+			
+				pp_movieInfo movieInfo	
 				answer= MediaManager.prompt("Is this correct?", :yes, [:edit, :skip, :drop] )
 				if answer==:no||answer==:edit
 					movieInfo=userCorrect movieInfo
 				elsif answer==:skip||answer==:drop
-					puts "Ignoring file."
+					(answer==:skip) ? (puts "Skipping file...") : (puts "Dropped.  Continuing...")
 					ignore=TRUE
 				end
 

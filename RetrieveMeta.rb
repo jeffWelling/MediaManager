@@ -17,10 +17,12 @@ module MediaManager
 			movieData['Path']=filename
 
 			sqlresult=sqlSearch( "SELECT * FROM mediaFiles WHERE PathSHA = '#{hash_filename movieData['Path']}'" )
-			movieData=sqlresult[0] unless sqlresult.empty?
-			puts "Metainformation is available based on a hash of the filename." unless sqlresult.empty?
-			puts "Checking that file has not changed..." unless sqlresult.empty?
-			
+			unless sqlresult.empty?
+				movieData=sqlresult[0]
+				puts "Metainformation is available based on a hash of the filename."
+				puts "Checking that file has not changed..."
+			end			
+
 			if movieData['FileSHA'].empty?
 				movieData['FileSHA']=hash_file filename
 			end
@@ -40,6 +42,26 @@ module MediaManager
 				unless sqlresult.empty?
 					if sqlresult[0]['id'] != sqlresult2[0]['id']
 						raise "filenameToInfo(): Lookup Conflict! filename based lookup and file based lookup product conflicting results."
+					end
+				end
+
+				#Because this sqlresult is produced based on the file's hash, the filename may not match
+				#FIXME When comparing paths, some filesystems are case senesetive and others are not.  
+				if movieData['Path'] != sqlresult2[0]['Path']
+					puts "Looking up the file's hash produces a different path!"
+					if File.exist?(sqlresult2[0]['Path'])
+						if File.exist?(movieData['Path'])
+							#By not doing anything here, the movieData is overwritten with the 'old' path which
+							#is still valid.  This MUST be detected after filenameToInfo() returns to properly
+							#handle duplicates!
+							puts "WARNING!!: this file is a duplicate!"					
+						end
+					else #The sqlresult2 path leads to a file that doesn't exist.
+						puts "NOTICE: The file's hash brings up database results whos path points to a non-existant file."
+						puts "NOTICE: Old path: #{sqlresult2[0]['Path']}"
+						puts "NOTICE: Because the old file is not accessible, continuing using new path for file."
+						sqlresult2[0]['PathSHA']= hash_filename(movieData['Path'])     #Just for posterities sake, don't want to show the old hash for the new path ><
+						sqlresult2[0]['Path']= movieData['Path']
 					end
 				end
 				movieData=sqlresult2[0]
@@ -292,38 +314,11 @@ module MediaManager
 							end
 						end
 =end
-						if name.match(Regexp.new(epName, TRUE))   #Basic name match
+
+						if MediaManager.name_match?(name, epName)
 							matches << episode
 							next
-						elsif name.include?("'")    #If the name includes as "'' then strip it out, it only makes trouble
-							if name.gsub("'", '').match(Regexp.new( epName, TRUE))
-								matches << episode
-								next
-							end
-						elsif epName.include?("'")
-							if name.match(Regexp.new(epName.gsub("'", ''), TRUE))
-								matches << episode
-								next
-							end
-						elsif epName.include?(",")
-							if name.match(Regexp.new(epName.gsub(",",''), TRUE))
-								matches << episode
-								next
-							end
-						elsif epName.include?('.')
-							if name.match(Regexp.new(epName.gsub('.', ''), TRUE))
-								matches << episode
-								next
-							end
-						elsif name.include?('.')
-							if name.gsub('.', '').match(Regexp.new(epName, TRUE))
-								matches << episode
-								next
-							end
 						end
-
-						#Some episodes have apostrophies in the episode name which aren't in the filename, causing a non-match
-						#If the first basic match didn't work, strip apostrophies and try again.
 
 						if epName.index(/\([\d]+\)/)
 							next unless name.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
@@ -495,8 +490,10 @@ module MediaManager
 			raise "FAIL! Did not get " if matches.length < 1
 
 			pp matches if matches.length > 1
-			puts "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this..." if matches.length > 1
-
+			raise "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this...\n db_include?() cannot return more than one match!" if matches.length > 1
+			
+			
+			raise "Error, more than one match remains!" if matches.length > 1
 			return matches
 		end
 
