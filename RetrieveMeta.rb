@@ -490,9 +490,23 @@ module MediaManager
 			raise "FAIL! Did not get " if matches.length < 1
 
 			pp matches if matches.length > 1
-			raise "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this...\n db_include?() cannot return more than one match!" if matches.length > 1
-			
-			
+			puts "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this...\n db_include?() cannot return more than one match!" if matches.length > 1
+
+			scores={}
+			matches.each {|match|
+				scores[hash_filename(movieData['Path'])]||=0
+				if name_match?(pathToArray(movieData['Path'])[1], match['Title'] )
+					scores[hash_filename(movieData['Path'])]=scores[hash_filename(movieData['Path'])]+1
+				end
+			}
+			scores=scores.sort {|a,b| a<=>b}
+			if scores.length != 1
+				pp scores
+				raise"false positive detected, sort matches and reduce!" 
+			else
+				#One match, remove all others and return this one match
+			end
+	
 			raise "Error, more than one match remains!" if matches.length > 1
 			return matches
 		end

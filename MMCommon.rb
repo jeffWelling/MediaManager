@@ -361,7 +361,7 @@ module MediaManager
 			pp peopleFriendly
 		end
 
-		#The purpose of this function is to take two strings and compare them
+		#name_match?(name, epName) searches for epName in name and returns true if found
 		#Return true if they match, return false if they do not
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
