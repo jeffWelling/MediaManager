@@ -29,7 +29,7 @@ module MediaManager
 		#had to add 'STDIN.gets', without 'STDIN' was producing errors.
     def ask question, default=nil
       print "\n#{question} "
-      answer = STDIN.gets.strip
+      answer = STDIN.gets.strip.downcase
       throw :quit if 'q' == answer
 			return default if symbolize(answer)==:empty
       answer
@@ -47,12 +47,18 @@ module MediaManager
     end
 		def prompt question, default = :yes, add_options = nil, delete_options = nil
 			options = ([default] + [:yes,:no] + [add_options] + [:quit]).flatten.uniq
-			options -= [delete_options]
+			if delete_options.class == Array
+				delete_options.each {|del_option|
+				options -= [del_option]
+				}
+			else
+				options -= [delete_options]
+			end
 			option_string = options.collect {|x| x.to_s.capitalize}.join('/')
 			answer = nil
 			loop {
-				answer = MediaManager.ask_symbol "#{question} (#{option_string}):", default
-			 	answer=:yes if answer==:nil
+				answer = MediaManager.ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
+			 	answer=default if answer==:nil
 				break if options.member? answer
 			}
 			answer
@@ -366,30 +372,35 @@ module MediaManager
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
 		def name_match?(name, epName)
-			if name.match(Regexp.new(epName, TRUE))   #Basic name match
+			if epName.nil? or epName.length==0 
+				puts "name_match?(): blank episode name?"
+				return FALSE
+			end 
+			epName=Regexp.escape(epName)
+			if name.match(Regexp.new(Regexp.escape(epName), TRUE))   #Basic name match
 				return TRUE
 			elsif name.include?("'")    #If the name includes as "'' then strip it out, it only makes trouble
-				if name.gsub("'", '').match(Regexp.new( epName, TRUE))
+				if name.gsub("'", '').match(Regexp.new( Regexp.escape(epName), TRUE))
 					return TRUE
 				end
 			elsif epName.include?("'")
-				if name.match(Regexp.new(epName.gsub("'", ''), TRUE))
+				if name.match(Regexp.new(Regexp.escape(epName.gsub("'", '')), TRUE))
 					return TRUE
 				end
 			elsif epName.include?(",")
-				if name.match(Regexp.new(epName.gsub(",",''), TRUE))
+				if name.match(Regexp.new(Regexp.escape(epName.gsub(",",'')), TRUE))
 					return TRUE
 				end
 			elsif name.include?(',')
-				if name.gsub(',', '').match(Regexp.new(epName, TRUE))
+				if name.gsub(',', '').match(Regexp.new(Regexp.escape(epName), TRUE))
 					return TRUE
 				end
 			elsif epName.include?('.')
-				if name.match(Regexp.new(epName.gsub('.', ''), TRUE))
+				if name.match(Regexp.new(Regexp.escape(epName.gsub('.', '')), TRUE))
 					return TRUE
 				end
 			elsif name.include?('.')
-				if name.gsub('.', '').match(Regexp.new(epName, TRUE))
+				if name.gsub('.', '').match(Regexp.new(Regexp.escape(epName), TRUE))
 					return TRUE
 				end
 			end

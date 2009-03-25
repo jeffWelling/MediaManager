@@ -1,7 +1,6 @@
 TODO file for MediaManager program
 Developed by JSW
 
-- In extractData(), add ability to guess Catagorization
-- In Hasher.rb's hash_file()'s Cache, set an expirey on Cache items that are too old.  Note, define 'too old'.
-
-- 
+- When run as a new instance, program appears to not consult the MySQL cache for episodes and instead pull from the web, and then skips
+the caching process because they are already in the database; evidenced by the '_______' that appears instead of '-----' when it is
+caching the episodes.

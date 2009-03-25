@@ -22,7 +22,19 @@ module MediaManager
 					$MMCONF_TVDB_MIRROR= mirrors_xml['Mirror'][0]['mirrorpath'][0]
 				end
 			
-				$TVDB_CACHE.merge!( nameHash => XmlSimple.xml_in( agent.get("#{$MMCONF_TVDB_MIRROR}/api/GetSeries.php?seriesname=#{ERB::Util.url_encode name}").body ))
+				begin
+					$TVDB_CACHE.merge!( nameHash => XmlSimple.xml_in( agent.get("#{$MMCONF_TVDB_MIRROR}/api/GetSeries.php?seriesname=#{ERB::Util.url_encode name}").body ))
+				rescue Timeout::Error => e
+					puts e
+					r= prompt( "Timeout occured, Retry or Quit?", :Retry, nil, [:yes, :no])
+					raise :quit if r==:quit
+					retry			
+				rescue Errno::ETIMEDOUT => e
+					puts e
+					r= prompt( "Timeout occured, Retry or Quit?", :Retry, nil, [:yes, :no])
+					raise :quit if r==:quit
+					retry
+				end
 
 				results=$TVDB_CACHE[nameHash]
 			end
@@ -54,13 +66,22 @@ module MediaManager
 		
 		def self.getAllEpisodes( seriesID, noCache=FALSE )
 			raise "getAllEpisodes() only takes seriesID" if seriesID.nil?
+			puts "Getting all episodes for #{seriesID}"
 			episodeList=[]
 
 			unless noCache
-				sqlResults= sqlSearch("SELECT Season, EpisodeNumber, EpisodeName FROM EpisodeCache WHERE SeriesID = '#{seriesID}'")
+				expired=FALSE
+				sqlResults= sqlSearch("SELECT * FROM EpisodeCache WHERE SeriesID = '#{seriesID}'")
 				sqlResults.each {|episode|
-					episodeList<<{'EpisodeName'=>episode['EpisodeName'], 'EpisodeID'=>"S#{episode['Season']}E#{episode['EpisodeNumber']}" }
+					episodeList<<{'EpisodeName'=>episode['EpisodeName'], 'EpisodeID'=>"S#{episode['Season']}E#{episode['EpisodeNumber']}" } unless DateTime.parse(episode['DateAdded'].to_s) < DateTime.now.-(3)
+
+					expired=TRUE if DateTime.parse(episode['DateAdded'].to_s) < DateTime.now.-(3)
 				}
+				if expired
+					puts "Cached episodes for #{seriesID} have expired, deleting"
+					sqlAddUpdate "DELETE FROM EpisodeCache WHERE SeriesID = #{seriesID}"
+					episodeList=[]
+				end
 				puts "getAllEpisodes(): #{seriesID} from cache." unless episodeList.empty?
 				return episodeList unless episodeList.empty?
 			end
@@ -82,63 +103,63 @@ module MediaManager
 				allEpisodeURL=cache[0]['allEpisodeURL']
 			end
 			allEpisodeURL=allEpisodeURL.match( /href="[^"]*"/ )[0].chop.slice( allEpisodeURL.index('"')-2, allEpisodeURL.length)
-			sleep 1    #Be nice to the poor web server (Dont DOS)
-			epTable= open("http://thetvdb.com"<<allEpisodeURL).read.gsub("\n", ' ').match( /id="listtable".*<\/table>[\s]*<\/div>[\s]*<div/m )
-			#That regex took me soo long to get right.  It locks onto the beginning of the list of episodes by looking for the listtable id tag
-			#It hooks the bottom of the list by looking for the end of a table, a division, and the opening of another div
-			#The closing sequence needs to be unique enough so as not to match any other closing table definitions in the page.
-			raise "Could not scrape episode list from theTVDB.com." if epTable.nil?
-			epTable=epTable[0]
-			noEpisodes=TRUE if epTable.index('<tr><td class=odd colspan=3>No Episodes Found</td></tr>')
-
-			unless noEpisodes
-				
-				i=0
-				index={0=>'EpisodeID', 1=>'EpisodeName', 2=>'', 3=>'', 4=>'', 5=>''}
-				field=0
-				
-				#Break it down into an array to work with in segments
-				epTable=epTable.split( '</tr>' )
-				epTable.each_index {|i| epTable[i]=epTable[i].split('</td>') }
-
-				
-				epTable.each {|row| field=0; episode={}; skip=FALSE; row.each {|epInfo|
-					skip=TRUE if 
-					temp=epInfo.match(/>[^<]+</)
-					unless temp.nil?
-						episode[(index[field])]=temp[0]
-						field=field+1
-					end	
-				}; episodeList<<episode; }
+			
+			##BEGIN NEW AREA
+			episodeList=[]
+			#TheTVDB runs slow on weekends soemtimes, dont want to crash fail, retry instead
+			begin
+				body= XmlSimple.xml_in( MediaManager.agent.get("http://thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/series/#{seriesID}/all/en.xml").body )
+			rescue Timeout::Error => e
+				puts e
+				r= prompt( "Timeout occured, Retry or Quit?", :Retry, nil, [:yes, :no])
+				raise :quit if r==:quit
+				retry			
+			rescue Errno::ETIMEDOUT => e
+				puts e
+				r= prompt( "Timeout occured, Retry or Quit?", :Retry, nil, [:yes, :no])
+				raise :quit if r==:quit
+				retry
 			end
 
-			#remove Specials from the episode List, they may be useful
-			#in the future, but currently cause problems in this script
-			episodeList= episodeList.delete_if {|episode|
-				#Delete if there is no episodeName
-				episode.has_key?('EpisodeName')!=TRUE or episode['EpisodeID'].match(/special/i)
+			if body.has_key?('Episode')!=TRUE
+				#has no episodeS?
+				puts "#{seriesID} has no episodes?"
+				return []
+			end
+
+			body['Episode'].each {|episode|
+				episode['EpisodeName'][0]='' if episode['EpisodeName'][0].class==Hash
+				episodeList << { 
+					'EpisodeName' => episode['EpisodeName'][0], 
+					'EpisodeNumber' => episode['EpisodeNumber'][0],
+					'Season' => episode['SeasonNumber'][0],
+					'SeriesID' => body['Series'][0]['id'][0],
+					'EpisodeID' => 'S' << episode['SeasonNumber'][0] \
+						<< 'E' << episode['EpisodeNumber'][0]
+				}
 			}
+			cacheEpisodes(episodeList)
+			return episodeList
+			episodeList=[]
 
 
+			##END NEW AREA
+		end
 
-			#Swap the episodeID for our preferred format
-			episodeList.each_index {|episode|
-				next if episodeList[episode]['EpisodeID'].match(/special/i)
-				next if episodeList[episode]['EpisodeID'].match(/\d/).nil?
-				episodeList[episode]['EpisodeID']= 'S' \
-					<< episodeList[episode]['EpisodeID'].match(/[\d]+ /)[0].strip \
-					<< 'E' << episodeList[episode]['EpisodeID'].match(/ [\d]+/)[0].strip
-			}
-
+		def self.cacheEpisodes episodeList
+			seriesID=episodeList[0]['SeriesID']
+			printf "\nCaching #{seriesID} "
 			#Put each episode in the cache
 			episodeList.each_index {|i|
 				#Get rid of the '>' and '<' from the ends of the EpisodeName
-				episodeList[i]['EpisodeName']=episodeList[i]['EpisodeName'].chop.reverse.chop.reverse
 				sqlStr= "SELECT uid FROM EpisodeCache WHERE SeriesID='#{seriesID}' AND " \
 					"Season='#{episodeList[i]['EpisodeID'].match(/S[\d]+/)[0].reverse.chop.reverse}' AND "\
 					"EpisodeNumber='#{episodeList[i]['EpisodeID'].match(/E[\d]+/)[0].reverse.chop.reverse}' AND "\
 					"EpisodeName='#{Mysql.escape_string(episodeList[i]['EpisodeName'])}'"
 				exist= sqlSearch(sqlStr)
+				
+				printf '_' if exist.empty? != TRUE
+				printf '-' if exist.empty?
 
 				#puts "getAllEpisodes: Not adding duplicate episode #{seriesID} #{episodeList[i]['EpisodeID']}" unless exist.empty?
 				#puts "getAllEpisodes: Caching #{seriesID} #{episodeList[i]['EpisodeID']}" if exist.empty?
@@ -148,11 +169,9 @@ module MediaManager
 					<< "'#{episodeList[i]['EpisodeID'].match(/S[\d]*/)[0].reverse.chop.reverse}', '#{seriesID}', NOW())" \
 					if exist.empty?
 
-				sqlAddUpdate(sqlStr)
+				sqlAddUpdate(sqlStr) if exist.empty?
 			}
-
-			return episodeList
-
+			puts "Done Caching."
 		end
 		
 	end

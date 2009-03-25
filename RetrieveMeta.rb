@@ -314,7 +314,6 @@ module MediaManager
 							end
 						end
 =end
-
 						if MediaManager.name_match?(name, epName)
 							matches << episode
 							next
@@ -326,8 +325,8 @@ module MediaManager
 #							puts epName.slice( 0,epName.index(/\([\d]+\)/) )
 #							puts epName.slice( (epName.index(/\([\d]+\)/) + epName.match(/\([\d]+\)/)[0].length),epName.length )
 							part2= epName.slice( epName.index(/\([\d]+\)/)+epName.match(/\([\d]+\)/)[0].length,epName.length ).downcase
-							regex1= Regexp.new( epName.slice( 0,epName.index(/\([\d]+\)/) ).downcase)
-							regex2= Regexp.new( part2 )
+							regex1= Regexp.new( Regexp.escape(epName.slice( 0,epName.index(/\([\d]+\)/) ).downcase))
+							regex2= Regexp.new( Regexp.escape(part2) )
 							unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
 								if name.downcase.match(regex1) and name.downcase.match(regex2)
 									matches << episode
@@ -336,7 +335,7 @@ module MediaManager
 							end
 							#Should only get here if the string following ([\d]) is empty						
 							#Use the first digit in the ( ) as the part number if it matches.
-							regex2= Regexp.new( epName.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse )
+							regex2= Regexp.new( Regexp.escape(epName.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
 							if part=name.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
 								part=part[0].match(/[\d]+/)[0]
 								if part.match(regex2)  #Match
@@ -363,9 +362,9 @@ module MediaManager
 							if romMatch.match( numeralMatch )
 								#puts "Roman numeral found in filename, it is printed on the following line."
 								#pp romMatch.match(numeralMatch)[0].strip
-								romMatch=romMatch.gsub(Regexp.new(romMatch.match(numeralMatch)[0]), 
+								romMatch=romMatch.gsub(Regexp.new(Regexp.escape(romMatch.match(numeralMatch)[0])), 
 									"#{toArabic( romMatch.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romMatch.match(numeralMatch)[0].strip)==0
-								if epName.match(Regexp.new(romMatch, TRUE))
+								if epName.match(Regexp.new(Regexp.escape(romMatch), TRUE))
 									matches << episode
 									next
 								end
@@ -373,10 +372,10 @@ module MediaManager
 								#puts "Roman numeral found in episode name, it is printed on the following line."
 								#printf "Matching: "; pp epName.match(numeralMatch)[0].strip
 								#printf "Replacing with: "; pp toArabic(epName.match(numeralMatch)[0].strip).to_s
-								epName=epName.gsub(Regexp.new(epName.match(numeralMatch)[0]), 
+								epName=epName.gsub(Regexp.new(Regexp.escape(epName.match(numeralMatch)[0])), 
 									" #{toArabic(epName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(epName.match(numeralMatch)[0].strip)==0
 								#puts romMatch
-								if romMatch.match(Regexp.new(epName, TRUE))
+								if romMatch.match(Regexp.new(Regexp.escape(epName), TRUE))
 									#puts "Yay, matched."
 									matches << episode
 									next
@@ -387,8 +386,8 @@ module MediaManager
 
 						if epName.index(':') #May be split into parts, try and match each side of the :
 							epName=episode['EpisodeName'].gsub(/\([\d]+\)/, '')   #Strip out any () parts
-							regex1= Regexp.new( epName.slice(0,epName.index(':')).downcase )
-							regex2= Regexp.new( epName.slice(epName.index(':')+1,epName.length).downcase )
+							regex1= Regexp.new( Regexp.escape(epName.slice(0,epName.index(':')).downcase) )
+							regex2= Regexp.new( Regexp.escape(epName.slice(epName.index(':')+1,epName.length).downcase) )
 
 							if name.downcase.match(regex1) and name.downcase.match(regex2)
 								matches << episode
@@ -461,17 +460,21 @@ module MediaManager
 						#Convert integer to word and try to match
 						if name.match(/\d+/)
 							longName=name.gsub(name.match(/\d+/)[0], Linguistics::EN.numwords(name.match(/\d+/)[0]))
-							if longName.match(Regexp.new(epName, TRUE))
-								puts "Matched after converting the number to a word, no space."
-								matches << episode
-								next
+							if longName.match(Regexp.new(Regexp.escape(epName), TRUE))
+								unless epName.empty?    #To prevent matching an empty episode name
+									puts "Matched after converting the number to a word, no space."
+									matches << episode
+									next
+								end
 							end
 
 							longName=name.gsub(name.match(/\d+/)[0], " #{Linguistics::EN.numwords(name.match(/\d+/)[0])} ")
-							if longName.match(Regexp.new(epName, TRUE))
-								puts "Matched after converting the number to a word, with space."
-								matches << episode
-								next
+							if longName.match(Regexp.new(Regexp.escape(epName), TRUE))
+								unless epName.empty?
+									puts "Matched after converting the number to a word, with space."
+									matches << episode
+									next
+								end
 							end
 						end
 						
@@ -486,27 +489,71 @@ module MediaManager
 #			pp matches
 #			puts "Path is : " ; printf movieData['Path']
 
-			puts "No Results...?"  if matches.length < 1
-			raise "FAIL! Did not get " if matches.length < 1
-
-			pp matches if matches.length > 1
+			if matches.length < 1
+				puts "No Results...?"
+				puts "CRITICAL ERROR, No Matches!"
+				pp matches
+				return []
+			end
 			puts "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this...\n db_include?() cannot return more than one match!" if matches.length > 1
 
 			scores={}
-			matches.each {|match|
-				scores[hash_filename(movieData['Path'])]||=0
-				if name_match?(pathToArray(movieData['Path'])[1], match['Title'] )
-					scores[hash_filename(movieData['Path'])]=scores[hash_filename(movieData['Path'])]+1
+			matches.each_index {|ind|
+				matches[ind].merge( { 'Hash' => hash_filename(matches[ind].to_s) })
+				match=matches[ind]
+				name=hash_filename(match.to_s)
+				scores[name]||=0
+				pp match
+				if name_match?(pathToArray(movieData['Path'])[1], match['Title'] )==TRUE
+					scores[name]=scores[name]+1
+					
+					#add the length to the score because if a name is very long and still matches, thats better than mattching a small name
+					scores[name]+= match['Title'].length
+					pp scores
 				end
 			}
-			scores=scores.sort {|a,b| a<=>b}
-			if scores.length != 1
-				pp scores
-				raise"false positive detected, sort matches and reduce!" 
-			else
+			
+			_scores=scores.sort {|a,b| a<=>b}.delete_if {|hash, score| score == 0}
+			
+			duplicates=[]
+			if _scores.length != 1
+				#For each match, search through all other matches for an episode name that fits inside the first
+				#match's episodename.  If there are matches, they should be removed.
+				matches.each {|match|
+					matches.each {|othermatch|
+						if match['EpisodeName'].index(othermatch['EpisodeName']) and match['EpisodeName']!=othermatch['EpisodeName']
+							duplicates<<othermatch
+							scores[hash_filename(match.to_s)]+=1
+							puts "One match fits inside one of the others, it has been removed."
+						end
+					}
+					
+				}
+				unless duplicates.empty?
+					duplicates.each {|dupe|
+						matches.delete dupe
+					}
+				end	 
+			end	
+			_scores=scores.sort {|a,b| a<=>b}.delete_if {|hash, score| score == 0}
+
+			#Scores will either be of length 1, and you can return that, or
+			#it will have a list of matches with the highest-rated sorted to the top, and return that one.
+			if _scores.length > 1 and matches.length != 1
+				pp _scores
+				raise "false positive detected, sort matches and reduce!" 
+			elsif _scores.length > 1
 				#One match, remove all others and return this one match
+				oneMatch=[]
+				matches.each {|match|
+					pp match
+					if _scores[0][0] == hash_filename(match.to_s)
+						pp match
+						return [match]
+					end
+				}
 			end
-	
+			pp scores	
 			raise "Error, more than one match remains!" if matches.length > 1
 			return matches
 		end

@@ -8,8 +8,8 @@ $mmconfig = "#{`cd ~;pwd`.chomp}/Documents/Projects/MediaManager/MediaManager.cf
 raise "Cannot read config file!!!" unless load $mmconfig
 
 #Initialize the cache and blacklist arrays
-$TVDB_CACHE={}
-$IMDB_CACHE={}
+$TVDB_CACHE||={}
+$IMDB_CACHE||={}
 $IMDB_BLACKLIST=[]
 
 #This is so that we can require files in the same directory without the .rb extention.
