@@ -13,6 +13,74 @@ $anti_flood=2
 $Use_Mysql=TRUE
 
 module TvDotComScraper
+	#Custom added self. to every function because it wouldnt freaking work without it, and I dont feel like relearning methods and scopes this very second, if it bothers you then you fix it.
+	#With credits to ct / kelora.org	
+	def self.symbolize text
+		return :nil if text.nil?
+		return :empty if text.empty?
+		return :quit if text =~ /^(q|quit)$/i
+		return :edit if text =~ /^(e|edit)$/i
+		return :yes  if text =~ /^(y|yes)$/i
+		return :no   if text =~ /^(n|no)$/i
+		text.to_sym
+	end 
+	
+	#customized, added 'default'
+	#had to add 'STDIN.gets', without 'STDIN' was producing errors.
+	def self.ask question, default=nil
+		print "\n#{question} "
+		answer = STDIN.gets.strip.downcase
+		throw :quit if 'q' == answer
+		return default if symbolize(answer)==:empty
+		answer
+	end
+	def self.ask_symbol question, default
+		answer = symbolize ask(question)
+		throw :quit if :quit == answer
+		return default if :empty == answer
+		answer
+	end
+	def self.prompt question, default = :yes, add_options = nil, delete_options = nil
+		options = ([default] + [:yes,:no] + [add_options] + [:quit]).flatten.uniq
+		if delete_options.class == Array
+			delete_options.each {|del_option|
+			options -= [del_option]
+			}
+		else
+			options -= [delete_options]
+		end
+		option_string = options.collect {|x| x.to_s.capitalize}.join('/')
+		answer = nil
+		loop {
+			answer = ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
+			answer=default if answer==:nil
+			break if options.member? answer
+		}
+		answer
+	end
+	def self.agent(timeout=300)
+		a = WWW::Mechanize.new
+    a.read_timeout = timeout if timeout
+		a.user_agent_alias= 'Mac Safari'
+		a   
+	end
+	def self.get_page(url)
+		printf '=>'
+		begin
+			return TvDotComScraper.agent.get(url).body
+		rescue Timeout::Error => e
+			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+		rescue Errno::ETIMEDOUT => e
+			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+		ensure
+		printf "<= "
+
+		printf "(anti-flood) "
+		sleep $anti_flood
+		end
+	end
+	#/credits ct 
+	
 	#This method is to be used for sql statements that do not return results, except for the number of records processed
 	#THE SQL MUST ALREADY BE ESCAPEID
 	#It returns the number of records
@@ -36,7 +104,42 @@ module TvDotComScraper
 		end
 		return r
 	end
-	
+
+	#Run from populate_results()
+	#This is run with the value
+	def self.get_value_of(key, page_as_string)
+		raise "get_value_of(): Both arguments must be strings you idiot." unless key.class==String and page_as_string.class==String
+		key=key+':' unless key.match(/:$/)||key.match(/show score/i)
+		#key=Regexp.escape(key)
+		if page_as_string.match(/#{key}/i)||key.match(/title/i)||key.match(/summary/i)
+			if key.match(/official site/i)
+				return page_as_string.match(/#{key}\<.*?\>\<.*href=".+?"/i)[0].
+					match(/href=".*?"$/)[0].
+					gsub(/^href=/,'').chop.reverse.chop.reverse
+			elsif key.match(/show categories/i)
+				return page_as_string.match(/#{key}\<.*?\<\/span>/i)[0].
+					gsub(/show categories:/i, '').gsub(/\<.*?\>/, '')
+			elsif key.match(/summary/i)
+				if page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)
+					return page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)[0].gsub(/\<.*?\>/, '').strip
+				else
+					return FALSE
+				end
+			elsif key.match(/show score/i)
+				return page_as_string.match(/\<span\>show score\<\/span\>\s+\d+(\.)?(\d+)?/im)[0].
+					match(/\d+(\.)?(\d+)?/)[0]
+			elsif key.match(/title/i)
+				return page_as_string.match(/\<h\d\>.+?:\s\<span\>Summary\<\/span\>/i)[0].
+					gsub(/Summary/i, '').gsub(/\<.+?\>/,'').gsub(/:\s$/, '')
+			end
+			return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
+				match(/\>.*?\<$/)[0].
+				chop.reverse.chop.reverse.strip
+		else
+			return FALSE
+		end
+	end
+
 	#This function searches tv.com for the query string, and returns an array of all of the results (Url and TvComSeriesID).
 	#returns empty array if no results
 	#It only gets the results as (Url and TV.com SeriesID) pairs, other functions get that info
@@ -70,6 +173,7 @@ The search_results array is in this format
 			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
 		rescue Errno::ETIMEDOUT => e
 			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+
 		end
 		printf "Done.\n"
 
@@ -179,74 +283,6 @@ The search_results array is in this format
 		return TRUE			
 
 	end
-#Custom added self. to every function because it wouldnt freaking work without it, and I dont feel like relearning methods and scopes this very second, if it bothers you then you fix it.
-	#With credits to ct / kelora.org	
-	def self.symbolize text
-		return :nil if text.nil?
-		return :empty if text.empty?
-		return :quit if text =~ /^(q|quit)$/i
-		return :edit if text =~ /^(e|edit)$/i
-		return :yes  if text =~ /^(y|yes)$/i
-		return :no   if text =~ /^(n|no)$/i
-		text.to_sym
-	end 
-	
-	#customized, added 'default'
-	#had to add 'STDIN.gets', without 'STDIN' was producing errors.
-	def self.ask question, default=nil
-		print "\n#{question} "
-		answer = STDIN.gets.strip.downcase
-		throw :quit if 'q' == answer
-		return default if symbolize(answer)==:empty
-		answer
-	end
-	def self.ask_symbol question, default
-		answer = symbolize ask(question)
-		throw :quit if :quit == answer
-		return default if :empty == answer
-		answer
-	end
-	def self.prompt question, default = :yes, add_options = nil, delete_options = nil
-		options = ([default] + [:yes,:no] + [add_options] + [:quit]).flatten.uniq
-		if delete_options.class == Array
-			delete_options.each {|del_option|
-			options -= [del_option]
-			}
-		else
-			options -= [delete_options]
-		end
-		option_string = options.collect {|x| x.to_s.capitalize}.join('/')
-		answer = nil
-		loop {
-			answer = ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
-			answer=default if answer==:nil
-			break if options.member? answer
-		}
-		answer
-	end
-	def self.agent(timeout=300)
-		a = WWW::Mechanize.new
-    a.read_timeout = timeout if timeout
-		a.user_agent_alias= 'Mac Safari'
-		a   
-	end
-	def self.get_page(url)
-		printf '=>'
-		begin
-			return TvDotComScraper.agent.get(url).body
-		rescue Timeout::Error => e
-			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
-		rescue Errno::ETIMEDOUT => e
-			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
-		ensure
-		printf "<= "
-
-		printf "(anti-flood) "
-		sleep $anti_flood
-		end
-	end
-
-	#/credits ct 
 
 	#This function runs on the search results returned from search_tvcom()
 	def self.populate_results(search_results)
@@ -454,7 +490,6 @@ The search_results array is in this format
 	#Takes the actor's name, and will check for that in Name, and if no results are found, will also search AKA
 	def self.db_has_bio?(name)
 		return {} unless $Use_Mysql
-		
 	end
 
 	#This function takes a series hash, and stores it in the database after first removing the old entry
@@ -574,41 +609,6 @@ The search_results array is in this format
 		}
 		printf " Done\n"
 		return effected
-	end
-
-	#Run from populate_results()
-	#This is run with the value
-	def self.get_value_of(key, page_as_string)
-		raise "get_value_of(): Both arguments must be strings you idiot." unless key.class==String and page_as_string.class==String
-		key=key+':' unless key.match(/:$/)||key.match(/show score/i)
-		#key=Regexp.escape(key)
-		if page_as_string.match(/#{key}/i)||key.match(/title/i)||key.match(/summary/i)
-			if key.match(/official site/i)
-				return page_as_string.match(/#{key}\<.*?\>\<.*href=".+?"/i)[0].
-					match(/href=".*?"$/)[0].
-					gsub(/^href=/,'').chop.reverse.chop.reverse
-			elsif key.match(/show categories/i)
-				return page_as_string.match(/#{key}\<.*?\<\/span>/i)[0].
-					gsub(/show categories:/i, '').gsub(/\<.*?\>/, '')
-			elsif key.match(/summary/i)
-				if page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)
-					return page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)[0].gsub(/\<.*?\>/, '').strip
-				else
-					return FALSE
-				end
-			elsif key.match(/show score/i)
-				return page_as_string.match(/\<span\>show score\<\/span\>\s+\d+(\.)?(\d+)?/im)[0].
-					match(/\d+(\.)?(\d+)?/)[0]
-			elsif key.match(/title/i)
-				return page_as_string.match(/\<h\d\>.+?:\s\<span\>Summary\<\/span\>/i)[0].
-					gsub(/Summary/i, '').gsub(/\<.+?\>/,'').gsub(/:\s$/, '')
-			end
-			return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
-				match(/\>.*?\<$/)[0].
-				chop.reverse.chop.reverse.strip
-		else
-			return FALSE
-		end
 	end
 end
 
