@@ -367,7 +367,12 @@ The search_results array is in this format
 							match(/\d+/)[0]
 					elsif first_bit.match(/pilot/i)
 						pp first_bit
-						episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/pilot/i)[0]
+						if first_bit.gsub(/\<.+?\>/, '').match(/pilot/i)
+							episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/pilot/i)[0]
+						else 
+							#'pilot' is in the html tags but not in text
+							episode['EpNum']='Pilot'
+						end
 					elsif first_bit.match(/special/i)
 						episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/special/i)[0]
 					else
