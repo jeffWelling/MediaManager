@@ -127,11 +127,11 @@ module TvDotComScraper
 					return FALSE
 				end
 			elsif key.match(/show score/i)
-				return page_as_string.match(/\<span\>show score\<\/span\>\s+\d+(\.)?(\d+)?/im)[0].
-					match(/\d+(\.)?(\d+)?/)[0]
+				return page_as_string.match(/\<h\d\>Show Score\<\/h\d\>\s+?\<div.+?\<\/div\>\s+?<div class="global_score"\>.+?\<\/div\>/im)[0].
+					gsub(/\<.+?\>/, '').match(/(\d){1,}\.(\d){1,}/)[0]
 			elsif key.match(/title/i)
-				return page_as_string.match(/\<h\d\>.+?:\s\<span\>Summary\<\/span\>/i)[0].
-					gsub(/Summary/i, '').gsub(/\<.+?\>/,'').gsub(/:\s$/, '')
+				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\<span.+?\<\/span\>\s+){1}?\<h\d\>.+?\<\/h\d\>/im)[0].
+					match(/\<h\d\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
 			end
 			return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
 				match(/\>.*?\<$/)[0].
@@ -313,11 +313,9 @@ The search_results array is in this format
 
 			page_as_string=TvDotComScraper.get_page(search_results[results_i]['series_details_url'])
 
-			episode_page_as_string=TvDotComScraper.get_page(page_as_string.match(/Trivia(<.*?>){7}Episodes\<\/span\>/i)[0].
-					match(/".*?"/)[0].chop.reverse.chop.reverse)
+			episode_page_as_string=TvDotComScraper.get_page(page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/episode.html/i)[0])
 
-			stars_page_as_string=TvDotComScraper.get_page(cast=page_as_string.match(/Photos(\<.+?\>){4}Cast and crew/i)[0].
-					match(/".+?"/)[0].chop.reverse.chop.reverse)
+			stars_page_as_string=TvDotComScraper.get_page(cast=page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/cast\.html/i)[0])
 
 			recurring_page_as_string=TvDotComScraper.get_page(cast+'?flag=2')
 			crew_page_as_string=TvDotComScraper.get_page(cast+'?flag=3')
@@ -531,10 +529,14 @@ The search_results array is in this format
 	#Takes the actor's name, and will check for that in Name, and if no results are found, will also search AKA
 	def self.db_has_bio?(name)
 		return {} unless $Use_Mysql
+
+		return {}
 	end
 
 	def self.store_bio_in_db(actor)
 		return 0 unless $Use_Mysql
+
+		return 0
 	end
 
 	#This function takes a series hash, and stores it in the database after first removing the old entry
