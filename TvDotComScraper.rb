@@ -341,6 +341,39 @@ The search_results array is in this format
 				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
 			}
 
+			#populate stars, recurring roles, and writers and directors
+			stars_raw=stars_page_as_string.match(/\<h1 class="module_title"\>STARS\<\/h1\>(\s+)?(\<\/div\>\s+){2}?(\<div class=".*?"\>){2}?\s+\<ul\>(.[^\\\n]+)?/im)[0].split('<li')
+			search_results[results_i]['Credits']=[]
+			unless stars_raw[1].match(/there are currently no cast members./i)
+				stars_raw.each_index {|stars_raw_i|
+					next if stars_raw_i==0  #Skip first array element, junk entry containing html tags that we matched above
+					actor={}
+					name=stars_raw[stars_raw_i].match(/\<h3 class="name"\>(\<.+?\>)?.+?(\<.+?\>)?\<\/h3\>/i)[0].gsub(/\<.+?\>/,'')
+					role=stars_raw[stars_raw_i].match(/\<div class="role"\>.+?\<\/div\>/i)[0].gsub(/\<.+?\>/, '')
+					actor_bio_url=stars_raw[stars_raw_i].match(/\<h3 class="name"\>.+?\<\/h3\>/i)[0].
+						match(/<a.+?\>/)[0].gsub(/^.+?"/, '').chop.chop
+					actor={ 'Name' => name, 'Role' => role }
+					if $Populate_Bios.class==TrueClass
+						birthplace=''
+						birthdate=''
+						aka=''
+						recent_role=''
+						recent_role_series=''
+						summary=''
+						bio=TvDotComScraper.db_has_bio?(actor['Name'])
+						unless bio.empty?
+							#TODO
+							#MERGE BIO INFO
+						else
+							#db_has_bio returned nothing, get bio
+							actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
+							
+
+						end
+					end
+				}
+			end
+
 			#Fill in the episodes
 			allepisode_page_as_string=episode_page_as_string if episode_page_as_string.match(/Other\<.+?\>\s+&nbsp;\s+\<.+?\>All/im).nil?
 			episodes_raw=""
@@ -405,39 +438,6 @@ The search_results array is in this format
 
 					next if episode['EpName'].match(/to be deleted/i)
 					search_results[results_i]['Episodes'] << episode
-				}
-			end
-
-			#populate stars, recurring roles, and writers and directors
-			stars_raw=stars_page_as_string.match(/\<h1 class="module_title"\>STARS\<\/h1\>(\s+)?(\<\/div\>\s+){2}?(\<div class=".*?"\>){2}?\s+\<ul\>(.[^\\\n]+)?/im)[0].split('<li')
-			search_results[results_i]['Credits']=[]
-			unless stars_raw[1].match(/there are currently no cast members./i)
-				stars_raw.each_index {|stars_raw_i|
-					next if stars_raw_i==0  #Skip first array element, junk entry containing html tags that we matched above
-					actor={}
-					name=stars_raw[stars_raw_i].match(/\<h3 class="name"\>(\<.+?\>)?.+?(\<.+?\>)?\<\/h3\>/i)[0].gsub(/\<.+?\>/,'')
-					role=stars_raw[stars_raw_i].match(/\<div class="role"\>.+?\<\/div\>/i)[0].gsub(/\<.+?\>/, '')
-					actor_bio_url=stars_raw[stars_raw_i].match(/\<h3 class="name"\>.+?\<\/h3\>/i)[0].
-						match(/<a.+?\>/)[0].gsub(/^.+?"/, '').chop.chop
-					actor={ 'Name' => name, 'Role' => role }
-					if $Populate_Bios.class==TrueClass
-						birthplace=''
-						birthdate=''
-						aka=''
-						recent_role=''
-						recent_role_series=''
-						summary=''
-						bio=TvDotComScraper.db_has_bio?(actor['Name'])
-						unless bio.empty?
-							#TODO
-							#MERGE BIO INFO
-						else
-							#db_has_bio returned nothing, get bio
-							actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
-							
-
-						end
-					end
 				}
 			end
 
