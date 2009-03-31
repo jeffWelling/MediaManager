@@ -11,6 +11,8 @@ $Database_user='TvDotCom'
 $Database_password='omgrandom'
 $anti_flood=2
 $Use_Mysql=TRUE
+$Sql_Check=TRUE
+$Populate_Bios=TRUE
 
 module TvDotComScraper
 	#Custom added self. to every function because it wouldnt freaking work without it, and I dont feel like relearning methods and scopes this very second, if it bothers you then you fix it.
@@ -85,6 +87,10 @@ module TvDotComScraper
 	#THE SQL MUST ALREADY BE ESCAPEID
 	#It returns the number of records
 	def self.sql_do(sql_String)
+		if $Sql_check
+			pp sql_String
+			prompt('Continue?')
+		end
 		r=FALSE
 		begin
 			$dbh =  DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
@@ -107,37 +113,36 @@ module TvDotComScraper
 
 	#Run from populate_results()
 	#This is run with the value
+	#FIXME This method makes my eyes bleed, it needs to be fixed
 	def self.get_value_of(key, page_as_string)
 		raise "get_value_of(): Both arguments must be strings you idiot." unless key.class==String and page_as_string.class==String
-		key=key+':' unless key.match(/:$/)||key.match(/show score/i)
+		#key=key+':' unless key.match(/:$/)||key.match(/show score/i)
 		#key=Regexp.escape(key)
-		if page_as_string.match(/#{key}/i)||key.match(/title/i)||key.match(/summary/i)
-			if key.match(/official site/i)
+		case key
+			when key.match(/official site/i)
 				return page_as_string.match(/#{key}\<.*?\>\<.*href=".+?"/i)[0].
 					match(/href=".*?"$/)[0].
 					gsub(/^href=/,'').chop.reverse.chop.reverse
-			elsif key.match(/show categories/i)
+			when key.match(/show categories/i)
 				return page_as_string.match(/#{key}\<.*?\<\/span>/i)[0].
 					gsub(/show categories:/i, '').gsub(/\<.*?\>/, '')
-			elsif key.match(/summary/i)
+			when key.match(/summary/i)
 				if page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)
 					return page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)[0].gsub(/\<.*?\>/, '').strip
 				else
 					return FALSE
 				end
-			elsif key.match(/show score/i)
-				return page_as_string.match(/\<span\>show score\<\/span\>\s+\d+(\.)?(\d+)?/im)[0].
-					match(/\d+(\.)?(\d+)?/)[0]
-			elsif key.match(/title/i)
-				return page_as_string.match(/\<h\d\>.+?:\s\<span\>Summary\<\/span\>/i)[0].
-					gsub(/Summary/i, '').gsub(/\<.+?\>/,'').gsub(/:\s$/, '')
-			end
-			return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
-				match(/\>.*?\<$/)[0].
-				chop.reverse.chop.reverse.strip
-		else
-			return FALSE
+			when key.match(/show score/i)
+				return page_as_string.match(/\<h\d\>Show Score\<\/h\d\>\s+?\<div.+?\<\/div\>\s+?<div class="global_score"\>.+?\<\/div\>/im)[0].
+					gsub(/\<.+?\>/, '').match(/(\d){1,}\.(\d){1,}/)[0]
+			when key.match(/title/i)
+				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\<span.+?\<\/span\>\s+){1}?\<h\d\>.+?\<\/h\d\>/im)[0].
+					match(/\<h\d\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
 		end
+		raise key
+		return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
+			match(/\>.*?\<$/)[0].
+			chop.reverse.chop.reverse.strip
 	end
 
 	#This function searches tv.com for the query string, and returns an array of all of the results (Url and TvComSeriesID).
@@ -309,18 +314,51 @@ The search_results array is in this format
 			search_results[results_i].merge!({ 'Details' => info['Details'] }) unless info.empty?
 			search_results[results_i]['Episodes']=[]
 			next unless info.empty?
-
 			page_as_string=TvDotComScraper.get_page(search_results[results_i]['series_details_url'])
-
-			episode_page_as_string=TvDotComScraper.get_page(page_as_string.match(/Trivia(<.*?>){7}Episodes\<\/span\>/i)[0].
-					match(/".*?"/)[0].chop.reverse.chop.reverse)
-
-			stars_page_as_string=TvDotComScraper.get_page(cast=page_as_string.match(/Photos(\<.+?\>){4}Cast and crew/i)[0].
-					match(/".+?"/)[0].chop.reverse.chop.reverse)
-
+			episode_page_as_string=TvDotComScraper.get_page(page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/episode.html/i)[0])
+			stars_page_as_string=TvDotComScraper.get_page(cast=page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/cast\.html/i)[0])
 			recurring_page_as_string=TvDotComScraper.get_page(cast+'?flag=2')
 			crew_page_as_string=TvDotComScraper.get_page(cast+'?flag=3')
 
+			#Fill in the 'Details' part
+			search_results[results_i]['Details']={}
+			values=['Originally on', 'Status', 'Premiered', 'Last Aired', 'Show Categories', 'Official Site', 'Summary', 'Show score', 'Title']
+			values.each {|attribute|
+				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
+			}
+
+			#populate stars, recurring roles, and writers and directors
+			stars_raw=stars_page_as_string.match(/\<h1 class="module_title"\>STARS\<\/h1\>(\s+)?(\<\/div\>\s+){2}?(\<div class=".*?"\>){2}?\s+\<ul\>(.[^\\\n]+)?/im)[0].split('<li')
+			search_results[results_i]['Credits']=[]
+			unless stars_raw[1].match(/there are currently no cast members./i)
+				stars_raw.each_index {|stars_raw_i|
+					next if stars_raw_i==0  #Skip first array element, junk entry containing html tags that we matched above
+					actor={}
+					name=stars_raw[stars_raw_i].match(/\<h3 class="name"\>(\<.+?\>)?.+?(\<.+?\>)?\<\/h3\>/i)[0].gsub(/\<.+?\>/,'')
+					role=stars_raw[stars_raw_i].match(/\<div class="role"\>.+?\<\/div\>/i)[0].gsub(/\<.+?\>/, '')
+					actor_bio_url=stars_raw[stars_raw_i].match(/\<h3 class="name"\>.+?\<\/h3\>/i)[0].
+						match(/<a.+?\>/)[0].gsub(/^.+?"/, '').chop.chop
+					actor={ 'Name' => name, 'Role' => role }
+					if $Populate_Bios.class==TrueClass
+						birthplace=''
+						birthdate=''
+						aka=''
+						recent_role=''
+						recent_role_series=''
+						summary=''
+						bio=TvDotComScraper.db_has_bio?(actor['Name'])
+						unless bio.empty?
+							#TODO
+							#MERGE BIO INFO
+						else
+							#db_has_bio returned nothing, get bio
+							actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
+							
+
+						end
+					end
+				}
+			end
 
 			printf '=>>>'
 			begin	
@@ -331,22 +369,14 @@ The search_results array is in this format
 			rescue Errno::ETIMEDOUT => e
 				retry if TvDotComScraper.deal_with_timeout(e)==TRUE
 			end
-			
 			printf "<=   "
-
-			#Fill in the 'Details' part
-			search_results[results_i]['Details']={}
-			values=['Originally on', 'Status', 'Premiered', 'Last Aired', 'Show Categories', 'Official Site', 'Summary', 'Show score', 'Title']
-			values.each {|attribute|
-				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
-			}
 
 			#Fill in the episodes
 			allepisode_page_as_string=episode_page_as_string if episode_page_as_string.match(/Other\<.+?\>\s+&nbsp;\s+\<.+?\>All/im).nil?
 			episodes_raw=""
 			episodes_raw=allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im )[0].
 				split('</li>') unless allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im).nil?
-			printf " [no-episodes] " if episodes_raw.empty?
+			printf "[no-episodes] " if episodes_raw.empty?
 			#next if episodes_raw.empty?
 			unless episodes_raw.empty?
 				episodes_raw.each {|episode_as_string|
@@ -407,6 +437,7 @@ The search_results array is in this format
 					search_results[results_i]['Episodes'] << episode
 				}
 			end
+
 			printf "#{search_results[results_i]['Episodes'].length} \n"
 			TvDotComScraper.store_series_in_db search_results[results_i]
 			puts "\n"
@@ -495,6 +526,14 @@ The search_results array is in this format
 	#Takes the actor's name, and will check for that in Name, and if no results are found, will also search AKA
 	def self.db_has_bio?(name)
 		return {} unless $Use_Mysql
+
+		return {}
+	end
+
+	def self.store_bio_in_db(actor)
+		return 0 unless $Use_Mysql
+
+		return 0
 	end
 
 	#This function takes a series hash, and stores it in the database after first removing the old entry
