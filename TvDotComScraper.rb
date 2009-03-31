@@ -11,6 +11,7 @@ $Database_user='TvDotCom'
 $Database_password='omgrandom'
 $anti_flood=2
 $Use_Mysql=TRUE
+$Populate_Bios=TRUE
 
 module TvDotComScraper
 	#Custom added self. to every function because it wouldnt freaking work without it, and I dont feel like relearning methods and scopes this very second, if it bothers you then you fix it.
@@ -320,7 +321,8 @@ The search_results array is in this format
 
 			recurring_page_as_string=TvDotComScraper.get_page(cast+'?flag=2')
 			crew_page_as_string=TvDotComScraper.get_page(cast+'?flag=3')
-
+			$it||=[]
+			$it<<stars_page_as_string
 
 			printf '=>>>'
 			begin	
@@ -346,7 +348,7 @@ The search_results array is in this format
 			episodes_raw=""
 			episodes_raw=allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im )[0].
 				split('</li>') unless allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im).nil?
-			printf " [no-episodes] " if episodes_raw.empty?
+			printf "[no-episodes] " if episodes_raw.empty?
 			#next if episodes_raw.empty?
 			unless episodes_raw.empty?
 				episodes_raw.each {|episode_as_string|
@@ -407,6 +409,40 @@ The search_results array is in this format
 					search_results[results_i]['Episodes'] << episode
 				}
 			end
+
+			#populate stars, recurring roles, and writers and directors
+			stars_raw=stars_page_as_string.match(/\<h1 class="module_title"\>STARS\<\/h1\>(\s+)?(\<\/div\>\s+){2}?(\<div class=".*?"\>){2}?\s+\<ul\>(.[^\\\n]+)?/im)[0].split('<li')
+			search_results[results_i]['Credits']=[]
+			unless stars_raw[1].match(/there are currently no cast members./i)
+				stars_raw.each_index {|stars_raw_i|
+					next if stars_raw_i==0  #Skip first array element, junk entry containing html tags that we matched above
+					actor={}
+					name=stars_raw[stars_raw_i].match(/\<h3 class="name"\>(\<.+?\>)?.+?(\<.+?\>)?\<\/h3\>/i)[0].gsub(/\<.+?\>/,'')
+					role=stars_raw[stars_raw_i].match(/\<div class="role"\>.+?\<\/div\>/i)[0].gsub(/\<.+?\>/, '')
+					actor_bio_url=stars_raw[stars_raw_i].match(/\<h3 class="name"\>.+?\<\/h3\>/i)[0].
+						match(/<a.+?\>/)[0].gsub(/^.+?"/, '').chop.chop
+					actor={ 'Name' => name, 'Role' => role }
+					if $Populate_Bios.class==TrueClass
+						birthplace=''
+						birthdate=''
+						aka=''
+						recent_role=''
+						recent_role_series=''
+						summary=''
+						bio=TvDotComScraper.db_has_bio?(actor['Name'])
+						unless bio.empty?
+							#TODO
+							#MERGE BIO INFO
+						else
+							#db_has_bio returned nothing, get bio
+							actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
+							
+
+						end
+					end
+				}
+			end
+
 			printf "#{search_results[results_i]['Episodes'].length} \n"
 			TvDotComScraper.store_series_in_db search_results[results_i]
 			puts "\n"
@@ -495,6 +531,10 @@ The search_results array is in this format
 	#Takes the actor's name, and will check for that in Name, and if no results are found, will also search AKA
 	def self.db_has_bio?(name)
 		return {} unless $Use_Mysql
+	end
+
+	def self.store_bio_in_db(actor)
+		return 0 unless $Use_Mysql
 	end
 
 	#This function takes a series hash, and stores it in the database after first removing the old entry
