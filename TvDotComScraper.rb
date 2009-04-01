@@ -88,7 +88,7 @@ module TvDotComScraper
 	#THE SQL MUST ALREADY BE ESCAPEID
 	#It returns the number of records
 	def self.sql_do(sql_String)
-		if $Sql_check
+		if $Sql_Check
 			pp sql_String
 			prompt('Continue?')
 		end
@@ -139,6 +139,8 @@ module TvDotComScraper
 			when key.match(/title/i)
 				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\<span.+?\<\/span\>\s+){1}?\<h\d\>.+?\<\/h\d\>/im)[0].
 					match(/\<h\d\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
+			when key.match(/originally on/i)
+				bit=page_as_string.match()[0]
 		end
 		raise key
 		return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
