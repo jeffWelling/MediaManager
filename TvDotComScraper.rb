@@ -4,6 +4,7 @@ require 'dbi'
 require 'mysql'
 require 'timeout'
 
+#OMGCHANGE
 #Configuration variables
 $Database_name='TvDotComScraperCache'
 $Database_host='mysql.osnetwork'
