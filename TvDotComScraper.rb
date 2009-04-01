@@ -119,29 +119,36 @@ module TvDotComScraper
 		raise "get_value_of(): Both arguments must be strings you idiot." unless key.class==String and page_as_string.class==String
 		#key=key+':' unless key.match(/:$/)||key.match(/show score/i)
 		#key=Regexp.escape(key)
-		case key
-			when key.match(/official site/i)
+		case key.downcase
+			when 'official site'
 				return page_as_string.match(/#{key}\<.*?\>\<.*href=".+?"/i)[0].
 					match(/href=".*?"$/)[0].
 					gsub(/^href=/,'').chop.reverse.chop.reverse
-			when key.match(/show categories/i)
+			when 'show categories'
 				return page_as_string.match(/#{key}\<.*?\<\/span>/i)[0].
 					gsub(/show categories:/i, '').gsub(/\<.*?\>/, '')
-			when key.match(/summary/i)
+			when 'summary'
 				if page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)
 					return page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)[0].gsub(/\<.*?\>/, '').strip
 				else
 					return FALSE
 				end
-			when key.match(/show score/i)
+			when 'show score'
 				return page_as_string.match(/\<h\d\>Show Score\<\/h\d\>\s+?\<div.+?\<\/div\>\s+?<div class="global_score"\>.+?\<\/div\>/im)[0].
 					gsub(/\<.+?\>/, '').match(/(\d){1,}\.(\d){1,}/)[0]
-			when key.match(/title/i)
+			when 'title'
 				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\<span.+?\<\/span\>\s+){1}?\<h\d\>.+?\<\/h\d\>/im)[0].
 					match(/\<h\d\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
-			when key.match(/originally on/i)
-				bit=page_as_string.match()[0]
+			when 'originally on'
+				pp 'OMGOMGOMG'
+				bit=page_as_string.match(/\<span class="tagline"\>.+?\<\/span\>/im)[0]
+				if bit[2].strip.empty?
+					return bit[1].gsub(/\<.+?\>/, '').split("\n")[1].gsub(/\(.+?\)\s+$/, '').strip
+				else
+					return bit[2].strip
+				end
 		end
+	pp key
 		raise key
 		return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
 			match(/\>.*?\<$/)[0].
