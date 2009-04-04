@@ -5,7 +5,6 @@ require 'mysql'
 require 'timeout'
 
 #Configuration variables
-#NEWCONFIG
 $Database_name='TvDotComScraperCache'
 $Database_host='mysql.osnetwork'
 $Database_user='TvDotCom'
