@@ -5,7 +5,9 @@ require 'mysql'
 require 'timeout'
 
 #another change
-#OMG
+#OMG BRANCH LOOKATME IMA BRANCH
+
+>>>>>>> ad088795cc63a0d2d8dd3b204392e6075c726884:TvDotComScraper.rb
 #Configuration variables
 $Database_name='TvDotComScraperCache'
 $Database_host='mysql.osnetwork'
