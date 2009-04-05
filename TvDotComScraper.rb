@@ -88,6 +88,7 @@ module TvDotComScraper
 	#It returns the number of records
 	def self.sql_do(sql_String)
 		if $Sql_Check
+			printf "\n"
 			pp sql_String
 			prompt('Continue?')
 		end
@@ -119,16 +120,22 @@ module TvDotComScraper
 		#key=key+':' unless key.match(/:$/)||key.match(/show score/i)
 		#key=Regexp.escape(key)
 		case key.downcase
-			when 'official site'
-				return page_as_string.match(/#{key}\<.*?\>\<.*href=".+?"/i)[0].
-					match(/href=".*?"$/)[0].
-					gsub(/^href=/,'').chop.reverse.chop.reverse
 			when 'show categories'
-				return page_as_string.match(/#{key}\<.*?\<\/span>/i)[0].
-					gsub(/show categories:/i, '').gsub(/\<.*?\>/, '')
+				begin 
+					return page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
+						match(/\<h\d\>genre(s)?\<\/h\d\>\s+?(\s+?\<a href.+?\<\/a\>(\s+)?(,)?){1,}/i)[0].
+						gsub(/^\<.+?\>.+?\<.+?\>/, '').gsub(/\<.+?\>/, '').strip.gsub(/\s+/, ' ')
+				rescue NoMethodError => e
+					unless e.to_s.match("undefined\\ method\\ `\\[\\]'\\ for\\ nil:NilClass")
+						raise e
+					end
+					return FALSE
+				end
 			when 'summary'
-				if page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)
-					return page_as_string.match(/\<div class="summary long"\>\s+\<span class="long"\>.*?\<\/span\>/im)[0].gsub(/\<.*?\>/, '').strip
+				if page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im) and page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].match(/\<h\d\>show summary\<\/h\d\>/i)
+					return page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
+						match(/\<h\d class="panel_title"\>\s+?show summary.+?\<\/h\d\>\s+?\<div class="text"\>.+?\<\/div\>/im)[0].
+						gsub(/^\<h\d.+?\<div class="text"\>/im, '').gsub(/\<\/div\>$/, '').strip
 				else
 					return FALSE
 				end
@@ -136,16 +143,62 @@ module TvDotComScraper
 				return page_as_string.match(/\<h\d\>Show Score\<\/h\d\>\s+?\<div.+?\<\/div\>\s+?<div class="global_score"\>.+?\<\/div\>/im)[0].
 					gsub(/\<.+?\>/, '').match(/(\d){1,}\.(\d){1,}/)[0]
 			when 'title'
-				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\<span.+?\<\/span\>\s+){1}?\<h\d\>.+?\<\/h\d\>/im)[0].
+				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\s+?\<span.+?\<\/span\>\s+?){1}?\<h\d\>.+?\<\/h\d\>/im)[0].
 					match(/\<h\d\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
 			when 'originally on'
-				pp 'OMGOMGOMG'
-				bit=page_as_string.match(/\<span class="tagline"\>.+?\<\/span\>/im)[0]
+				bit=page_as_string.match(/\<span class="tagline"\>.+?\<\/span\>/im)[0].split("\n")
 				if bit[2].strip.empty?
-					return bit[1].gsub(/\<.+?\>/, '').split("\n")[1].gsub(/\(.+?\)\s+$/, '').strip
+					return bit[1].gsub(/\<.+?\>/, '').split("\n")[1].gsub(/\(.+?\)\s+$/, '').gsub(/\<.+?\>/, '').strip
+				elsif bit[2].gsub(/\<.+?\>/, '').strip.empty?
+					return FALSE
 				else
 					return bit[2].strip
 				end
+			when 'status'
+				begin
+					return page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
+						match(/\<h\d\>status\<\/h\d\>.+?\<.+?\>/im)[0].
+						gsub(/^\<h\d\>.+?<\/h\d\>/, '').gsub(/\<.+?\>/, '').strip
+				rescue NoMethodError => e
+					#Silently ignore if premiered doesn't exist
+					unless e.to_s.match("undefined\\ method\\ `\\[\\]'\\ for\\ nil:NilClass")
+						raise e
+					end
+					return FALSE
+				end
+			when 'premiered'
+				begin
+					return DateTime.parse(date=page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
+						match(/\<h\d\>premiered\<\/h\d\>.+?\<.+?\>/im)[0].
+						gsub(/^\<h\d\>.+?<\/h\d\>/, '').gsub(/\<.+?\>$/, '').strip)
+				rescue NoMethodError => e
+					#Silently ignore if premiered doesn't exist
+					unless e.to_s.match("undefined\\ method\\ `\\[\\]'\\ for\\ nil:NilClass")
+						raise e
+					end
+					return FALSE
+				rescue ArgumentError => e
+					unless date.empty?
+						puts "WARNING!!!: Could not parse 'Premiered' date"
+						puts e
+						raise e
+					else
+						return FALSE
+					end
+				end
+			when 'last aired'
+				#Used to be called 'last aired', tvcom now calls it 'ended'
+				begin
+					return DateTime.parse(date=page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
+						match(/\<h\d\>ended\<\/h\d\>.+?\<.+?\>/im)[0].
+						gsub(/^\<h\d\>.+?<\/h\d\>/, '').gsub(/\<.+?\>$/, '').strip)
+				rescue NoMethodError => e
+					#Silently ignore if 'ended' doesn't exist
+					unless e.to_s.match("undefined\\ method\\ `\\[\\]'\\ for\\ nil:NilClass")
+						raise e
+					end
+					return FALSE
+				end				
 		end
 	pp key
 		raise key
@@ -331,7 +384,7 @@ The search_results array is in this format
 
 			#Fill in the 'Details' part
 			search_results[results_i]['Details']={}
-			values=['Originally on', 'Status', 'Premiered', 'Last Aired', 'Show Categories', 'Official Site', 'Summary', 'Show score', 'Title']
+			values=['Originally on', 'Status', 'Premiered', 'Last Aired', 'Show Categories', 'Summary', 'Show score', 'Title']
 			values.each {|attribute|
 				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
 			}
@@ -485,13 +538,12 @@ The search_results array is in this format
 				rowNum=rowNum+1
 			end
 			formatted_result={'Details'=> {}, 'Episodes'=>[]}
-			attrs=['Status', 'Originally on', 'Show score', 'Premiered', 'Title', 'Summary', 'Show Categories', 'Last Aired', 'Official Site']
+			attrs=['Status', 'Originally on', 'Show score', 'Premiered', 'Title', 'Summary', 'Show Categories', 'Last Aired']
 			unless arry.empty? 
 				attrs.each {|attribute|
 					attribute1='Originally_On'	if attribute.match(/originally on/i)
 					attribute1='Show_Score' if attribute.match(/show score/i)
 					attribute1='Show_Categories' if attribute.match(/show categories/i)
-					attribute1='Official_Site' if attribute.match(/official site/i)
 					attribute1=attribute if !attribute.match(/\s/)
 
 					formatted_result['Details'][attribute]=FALSE
@@ -630,7 +682,7 @@ The search_results array is in this format
 			series['Details']['Last Aired']=FALSE
 		end
 		printf "store_series_in_db(): Storing ..."	
-		sql_String='INSERT INTO Series_Details (Title, Status, Originally_On, Show_Score, Premiered, Last_Aired, Summary, Show_Categories, Official_Site, tvcomID, DateAdded, series_details_url) '
+		sql_String='INSERT INTO Series_Details (Title, Status, Originally_On, Show_Score, Premiered, Last_Aired, Summary, Show_Categories, tvcomID, DateAdded, series_details_url) '
 		sql_String << 'VALUES ('
 		sql_String << "'#{Mysql.escape_string(series['Details']['Title'])}', "
 		series['Details']['Status'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Status'])}', "
@@ -640,7 +692,6 @@ The search_results array is in this format
 		series['Details']['Last Aired'].class==String ? sql_String << "'#{DateTime.parse(series['Details']['Last Aired']).to_s}', " : sql_String << "NULL, "
 		series['Details']['Summary'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Summary'])}', "
 		series['Details']['Show Categories'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Show Categories'])}', "
-		series['Details']['Official Site'].class==String ? sql_String << "'#{Mysql.escape_string(series['Details']['Official Site'])}', " : sql_String << "NULL, "
 		sql_String << "'#{Mysql.escape_string(series['tvcomID'])}', "
 		sql_String << "NOW(), "
 		sql_String << "'#{Mysql.escape_string(series['series_details_url'])}')"
