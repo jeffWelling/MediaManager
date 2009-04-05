@@ -133,9 +133,11 @@ module TvDotComScraper
 				end
 			when 'summary'
 				if page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im) and page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].match(/\<h\d\>show summary\<\/h\d\>/i)
-					return page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
+					summary=page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
 						match(/\<h\d class="panel_title"\>\s+?show summary.+?\<\/h\d\>\s+?\<div class="text"\>.+?\<\/div\>/im)[0].
 						gsub(/^\<h\d.+?\<div class="text"\>/im, '').gsub(/\<\/div\>$/, '').strip
+					puts "get_value_of(): WARNING!!! Summary longer than database will allow!\n Summary will be truncated!" if summary.length > 32999
+					return summary
 				else
 					return FALSE
 				end
@@ -148,7 +150,7 @@ module TvDotComScraper
 			when 'originally on'
 				bit=page_as_string.match(/\<span class="tagline"\>.+?\<\/span\>/im)[0].split("\n")
 				if bit[2].strip.empty?
-					return bit[1].gsub(/\<.+?\>/, '').split("\n")[1].gsub(/\(.+?\)\s+$/, '').gsub(/\<.+?\>/, '').strip
+					return bit[1].gsub(/\<.+?\>/, '').gsub(/\(.+?\)\s+$/, '').strip
 				elsif bit[2].gsub(/\<.+?\>/, '').strip.empty?
 					return FALSE
 				else
@@ -389,12 +391,14 @@ The search_results array is in this format
 				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
 			}
 
+			#FIXME Handle multiple pages for stars, and for recurring roles, etc
 			#populate stars, recurring roles, and writers and directors
 			stars_raw=stars_page_as_string.match(/\<h1 class="module_title"\>STARS\<\/h1\>(\s+)?(\<\/div\>\s+){2}?(\<div class=".*?"\>){2}?\s+\<ul\>(.[^\\\n]+)?/im)[0].split('<li')
 			search_results[results_i]['Credits']=[]
 			unless stars_raw[1].match(/there are currently no cast members./i)
 				stars_raw.each_index {|stars_raw_i|
 					next if stars_raw_i==0  #Skip first array element, junk entry containing html tags that we matched above
+					next unless stars_raw[stars_raw_i].match(/\<h\d\ class="name"\>.+?\<\/h\d\>/im)
 					actor={}
 					name=stars_raw[stars_raw_i].match(/\<h3 class="name"\>(\<.+?\>)?.+?(\<.+?\>)?\<\/h3\>/i)[0].gsub(/\<.+?\>/,'')
 					role=stars_raw[stars_raw_i].match(/\<div class="role"\>.+?\<\/div\>/i)[0].gsub(/\<.+?\>/, '')
@@ -689,7 +693,7 @@ The search_results array is in this format
 		series['Details']['Originally on'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Originally on'])}', "
 		series['Details']['Show score'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Show score'])}', "
 		series['Details']['Premiered'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{DateTime.parse(series['Details']['Premiered'].to_s)}', "
-		series['Details']['Last Aired'].class==String ? sql_String << "'#{DateTime.parse(series['Details']['Last Aired']).to_s}', " : sql_String << "NULL, "
+		series['Details']['Last Aired'].class==DateTime ? sql_String << "'#{series['Details']['Last Aired'].to_s}', " : sql_String << "NULL, "
 		series['Details']['Summary'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Summary'])}', "
 		series['Details']['Show Categories'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Show Categories'])}', "
 		sql_String << "'#{Mysql.escape_string(series['tvcomID'])}', "
