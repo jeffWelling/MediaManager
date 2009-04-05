@@ -440,6 +440,7 @@ The search_results array is in this format
 			#Fill in the episodes
 			allepisode_page_as_string=episode_page_as_string if episode_page_as_string.match(/Other\<.+?\>\s+&nbsp;\s+\<.+?\>All/im).nil?
 			episodes_raw=""
+			pp allepisode_page_as_string
 			episodes_raw=allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im )[0].
 				split('</li>') unless allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im).nil?
 			printf "[no-episodes] " if episodes_raw.empty?
