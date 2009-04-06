@@ -425,11 +425,12 @@ The search_results array is in this format
 					end
 				}
 			end
-
+			#Fill in the episodes
 			printf '=>>>'
-			begin	
-				allepisode_page_as_string=TvDotComScraper.agent(300).get(episode_page_as_string.match(/Other\<.+?\>\s+&nbsp;\s+\<.+?\>All/im)[0].
-					match(/".+"/i)[0].chop.reverse.chop.reverse).body unless episode_page_as_string.match(/Other\<.+?\>\s+&nbsp;\s+\<.+?\>All/im).nil?
+			begin
+				allepisode_page_as_string=TvDotComScraper.agent(300).get(episode_page_as_string.match(/\<ul class="tab_links"\>.+?\<\/ul\>/im)[0].
+					match(/\<a\s+href=".+?"\>all\<\/a\>/i)[0].
+					match(/".+?"/)[0].chop.reverse.chop.reverse).body
 			rescue Timeout::Error => e
 				retry if TvDotComScraper.deal_with_timeout(e)==TRUE
 			rescue Errno::ETIMEDOUT => e
@@ -437,10 +438,9 @@ The search_results array is in this format
 			end
 			printf "<=   "
 
-			#Fill in the episodes
-			allepisode_page_as_string=episode_page_as_string if episode_page_as_string.match(/Other\<.+?\>\s+&nbsp;\s+\<.+?\>All/im).nil?
 			episodes_raw=""
-			pp allepisode_page_as_string
+			$it||=[]
+			$it<< allepisode_page_as_string
 			episodes_raw=allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im )[0].
 				split('</li>') unless allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im).nil?
 			printf "[no-episodes] " if episodes_raw.empty?
