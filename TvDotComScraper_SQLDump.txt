@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 -- 
 -- Host: localhost
--- Generation Time: Apr 07, 2009 at 05:18 PM
+-- Generation Time: Apr 08, 2009 at 03:03 AM
 -- Server version: 5.0.32
 -- PHP Version: 5.2.0-8+etch13
 -- 
@@ -16,6 +16,7 @@
 -- Table structure for table `Actor_Biographies`
 -- 
 
+DROP TABLE IF EXISTS `Actor_Biographies`;
 CREATE TABLE `Actor_Biographies` (
   `uid` int(12) NOT NULL auto_increment,
   `Name` varchar(42) NOT NULL,
@@ -35,12 +36,13 @@ CREATE TABLE `Actor_Biographies` (
 -- Table structure for table `Cast_and_Crew`
 -- 
 
+DROP TABLE IF EXISTS `Cast_and_Crew`;
 CREATE TABLE `Cast_and_Crew` (
   `uid` mediumint(12) NOT NULL auto_increment,
   `tvcomID` int(12) NOT NULL,
   `Name` varchar(42) NOT NULL,
   `Role` varchar(42) NOT NULL,
-  `Priority` smallint(1) NOT NULL default '2' COMMENT '0=star, 1=recurring role, 2=writers,directors,crew',
+  `Propriety` smallint(1) NOT NULL default '2' COMMENT '0=star, 1=recurring role, 2=writers,directors,crew',
   `DateAdded` datetime NOT NULL,
   PRIMARY KEY  (`uid`),
   KEY `tvcomID` (`tvcomID`)
@@ -52,6 +54,7 @@ CREATE TABLE `Cast_and_Crew` (
 -- Table structure for table `Episodes`
 -- 
 
+DROP TABLE IF EXISTS `Episodes`;
 CREATE TABLE `Episodes` (
   `uid` int(12) NOT NULL auto_increment,
   `tvcomID` varchar(12) NOT NULL,
@@ -72,6 +75,7 @@ CREATE TABLE `Episodes` (
 -- Table structure for table `Series_Details`
 -- 
 
+DROP TABLE IF EXISTS `Series_Details`;
 CREATE TABLE `Series_Details` (
   `uid` int(9) NOT NULL auto_increment,
   `Title` varchar(255) NOT NULL,
@@ -89,4 +93,4 @@ CREATE TABLE `Series_Details` (
   UNIQUE KEY `tvcomID` (`tvcomID`),
   KEY `Title` (`Title`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7 ;
-  
+

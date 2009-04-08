@@ -12,10 +12,10 @@ $Database_password='omgrandom'
 $anti_flood=2
 $Use_Mysql=TRUE
 $Sql_Check=FALSE
-$Populate_Bios=TRUE
+$Populate_Bios=FALSE
 
 module TvDotComScraper
-	#Custom added self. to every function because it wouldnt freaking work without it, and I dont feel like relearning methods and scopes this very second, if it bothers you then you fix it.
+	#Custom added self. to every function because it wouldnt freaking work without it, and I dont feel like relearning methods and scopes this very second, if it bothers you then suggest a fix.
 	#With credits to ct / kelora.org	
 	def self.symbolize text
 		return :nil if text.nil?
@@ -67,6 +67,8 @@ module TvDotComScraper
 		a   
 	end
 	def self.get_page(url)
+		printf "\n"		
+		pp url
 		printf '=>'
 		begin
 			return TvDotComScraper.agent.get(url).body
@@ -202,7 +204,6 @@ module TvDotComScraper
 					return FALSE
 				end				
 		end
-	pp key
 		raise key
 		return page_as_string.match(/#{key}\<.*?\>.*?\</i)[0].
 			match(/\>.*?\<$/)[0].
@@ -309,7 +310,6 @@ The search_results array is in this format
 	
 	#The first result on the page is unique because its displayed differently, following results are uniform
 	r={}
-#	pp body.match(top_result_regex)[0]
 	return [] unless body.match(top_result_regex)     #This line takes care of 'no-results' situations.
 	r['series_details_url']= body.match(top_result_regex)[0].
 		match(series_details_url_regex)[0].
@@ -391,41 +391,118 @@ The search_results array is in this format
 				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
 			}
 
+			puts "\npopulate_results(): populating staff\n"
 			#FIXME Handle multiple pages for stars, and for recurring roles, etc
 			#populate stars, recurring roles, and writers and directors
-			stars_raw=stars_page_as_string.match(/\<h1 class="module_title"\>STARS\<\/h1\>(\s+)?(\<\/div\>\s+){2}?(\<div class=".*?"\>){2}?\s+\<ul\>(.[^\\\n]+)?/im)[0].split('<li')
+			#propriety maps out to ['Stars', 'Recurring Roles', and 'Writers and Directors'] respectively
 			search_results[results_i]['Credits']=[]
-			unless stars_raw[1].match(/there are currently no cast members./i)
-				stars_raw.each_index {|stars_raw_i|
-					next if stars_raw_i==0  #Skip first array element, junk entry containing html tags that we matched above
-					next unless stars_raw[stars_raw_i].match(/\<h\d\ class="name"\>.+?\<\/h\d\>/im)
-					actor={}
-					name=stars_raw[stars_raw_i].match(/\<h3 class="name"\>(\<.+?\>)?.+?(\<.+?\>)?\<\/h3\>/i)[0].gsub(/\<.+?\>/,'')
-					role=stars_raw[stars_raw_i].match(/\<div class="role"\>.+?\<\/div\>/i)[0].gsub(/\<.+?\>/, '')
-					actor_bio_url=stars_raw[stars_raw_i].match(/\<h3 class="name"\>.+?\<\/h3\>/i)[0].
-						match(/<a.+?\>/)[0].gsub(/^.+?"/, '').chop.chop
-					actor={ 'Name' => name, 'Role' => role }
-					if $Populate_Bios.class==TrueClass
-						birthplace=''
-						birthdate=''
-						aka=''
-						recent_role=''
-						recent_role_series=''
-						summary=''
-						bio=TvDotComScraper.db_has_bio?(actor['Name'])
-						unless bio.empty?
-							#TODO
-							#MERGE BIO INFO
-						else
-							#db_has_bio returned nothing, get bio
-							actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
-							
+			[1,2,3].each {|propriety|
+				case propriety
+					when 1
+						puts "stars"
+						stars_raw=stars_page_as_string.match(/\<h\d class="module_title"\>stars\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0].split('<li')
+					when 2
+						puts "recurring"
+						stars_raw=recurring_page_as_string.match(/\<h\d class="module_title"\>recurring roles\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0].split('<li')
+					when 3
+						puts "crew"
+						stars_raw=crew_page_as_string.match(/\<h\d class="module_title"\>writers\<\/h\d\>.+?\<h\d class="module_title"\>directors/im)[0].split('<li')
+				end
+				next_page=''
+				writers_done=FALSE
+				directors_done=FALSE
+				crew_done=FALSE
+				directors_area=''
+				crew_area=''
+				while TRUE
+					if !next_page.empty?
+						#Get next_page, put its info in stars_raw for repreocessing
+						stars_raw=(current_page_as_string=TvDotComScraper.get_page(next_page).match(/\<h\d class="module_title"\>stars\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0]).split('<li')
+						next_page=''
+					end
 
+					current_page_as_string||=stars_page_as_string
+
+					if propriety==3
+						if writers_done.class==TrueClass and directors_done.class==FalseClass
+							stars_raw=directors_area
+							directors_done=TRUE
+						end
+
+						if directors_done.class==TrueClass
+							stars_raw=crew_area
+							crew_done=TRUE
 						end
 					end
-				}
-			end
 
+					unless stars_raw[1].match(/there are currently no cast members./i)
+						stars_raw.each_index {|stars_raw_i|
+#							next if stars_raw_i==0  #Skip first array element, junk entry containing html tags that we matched above
+							next unless stars_raw[stars_raw_i].match(/\<h\d\ class="name"\>.+?\<\/h\d\>/im)
+							actor={}
+							name=stars_raw[stars_raw_i].match(/\<h3 class="name"\>(\<.+?\>)?.+?(\<.+?\>)?\<\/h3\>/i)[0].gsub(/\<.+?\>/,'')
+							role=stars_raw[stars_raw_i].match(/\<div class="role"\>.+?\<\/div\>/i)[0].gsub(/\<.+?\>/, '')
+							actor_bio_url=stars_raw[stars_raw_i].match(/\<h3 class="name"\>.+?\<\/h3\>/i)[0].
+								match(/<a.+?\>/)[0].gsub(/^.+?"/, '').chop.chop
+							actor={ 'Name' => name, 'Role' => role, 'Propriety' => propriety}
+							if $Populate_Bios.class==TrueClass
+								birthplace=''
+								birthdate=''
+								aka=''
+								recent_role=''
+								recent_role_series=''
+								summary=''
+								bio=TvDotComScraper.db_has_bio?(actor['Name'])
+								unless bio.empty?
+									#TODO
+									#MERGE BIO INFO
+								else
+									#db_has_bio returned nothing, get bio
+									actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
+									
+
+								end
+							end
+							search_results[results_i]['Credits'] << actor
+						}
+					end
+
+					#Process multiple pages
+					if stars_raw[0].match(/pagination/i)
+						#There are multiple pages, get the next page URL, and restart loop
+						pagination_raw=current_page_as_string.match(/\<h\d class="module_title"\>stars\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0].
+							match(/^.+?\<div class="body"\>/im)[0]
+						unless pagination_raw.match(/\<a href=".+?"\>next/im)
+							next_page=''
+							#end of pages?
+							break
+						else
+							next_page=pagination_raw.match(/\<a href=".+?"\>next/im)[0].
+								match(/".+?"/)[0].chop.reverse.chop.reverse
+						end
+					elsif propriety==3
+						#Writers and Directors page is broken into multiple table sections which can be processed, but must be done
+						#seperately.  Process each one in turn, already having done writers
+						writers_done=TRUE
+						unless directors_done.class==TrueClass
+							directors_area=crew_page_as_string.match(/\<h\d class="module_title"\>directors\<\/h\d\>.+?\<h\d class="module_title"\>crew/im)[0].split('<li')
+						end
+						unless  !crew_done.class==TrueClass
+							crew_area=crew_page_as_string.match(/\<h\d class="module_title"\>crew\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0].split('<li')
+						end
+						if writers_done and directors_done and crew_done
+							#finished all three
+							break
+						end
+						
+							
+					else
+						#Break unless there are multiple pages to process
+						break
+					end
+				end #End of while loop
+				next_page=''
+			} 
 
 			#Fill in the episodes
 			printf '=>>>'
