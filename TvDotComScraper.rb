@@ -11,7 +11,7 @@ $Database_user='TvDotCom'
 $Database_password='omgrandom'
 $anti_flood=2
 $Use_Mysql=TRUE
-$Sql_Check=TRUE
+$Sql_Check=FALSE
 $Populate_Bios=TRUE
 
 module TvDotComScraper
@@ -425,6 +425,8 @@ The search_results array is in this format
 					end
 				}
 			end
+
+
 			#Fill in the episodes
 			printf '=>>>'
 			begin
@@ -439,69 +441,93 @@ The search_results array is in this format
 			printf "<=   "
 
 			episodes_raw=""
-			$it||=[]
-			$it<< allepisode_page_as_string
-			episodes_raw=allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im )[0].
-				split('</li>') unless allepisode_page_as_string.match(/print episode guide.+?\<script type=\"text\/javascript"\>/im).nil?
-			printf "[no-episodes] " if episodes_raw.empty?
-			#next if episodes_raw.empty?
+			episodes_raw=allepisode_page_as_string.match(/\<div\sid="episode_guide_list"\>.+?\<div\sclass="paginator"\>/im)[0].
+				split("</li>\n\n\n")
+			if episodes_raw[0].match(/No episodes have been added/im)
+				printf "[no-episodes] "
+				episodes_raw=[]
+			end
+
 			unless episodes_raw.empty?
 				episodes_raw.each {|episode_as_string|
-					episode={}
-					next if episode_as_string.gsub(/\<.*?\>/, '').strip.empty?
-					#Season, Ep Number, and Ep Name
-					first_bit=episode_as_string.match(/\<h\d class="title"\>.+?\<\/a\>\<\/h\d\>/im)[0].
-						match(/^\<.+?\>.+?\<a.*?\>/i)[0]
-					if first_bit.match(/season \d+/i)
-						episode['Season']=first_bit.match(/season \d+/i)[0].
-							match(/\d+/)[0]
-					elsif first_bit.match(/pilot/i)
-						printf "   WARNING: episode with no season, but could be pilot.  defaulting to season 1  --- "
-						episode['Season']='1'
-					end
-					if first_bit.match(/Ep \d+/i)
-						episode['EpNum']=first_bit.match(/Ep \d+/i)[0].
-							match(/\d+/)[0]
-					elsif first_bit.match(/pilot/i)
-						pp first_bit
-						if first_bit.gsub(/\<.+?\>/, '').match(/pilot/i)
-							episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/pilot/i)[0]
-						else 
-							#'pilot' is in the html tags but not in text
-							episode['EpNum']='Pilot'
-						end
-					elsif first_bit.match(/special/i)
-						episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/special/i)[0]
-					else
-						episode['EpNum']='Special'
-					end
-					episode['EpName']=episode_as_string.match(/\<h\d class="title"\>.+?\<\/a\>\<\/h\d\>/im)[0].
-						match(/\<a.+?\>.*?(\<.+?\>){2}/)[0].
-						gsub(/^\<a.+?\>/, '').gsub(/(\<.+?\>){2}/, '')
-					if episode_as_string.match(/\<span class="score"\>.+?\<\/span\>/)
-						episode['EpRating']=episode_as_string.match(/\<span class="score"\>.+?\<\/span\>/)[0].
-							gsub(/\<.+?\>/,'')
-					else
-						episode['EpRating']=FALSE
-					end
-					if episode_as_string.match(/\<\/p\>Aired:/)
-						episode['Summary']=episode_as_string.match(/\<div class="info"\>\<p\>.*?\<\/p>Aired:/im)[0].
-							gsub(/^(\<.*?\>){2}/, '').gsub(/\<\/p\>Aired:$/i, '')
-						begin
-							episode['Aired']=DateTime.parse(episode_as_string.match(/Aired: \<span.+?\>.+?$/)[0].
-								gsub('Aired: ', '').gsub(/\<.+?\>/, ''))
-						rescue ArgumentError => e
-						printf "   WARNING: Invalid date detected.  Purged.   ---"
-							episode['Aired']=FALSE
-						end
-					else
-						episode['Summary']=episode_as_string.match(/\<div class="info"\>\<p\>.*?\<\/p>\<\/div\>/im)[0].
-							gsub(/^(\<.*?\>){2}/, '').gsub(/\<\/p\>\<\/div\>$/i, '')
-						episode['Aired']=''
-					end
+					#So that we can spit out the episode to the user for examination
+					#if we panic trying to get information from it
+					begin
+						episode={}
+						next if episode_as_string.gsub(/\<.*?\>/, '').strip.empty?
+						#Season, Ep Number, and Ep Name
+						first_bit=episode_as_string.match(/\<div class="meta"\>.+?\<\/div\>/im)[0]
 
-					next if episode['EpName'].match(/to be deleted/i)
-					search_results[results_i]['Episodes'] << episode
+						#Season
+						if first_bit.match(/season \d+/i)
+							episode['Season']=first_bit.match(/season \d+/i)[0].
+								match(/\d+/)[0]
+						elsif first_bit.match(/pilot/i)
+							printf "   WARNING: episode with no season, but could be pilot.  defaulting to season 1  --- "
+							episode['Season']='1'
+						else
+							raise "populate_results(): Did not catch 'Season'?"
+						end
+						
+						#Episode Number
+						if first_bit.match(/Episode \d+/i)
+							episode['EpNum']=first_bit.match(/Episode \d+/i)[0].
+								match(/\d+/)[0]
+						elsif first_bit.match(/pilot/i)
+							if first_bit.gsub(/\<.+?\>/, '').match(/pilot/i)
+								episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/pilot/i)[0]
+							else 
+								#'pilot' is in the html tags but not in text
+								episode['EpNum']='Pilot'
+							end
+						elsif first_bit.match(/special/i)
+							episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/special/i)[0]
+						else
+							puts "populate_results(): Did not catch 'Episode Num'?\nAssuming episode is a 'Special'"
+							episode['EpNum']='Special'
+						end
+
+						#Episode Name
+						episode['EpName']=episode_as_string.match(/\<h\d\>\s+?\<a.+?\>.+?\<\/a\>\s+?\<\/h\d\>/im)[0].
+							gsub(/^(\<.+?\>(\s+)?){2}/, '').gsub(/(\<.+?\>(\s+)?){2}$/,'')
+
+						#EpRating
+						raw_score=episode_as_string.match(/\<div class="global_score"\>.+?<\/div\>/im)[0].
+							match(/\<span class="number"\>.+?\<\/span\>/im)[0]
+						if raw_score.match(/n\/a/i)
+							episode['EpRating']=FALSE
+						else
+							episode['EpRating']=raw_score.gsub(/\<.+?\>/, '')
+						end
+
+						#Aired
+						if first_bit.match(/aired/i)
+							begin
+								episode['Aired']=DateTime.parse(first_bit.match(/aired:\s.+?\s/i)[0].
+									gsub(/^.+?\s/, '').gsub(/\s$/, ''))
+							rescue ArgumentError => e
+								printf "   WARNING: Invalid date detected.  Purged.   ---"
+								episode['Aired']=FALSE
+							end
+						else
+							episode['Aired']=''
+						end
+
+						#Summary
+						episode['Summary']=''
+						summary=episode_as_string.match(/\<h\d\>.+?\<\/h\d\>\s+?\<p.+?\>.+?\<ul/im)[0].
+							gsub(/\s+?\<\/p\>\s+?\<ul$/, '').gsub(/^.+?\<p.+?\>\s+/im, '')
+						summary.strip.empty? ? episode['Summary']=FALSE : episode['Summary']=summary
+						puts "populate_results(): Empty episode summary?" if episode['Summary'].class==FalseClass
+						pp search_results[results_i]['series_details_url'] if episode['Summary'].class==FalseClass
+
+						next if episode['EpName'].match(/to be deleted/i)
+						search_results[results_i]['Episodes'] << episode
+					rescue
+						puts "ERROR!!  DEBUG - Printing episode that caused the problem..."
+						pp episode_as_string
+						raise $!
+					end
 				}
 			end
 
