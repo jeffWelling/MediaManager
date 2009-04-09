@@ -689,6 +689,69 @@ The search_results array is in this format
 		return formatted_result
 	end
 
+	#Search the database for episodes for this tvcomID
+	#Return array of episodes to fit in series_results[result_i]['Episodes'], or empty array
+	#Show expired indicates wether to show episodes that have 'expired', it is intended for use for
+	#pulling episodes from the database when tv.com isn't available for updating.
+	def self.db_has_episodes?(tvcomID, show_expired=nil)
+		raise "db_has_episodes?(): tvcomID must be an integer." if !tvcomID.class==Fixnum
+		episodes=[]
+		return {} unless $Use_Mysql
+		printf "db_has_episodes?(): Getting episodes for tvcomID:'#{tvcomID}'"
+		result={}
+		begin
+			$dbh= DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
+
+			rez= $dbh.execute "SELECT * FROM Episodes WHERE tvcomID='#{tvcomID}'"
+			arry=[]
+			columns=rez.column_names
+			rowNum=0
+			while row=rez.fetch
+				count=0
+				row.each {|item|
+					arry[rowNum]||={}
+					arry[rowNum].merge!( columns[count] => item )
+					count=count+1
+				}
+				rowNum=rowNum+1
+			end
+			
+			unless arry.empty?
+				arry.each {|ep|
+					episode={}
+					ep.each_key {|attr_name|
+						episode[attr_name]=FALSE unless attr_name.match(/dateadded/i) or attr_name.match(/uid/i) or attr_name.match(/tvcomID/i)
+						next if ep[attr_name].nil? or attr_name.match(/dateadded/i) or attr_name.match(/uid/i) or attr_name.match(/tvcomID/i)
+ 
+						case attr_name
+							when 'EpName'
+								episode[attr_name]=ep[attr_name]
+							when 'EpRating'
+								episode[attr_name]=ep[attr_name]
+							when 'Aired'
+								#Convert to DateTime from DBI:Timestamp
+								begin
+									episode[attr_name]=DateTime.parse(ep[attr_name].to_s)
+								rescue ArgumentError => e
+									raise $! unless e.to_s.match(/invalid date/i)
+									puts "db_has_episode?(): Invalid Date for '#{ep['EpName']}' in tvcomID '#{tvcomID}', cleansing."
+									episode[attr_name]=FALSE
+							end
+							when 'Summary'
+								episode[attr_name]=ep[attr_name]
+							when 'Season'
+								episode[attr_name]=ep[attr_name]
+							when 'EpNum'
+								episode[attr_name]=ep[attr_name]
+						end
+					}
+					episodes << episode
+				}
+			end
+		end
+		return episodes
+	end
+
 	#Look in database for actor
 	#This functio does NOT populate the actor database, it will only return results already in the database
 	#The only way actor biographies are populated is when a search is performed
