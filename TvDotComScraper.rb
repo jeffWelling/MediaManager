@@ -375,8 +375,8 @@ The search_results array is in this format
 		search_results.each_index {|results_i|
 			info=0
 			info=db_has_series?(search_results[results_i]['tvcomID'].to_i)
+			search_results[results_i]['Episodes']=db_has_episodes?(search_results[results_i]['tvcomID'])
 			search_results[results_i].merge!({ 'Details' => info['Details'] }) unless info.empty?
-			search_results[results_i]['Episodes']=[]
 			next unless info.empty?
 			page_as_string=TvDotComScraper.get_page(search_results[results_i]['series_details_url'])
 			episode_page_as_string=TvDotComScraper.get_page(page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/episode.html/i)[0])
