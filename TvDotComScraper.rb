@@ -9,10 +9,55 @@ $Database_name='TvDotComScraperCache'
 $Database_host='mysql.osnetwork'
 $Database_user='TvDotCom'
 $Database_password='omgrandom'
-$anti_flood=2
+$anti_flood=0
 $Use_Mysql=TRUE
 $Sql_Check=FALSE
 $Populate_Bios=FALSE
+
+#Credit for origional generate_hash function goes to 
+#http://blog.arctus.co.uk/articles/2007/09/17/compatible-md5-sha-1-file-hashes-in-ruby-java-and-net-c/
+#Adapted to be slightly verbose, and to use a cache, with the option of bypassing the cache.
+require 'digest/sha1'	
+def hash_file(file_path_and_name, bypassCache=nil) #Was generate_hash
+	cache=''
+
+	#Only delete files that are being processed so that the database may be consulted manually for information if thetvdb ever has problems or goes down	
+	n=sqlAddUpdate("DELETE FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}' AND DateAdded < '#{DateTime.now.-(3).strftime("%Y-%m-%d %H:%M:%S")}'")
+	puts "Deleted expired cache record of file's hash." if n==1
+	cache=sqlSearch("SELECT * FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}'")
+	unless cache.empty? or bypassCache
+		puts "This file was hashed less than 3 days ago, using cached hash."
+		return cache[0]['FileSHA']
+	end
+
+  hash_func = Digest::SHA1.new # SHA1 or MD5
+	print "\nHashing a file "
+	sofar=0	
+	size=File.size(file_path_and_name)
+	current=size/50
+  open(file_path_and_name, "rb") do |io|
+    while (!io.eof)
+            readBuf = io.readpartial(1024)
+						sofar=sofar+1024
+						print '.' if sofar > current
+						current=current+size/50 if sofar > current
+            hash_func.update(readBuf)
+    end
+  end
+	
+  digest=hash_func.hexdigest
+	puts "100%  =>  #{digest}"
+	sqlAddUpdate("INSERT INTO FileHashCache (PathSHA, FileSHA, DateAdded) VALUES ('#{hash_filename file_path_and_name}', '#{digest}', NOW())") if cache.empty?
+	return digest
+end
+#Generate a hash of the path to a file for the purpose of MySQL lookup
+def hash_filename path
+	hash_func = Digest::SHA1.new # SHA1 or MD5
+	hash_func.update(path)
+	return hash_func.hexdigest
+end
+
+
 
 module TvDotComScraper
 	#Custom added self. to every function because it wouldnt freaking work without it, and I dont feel like relearning methods and scopes this very second, if it bothers you then suggest a fix.
@@ -147,8 +192,8 @@ module TvDotComScraper
 				return page_as_string.match(/\<h\d\>Show Score\<\/h\d\>\s+?\<div.+?\<\/div\>\s+?<div class="global_score"\>.+?\<\/div\>/im)[0].
 					gsub(/\<.+?\>/, '').match(/(\d){1,}\.(\d){1,}/)[0]
 			when 'title'
-				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\s+?\<span.+?\<\/span\>\s+?){1}?\<h\d\>.+?\<\/h\d\>/im)[0].
-					match(/\<h\d\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
+				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\s+?\<span.+?\<\/span\>\s+?){1}?\<h\d( class="show_title")?\>.+?\<\/h\d\>/im)[0].
+					match(/\<h\d( class="show_title")?\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
 			when 'originally on'
 				bit=page_as_string.match(/\<span class="tagline"\>.+?\<\/span\>/im)[0].split("\n")
 				if bit[2].strip.empty?
@@ -172,12 +217,16 @@ module TvDotComScraper
 				end
 			when 'premiered'
 				begin
-					return DateTime.parse(date=page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
+					date=''
+					rawdate=page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
 						match(/\<h\d\>premiered\<\/h\d\>.+?\<.+?\>/im)[0].
-						gsub(/^\<h\d\>.+?<\/h\d\>/, '').gsub(/\<.+?\>$/, '').strip)
+						gsub(/^\<h\d\>.+?<\/h\d\>/, '').gsub(/\<.+?\>$/, '').strip
+					date=DateTime.parse(rawdate)
+					return date
 				rescue NoMethodError => e
 					#Silently ignore if premiered doesn't exist
-					unless e.to_s.match("undefined\\ method\\ `\\[\\]'\\ for\\ nil:NilClass")
+					unless e.to_s.match("undefined\\ method\\ `\\[\\]'\\ for\\ nil:NilClass") or date.length==4
+						pp rawdate
 						raise e
 					end
 					return FALSE
@@ -373,9 +422,12 @@ The search_results array is in this format
 		printf "Done.\npopulate_results(): Populating #{search_results.length} items...  \n"
 	
 		search_results.each_index {|results_i|
+			search_results[results_i]['Episodes']=[]
+#			search_results[results_i]['Credits']=[]
 			info=0
 			info=db_has_series?(search_results[results_i]['tvcomID'].to_i)
-			search_results[results_i]['Episodes']=db_has_episodes?(search_results[results_i]['tvcomID'])
+			search_results[results_i]['Episodes']=db_has_episodes?(search_results[results_i]['tvcomID']) unless info.empty?
+			
 			search_results[results_i].merge!({ 'Details' => info['Details'] }) unless info.empty?
 			next unless info.empty?
 			page_as_string=TvDotComScraper.get_page(search_results[results_i]['series_details_url'])
@@ -391,7 +443,7 @@ The search_results array is in this format
 				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
 			}
 
-			puts "\npopulate_results(): populating staff\n"
+			puts "\npopulate_results(): populating biographies, need to pull additional pages...\n" if $Populate_Bios
 			#FIXME Handle multiple pages for stars, and for recurring roles, etc
 			#populate stars, recurring roles, and writers and directors
 			#propriety maps out to ['Stars', 'Recurring Roles', and 'Writers and Directors'] respectively
@@ -399,13 +451,10 @@ The search_results array is in this format
 			[1,2,3].each {|propriety|
 				case propriety
 					when 1
-						puts "stars"
 						stars_raw=stars_page_as_string.match(/\<h\d class="module_title"\>stars\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0].split('<li')
 					when 2
-						puts "recurring"
 						stars_raw=recurring_page_as_string.match(/\<h\d class="module_title"\>recurring roles\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0].split('<li')
 					when 3
-						puts "crew"
 						stars_raw=crew_page_as_string.match(/\<h\d class="module_title"\>writers\<\/h\d\>.+?\<h\d class="module_title"\>directors/im)[0].split('<li')
 				end
 				next_page=''
@@ -520,9 +569,15 @@ The search_results array is in this format
 			episodes_raw=""
 			episodes_raw=allepisode_page_as_string.match(/\<div\sid="episode_guide_list"\>.+?\<div\sclass="paginator"\>/im)[0].
 				split("</li>\n\n\n")
-			if episodes_raw[0].match(/No episodes have been added/im)
+			no_season=FALSE
+			if episodes_raw[0].match(/No episodes have been added/i) and episode_page_as_string.match(/No episodes have been added for this season of/i)
 				printf "[no-episodes] "
 				episodes_raw=[]
+			elsif episodes_raw[0].match(/no episodes have been added/i)
+				printf "[Episodes external of any season found, using Season '0'] "
+				episodes_raw=episode_page_as_string.match(/\<div\sid="episode_guide_list"\>.+?\<div\sclass="paginator"\>/im)[0].
+					split("</li>\n\n\n")
+				no_season=TRUE
 			end
 
 			unless episodes_raw.empty?
@@ -542,6 +597,8 @@ The search_results array is in this format
 						elsif first_bit.match(/pilot/i)
 							printf "   WARNING: episode with no season, but could be pilot.  defaulting to season 1  --- "
 							episode['Season']='1'
+						elsif no_season
+							episode['Season']='0'
 						else
 							raise "populate_results(): Did not catch 'Season'?"
 						end
@@ -697,7 +754,7 @@ The search_results array is in this format
 		raise "db_has_episodes?(): tvcomID must be an integer." if !tvcomID.class==Fixnum
 		episodes=[]
 		return {} unless $Use_Mysql
-		printf "db_has_episodes?(): Getting episodes for tvcomID:'#{tvcomID}'"
+		printf "db_has_episodes?(): Getting episodes for tvcomID:'#{tvcomID}' \n"
 		result={}
 		begin
 			$dbh= DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
@@ -830,6 +887,19 @@ The search_results array is in this format
 						end
 					}
 				end
+				unless series['Credits'].empty?
+					series['Credits'].each {|person|
+						if !person['Role'].class==String
+							raise "store_series_in_db(): OMg bad args!!!!!!"
+						end
+						if !person['Name'].class==String
+							raise "store_series_in_db(): OMg bad args!!!!!!"
+						end
+						if !person['Propriety'].class==String
+							raise "store_series_in_db(): OMg bad args!!!!!!"
+						end
+					}
+				end
 				if !series['tvcomID'].class==String
 					raise "store_series_in_db(): OMg bad args!!!!!!"
 				end
@@ -882,6 +952,29 @@ The search_results array is in this format
 			sql_String << "NOW())"
 			TvDotComScraper.sql_do sql_String
 		}
+
+		#duplicate credits entries have been found in the past
+		#This is here solely for the removal of duplicated credit entries, if you can simplify it please by all means, do so (And cc me?)
+		#Note this was written with 1.8.6, .uniq would work if this was 1.8.7
+		series['Credits'].each_index {|credits_index|
+			series['Credits'][credits_index]['sha1']=''
+			series['Credits'][credits_index]['sha1']=hash_filename(series['Credits'][credits_index]['Name'] + series['Credits'][credits_index]['Role'] + series['tvcomID'])
+		}
+		cast={}
+		series['Credits']=series['Credits'].delete_if {|person|
+			cast[person['sha1']]= person unless cast.has_key? person['sha1']
+		}
+		
+		cast.each {|person|
+			sql_String="INSERT INTO Cast_and_Crew (tvcomID, Name, Role, Propriety, DateAdded) VALUES ("
+			sql_String << " '#{series['tvcomID']}', "
+			sql_String << " '#{Mysql.escape_string(person[1]['Name'])}', "
+			sql_String << " '#{Mysql.escape_string(person[1]['Role'])}', "
+			sql_String << " #{person[1]['Propriety']}, "
+			sql_String << " NOW() )"
+			TvDotComScraper.sql_do sql_String
+		}
+
 		printf " Done\n"
 		return effected
 	end
