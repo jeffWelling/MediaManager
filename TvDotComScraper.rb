@@ -690,7 +690,9 @@ The search_results array is in this format
 
 
 			rez = $dbh.execute "SELECT * FROM Series_Details WHERE tvcomID='#{seriesID}'"
+			rez1 = $dbh.execute "SELECT * FROM Cast_and_Crew WHERE tvcomID='#{seriesID}"
 			arry=[]
+			arry1=[]
 			columns=rez.column_names
 			rowNum=0
 			while row=rez.fetch
@@ -702,7 +704,20 @@ The search_results array is in this format
 				}
 				rowNum=rowNum+1
 			end
-			formatted_result={'Details'=> {}, 'Episodes'=>[]}
+
+			columns=rez1.column_names
+			rowNum=0
+			while row=rez1.fetch
+				count=0
+				row1.each {|item|
+					arry1[rowNum]||={}
+					arry1[rowNum].merge!( columns[count] => item )
+					count=count+1
+				}
+				rowNum=rowNum+1
+			end
+
+			formatted_result={'Details'=> {}, 'Episodes'=>[], 'Credits'=>[]}
 			attrs=['Status', 'Originally on', 'Show score', 'Premiered', 'Title', 'Summary', 'Show Categories', 'Last Aired']
 			unless arry.empty? 
 				attrs.each {|attribute|
@@ -726,6 +741,18 @@ The search_results array is in this format
 				formatted_result={}
 				printf "not found :(\n"
 			end
+
+			attrs1=['Role', 'Name', 'Propriety']
+			unless arry1.empty?
+				attrs1.each {|attribute|
+					next if arry1[0][attribute].nil?
+					if arry[0][attribute
+				}
+			else
+				formatted_result={}
+				printf "not found! :(\n"
+			end
+				
 
 			#do stuff here
 			#format results
