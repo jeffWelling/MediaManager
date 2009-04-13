@@ -426,9 +426,13 @@ The search_results array is in this format
 #			search_results[results_i]['Credits']=[]
 			info=0
 			info=db_has_series?(search_results[results_i]['tvcomID'].to_i)
-			search_results[results_i]['Episodes']=db_has_episodes?(search_results[results_i]['tvcomID']) unless info.empty?
+			unless info.empty?
+				search_results[results_i].merge!({ 'Details' => info['Details'] })
+				search_results[results_i].merge!({ 'Credits' => info['Credits'] })
+			end
 			
-			search_results[results_i].merge!({ 'Details' => info['Details'] }) unless info.empty?
+			search_results[results_i]['Episodes']=db_has_episodes?(search_results[results_i]['tvcomID']) unless info.empty?
+	
 			next unless info.empty?
 			page_as_string=TvDotComScraper.get_page(search_results[results_i]['series_details_url'])
 			episode_page_as_string=TvDotComScraper.get_page(page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/episode.html/i)[0])
@@ -707,7 +711,7 @@ The search_results array is in this format
 
 			columns=rez1.column_names
 			rowNum=0
-			while row=rez1.fetch
+			while row1=rez1.fetch
 				count=0
 				row1.each {|item|
 					arry1[rowNum]||={}
@@ -744,9 +748,12 @@ The search_results array is in this format
 
 			attrs1=['Role', 'Name', 'Propriety']
 			unless arry1.empty?
-				attrs1.each {|attribute|
-					next if arry1[0][attribute].nil?
-					if arry[0][attribute
+				arry1.each {|person|
+					crew_person={}
+					attrs1.each {|attribute|
+						crew_person[attribute]=person[attribute] if attribute.match(/role/i) or attribute.match(/name/i) or attribute.match(/propriety/i)
+					}
+				formatted_result['Credits'] << crew_person
 				}
 			else
 				formatted_result={}
