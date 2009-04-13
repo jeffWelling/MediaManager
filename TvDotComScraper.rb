@@ -962,8 +962,8 @@ The search_results array is in this format
 		}
 		cast={}
 		series['Credits']=series['Credits'].delete_if {|person|
-			cast[person['sha1']]= person unless cast.has_key? person['sha1']
-			cast.has_key? person['sha1']
+			!cast[person['sha1']]= person unless cast.has_key? person['sha1']
+#			cast.has_key? person['sha1']
 		}
 		
 		cast.each {|person|
