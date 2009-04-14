@@ -9,10 +9,10 @@ $Database_name='TvDotComScraperCache'
 $Database_host='mysql.osnetwork'
 $Database_user='TvDotCom'
 $Database_password='omgrandom'
-$anti_flood=0
+$anti_flood=2
 $Use_Mysql=TRUE
 $Sql_Check=FALSE
-$Populate_Bios=FALSE
+$Populate_Bios=TRUE
 
 #Credit for origional generate_hash function goes to 
 #http://blog.arctus.co.uk/articles/2007/09/17/compatible-md5-sha-1-file-hashes-in-ruby-java-and-net-c/
@@ -429,6 +429,11 @@ The search_results array is in this format
 			unless info.empty?
 				search_results[results_i].merge!({ 'Details' => info['Details'] })
 				search_results[results_i].merge!({ 'Credits' => info['Credits'] })
+				unless search_results[results_i]['Credits'].empty?
+					search_results[results_i]['Credits'].each_index {|credits_i|
+						search_results[results_i]['Credits'][credits_i].merge!(TvDotComScraper.db_has_bio?(search_results[results_i]['Credits'][credits_i]['Name']))
+					}
+				end
 			end
 			
 			search_results[results_i]['Episodes']=db_has_episodes?(search_results[results_i]['tvcomID']) unless info.empty?
@@ -444,7 +449,7 @@ The search_results array is in this format
 			search_results[results_i]['Details']={}
 			values=['Originally on', 'Status', 'Premiered', 'Last Aired', 'Show Categories', 'Summary', 'Show score', 'Title']
 			values.each {|attribute|
-				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string)
+				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string) #unless $Populate_Bios.class==FalseClass
 			}
 
 			puts "\npopulate_results(): populating biographies, need to pull additional pages...\n" if $Populate_Bios
@@ -499,12 +504,13 @@ The search_results array is in this format
 								match(/<a.+?\>/)[0].gsub(/^.+?"/, '').chop.chop
 							actor={ 'Name' => name, 'Role' => role, 'Propriety' => propriety}
 							if $Populate_Bios.class==TrueClass
-								birthplace=''
-								birthdate=''
-								aka=''
-								recent_role=''
-								recent_role_series=''
-								summary=''
+								actor['birthplace']=FALSE
+								actor['birthday']=FALSE
+								actor['aka']=FALSE
+								actor['recent_role']=FALSE
+								actor['recent_role_series']=FALSE
+								actor['summary']=FALSE
+								actor['gender']=FALSE
 								bio=TvDotComScraper.db_has_bio?(actor['Name'])
 								unless bio.empty?
 									#TODO
@@ -512,7 +518,38 @@ The search_results array is in this format
 								else
 									#db_has_bio returned nothing, get bio
 									actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
+									good_parts=actor_bio_page_string.match(/\<h\d class="module_title"\>\<a href=".+?"\>biography(\<.+?\>){2}.+?\<script type=".+?"\>/im)[0]
 									
+									actor['birthplace']=good_parts.match(/\<dt\>birthplace:\<\/dt\>\s+?\<dd\>.+?\<\/dd\>/im)[0].
+										gsub(/^.+?\n/, '').gsub(/\s+\<.+?\>/, '').gsub(/\<.+?\>$/, '') if good_parts.match(/birthplace:/i)
+
+									begin
+										date=(good_parts.match(/\<dt\>birthday:\<\/dt\>\s+\<dd\>.+?\<\/dd\>/im)[0].
+											gsub(/^.+?\n/m, '').gsub(/^\s+?\<.+?\>/, '').gsub(/\<.+?\>$/, ''))
+										formatted_date= date.match(/-\d+-/)[0].chop.reverse.chop.reverse + '-' + date.match(/\d+/)[0] + '-' + date.match(/\d+$/)[0]
+										actor['birthday']=DateTime.parse(formatted_date)
+									rescue ArgumentError => e
+										raise e unless e.to_s.match(/invalid date/i)
+										puts "\n\nBio for #{actor['Name']} has an invalid date in it? '#{formatted_date}'"
+										puts "page is at =>    #{actor_bio_url}\n\n"
+										actor['birthday']=FALSE
+									rescue NoMethodError => e
+										$it=e
+										raise e unless e.to_s.match(/undefined method `\[\]' for nil:nilclass/i)
+										actor['birthday']=FALSE
+									end
+
+									actor['aka']=good_parts.match(/\<dt\>aka:\<\/dt\>\s+?\<dd\>.+?\<\/dd\>/im)[0].gsub(/^.+?\n\s+?\<.+?\>/, '').gsub(/\<.+?\>$/, '') if good_parts.match(/aka:/i)
+
+									if good_parts.match(/recent role:/i)
+										actor['recent_role']=good_parts.match(/\<dt\>recent role:\<\/dt\>\s+\<dd\>\<strong\>.+?\<\/strong\>\<\/dd\>/im)[0].
+											gsub(/^.+?\<strong\>/im, '').gsub(/\<\/strong\>\<\/dd\>$/, '').gsub(/\<a .+?\>/,"'").gsub(/\<\/a\>/, "'")
+										actor['recent_role_series']=good_parts.match(/\<dt\>recent role:\<\/dt\>\s+\<dd\>\<strong\>.+?\<\/strong\>\<\/dd\>/im)[0].gsub(/^.+?href=".+?\/show\//im, '').gsub(/\/summary.+?$/, '')
+									end
+
+									actor['summary']=good_parts.match(/\<span class="long"\>.+?\<\/span\>/im)[0].gsub(/^\<.+?\>/, '').gsub(/\<.+?\>$/, '') unless good_parts.match(/Add\<\/a\> biographical information for/i)
+
+									actor['gender']=good_parts.match(/\<dt\>gender:\<\/dt\>\s+?\<dd\>.+?\<\/dd\>/im)[0].gsub(/^.+?\n\s+\<dd\>/, '').gsub(/\<\/dd\>$/, '') if good_parts.match(/gender:/i)
 
 								end
 							end
@@ -959,6 +996,7 @@ The search_results array is in this format
 		printf "store_series_in_db(): Storing ..."	
 		sql_String='INSERT INTO Series_Details (Title, Status, Originally_On, Show_Score, Premiered, Last_Aired, Summary, Show_Categories, tvcomID, DateAdded, series_details_url) '
 		sql_String << 'VALUES ('
+		pp series['Details']['Title'] unless series['Details']['Title'].class==String
 		sql_String << "'#{Mysql.escape_string(series['Details']['Title'])}', "
 		series['Details']['Status'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Status'])}', "
 		series['Details']['Originally on'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(series['Details']['Originally on'])}', "
