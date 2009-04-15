@@ -9,7 +9,7 @@ $Database_name='TvDotComScraperCache'
 $Database_host='mysql.osnetwork'
 $Database_user='TvDotCom'
 $Database_password='omgrandom'
-$anti_flood=2
+$anti_flood=0
 $Use_Mysql=TRUE
 $Sql_Check=FALSE
 $Populate_Bios=TRUE
@@ -452,7 +452,7 @@ The search_results array is in this format
 				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string) #unless $Populate_Bios.class==FalseClass
 			}
 
-			puts "\npopulate_results(): populating biographies, need to pull additional pages...\n" if $Populate_Bios
+			puts "\n\npopulate_results(): populating biographies, need to pull additional pages...\n" if $Populate_Bios
 			#FIXME Handle multiple pages for stars, and for recurring roles, etc
 			#populate stars, recurring roles, and writers and directors
 			#propriety maps out to ['Stars', 'Recurring Roles', and 'Writers and Directors'] respectively
@@ -530,11 +530,12 @@ The search_results array is in this format
 										actor['birthday']=DateTime.parse(formatted_date)
 									rescue ArgumentError => e
 										raise e unless e.to_s.match(/invalid date/i)
-										puts "\n\nBio for #{actor['Name']} has an invalid date in it? '#{formatted_date}'"
-										puts "page is at =>    #{actor_bio_url}\n\n"
+										unless formatted_date=='0-0-0'
+											puts "\n\nBio for #{actor['Name']} has an invalid date in it? '#{formatted_date}'"
+											puts "page is at =>    #{actor_bio_url}\n\n"
+										end
 										actor['birthday']=FALSE
 									rescue NoMethodError => e
-										$it=e
 										raise e unless e.to_s.match(/undefined method `\[\]' for nil:nilclass/i)
 										actor['birthday']=FALSE
 									end
@@ -562,12 +563,12 @@ The search_results array is in this format
 						#There are multiple pages, get the next page URL, and restart loop
 						pagination_raw=current_page_as_string.match(/\<h\d class="module_title"\>stars\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0].
 							match(/^.+?\<div class="body"\>/im)[0]
-						unless pagination_raw.match(/\<a href=".+?"\>next/im)
+						unless pagination_raw.match(/\<a href="([^\n].)+?"\>next/im)
 							next_page=''
 							#end of pages?
 							break
 						else
-							next_page=pagination_raw.match(/\<a href=".+?"\>next/im)[0].
+							next_page=pagination_raw.match(/\<a href="([^\n].)+?"\>next/im)[0].
 								match(/".+?"/)[0].chop.reverse.chop.reverse
 						end
 					elsif propriety==3
@@ -681,8 +682,8 @@ The search_results array is in this format
 								episode['Aired']=DateTime.parse(first_bit.match(/aired:\s.+?\s/i)[0].
 									gsub(/^.+?\s/, '').gsub(/\s$/, ''))
 							rescue ArgumentError => e
-								printf "   WARNING: Invalid date detected.  Purged.   ---"
-								episode['Aired']=FALSE
+								printf "   WARNING: Invalid date detected.  Purged.   ---   "
+								episode['Aired']=''
 							end
 						else
 							episode['Aired']=''
@@ -793,8 +794,8 @@ The search_results array is in this format
 				formatted_result['Credits'] << crew_person
 				}
 			else
-				formatted_result={}
-				printf "not found! :(\n"
+#				formatted_result={}
+#				printf "not found! :(\n"
 			end
 				
 
@@ -892,6 +893,59 @@ The search_results array is in this format
 
 	def self.store_bio_in_db(actor)
 		return 0 unless $Use_Mysql
+		badargs="store_bio_in_db(): BAD ARGUMENTS, OH-EM-GEE YOU FOOL!"
+		person=actor[1]
+		if !person['Role'].class==String
+			raise badargs
+		end
+		if !person['Name'].class==String
+			raise badargs
+		end
+		if !person['Propriety'].class==String
+			raise badargs
+		end
+		if !person['birthplace'].class==String and !person['birthplace'].class==FalseClass
+			raise badargs
+		end
+		if !person['birthdate'].class==DateTime and !person['birthdate'].class==FalseClass
+			raise badargs
+		end
+		if !person['aka'].class==String and !person['aka'].class==FalseClass
+			raise badargs
+		end
+		if !person['recent_role'].class==String and !person['recent_role'].class==FalseClass
+			raise badargs
+		end
+		if !person['recent_role_series'].class==String and !person['recent_role_series'].class==FalseClass
+			raise badargs
+		end
+		if !person['summary'].class==String and !person['recent_role_series'].class==FalseClass
+			raise badargs
+		end
+		unless person['summary'].class==FalseClass
+			if person['summary'].length >= 12000
+				puts "OMG! THIS ONE WONT FIT IN ZE DATABASE!!! MAKE ZE DATABASE ZE BIGGER! ZE!"
+				raise "YOU ARE A DEMENTED SHEEPLE-SUCKER! Unless you work(ed) for Microsoft or something, don't want to make fun of the mentally handicapped."
+			end 
+		end
+		if !person['gender'].class==String and !person['gender'].class==FalseClass
+			raise badargs
+		end
+
+		person.each_key {|key|
+			person[key]='' if person[key].class==FalseClass
+		}
+
+		sql_String="INSERT INTO Actor_Biographies (Name, Birthplace, Birthdate, AKA, Recent_Role, Recent_Role_Series, Summary, gender) VALUES ("
+		sql_String << "'#{Mysql.escape_string(person['Name'])}', "
+		sql_String << "'#{Mysql.escape_string(person['birthplace'])}', "
+		sql_String << "'#{person['birthday'].to_s}', "
+		sql_String << "'#{Mysql.escape_string(person['aka'])}', "
+		sql_String << "'#{Mysql.escape_string(person['recent_role'])}', "
+		sql_String << "'#{Mysql.escape_string(person['recent_role_series'])}', "
+		sql_String << "'#{Mysql.escape_string(person['summary'])}', "
+		sql_String << "'#{Mysql.escape_string(person['gender'])}')"
+		TvDotComScraper.sql_do(sql_String)
 
 		return 0
 	end
@@ -1039,6 +1093,7 @@ The search_results array is in this format
 		}
 		
 		cast.each {|person|
+			TvDotComScraper.store_bio_in_db(person)
 			sql_String="INSERT INTO Cast_and_Crew (tvcomID, Name, Role, Propriety, DateAdded) VALUES ("
 			sql_String << " '#{series['tvcomID']}', "
 			sql_String << " '#{Mysql.escape_string(person[1]['Name'])}', "
