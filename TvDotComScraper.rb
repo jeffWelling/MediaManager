@@ -431,7 +431,7 @@ The search_results array is in this format
 				search_results[results_i].merge!({ 'Credits' => info['Credits'] })
 				unless search_results[results_i]['Credits'].empty?
 					search_results[results_i]['Credits'].each_index {|credits_i|
-						search_results[results_i]['Credits'][credits_i].merge!(TvDotComScraper.db_has_bio?(search_results[results_i]['Credits'][credits_i]['Name']))
+						search_results[results_i]['Credits'][credits_i].merge!(TvDotComScraper.db_has_bio?(search_results[results_i]['Credits'][credits_i]['Name'])) unless $Populate_Bios.class==FalseClass
 					}
 				end
 			end
@@ -515,6 +515,7 @@ The search_results array is in this format
 								unless bio.empty?
 									#TODO
 									#MERGE BIO INFO
+									actor.merge!(bio)
 								else
 									#db_has_bio returned nothing, get bio
 									actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
@@ -887,8 +888,39 @@ The search_results array is in this format
 	#Takes the actor's name, and will check for that in Name, and if no results are found, will also search AKA
 	def self.db_has_bio?(name)
 		return {} unless $Use_Mysql
+		raise "db_has_bio?(): takes a single string as an argument you idiot, if I have to tell you that do I have to tell you its supposed to be a name too?" unless name.class==String
+		actor={}
+		
+		begin
+			$dbh=DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
 
-		return {}
+			rez=$dbh.execute "SELECT * FROM Actor_Biographies WHERE Name='#{Mysql.escape_string(name)}'"
+
+			arry=[]
+			columns=rez.column_names
+			rowNum=0
+			while row=rez.fetch
+				count=0
+				row.each {|item|
+					arry[rowNum]||={}
+					arry[rowNum].merge!( columns[count] => item )
+					count=count+1
+				}
+				rowNum=rowNum+1
+			end
+
+			unless arry.empty?
+				actor['Name']=arry[0]['Name']
+				actor['birthplace']=arry[0]['Birthplace']
+				arry[0]['Birthdate'].class==NilClass ? actor['birthday']=FALSE : actor['birthday']=DateTime.parse(arry[0]['Birthdate'].to_s)
+				actor['aka']=arry[0]['AKA']
+				actor['recent_role']=arry[0]['Recent_Role']
+				actor['recent_role_series']=arry[0]['Recent_Role_Series']
+				actor['summary']=arry[0]['Summary']
+				actor['gender']=arry[0]['gender']
+			end
+		end
+		return actor
 	end
 
 	def self.store_bio_in_db(actor)
@@ -942,7 +974,7 @@ The search_results array is in this format
 		sql_String << "'#{person['birthday'].to_s}', "
 		sql_String << "'#{Mysql.escape_string(person['aka'])}', "
 		sql_String << "'#{Mysql.escape_string(person['recent_role'])}', "
-		sql_String << "'#{Mysql.escape_string(person['recent_role_series'])}', "
+		sql_String << "'#{Mysql.escape_string(person['recent_role_series'].to_s)}', "
 		sql_String << "'#{Mysql.escape_string(person['summary'])}', "
 		sql_String << "'#{Mysql.escape_string(person['gender'])}')"
 		TvDotComScraper.sql_do(sql_String)
