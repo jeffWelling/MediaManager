@@ -73,11 +73,13 @@ module MediaManager
 				
 				#If its a duplicate
 				if movieInfo.has_key?('id')==true
-					if movieInfo['Path']==files[filesP] and updateDuplicates != :yes
+					if movieInfo['Path']==files[filesP] and updateDuplicates == :yes
 						puts "Silently skipping..."
 						next
 					end
-					s="Duplicate found, OMG THINK OF SOME OPTIONS FOR HERE!"
+					pp movieInfo['Path']
+					pp files[filesP]
+					s="Duplicate found and , OMG THINK OF SOME OPTIONS FOR HERE!"
 					raise s
 					#case MediaManager.prompt(s, :)
 					#	when 
