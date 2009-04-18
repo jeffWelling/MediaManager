@@ -9,10 +9,11 @@ $Database_name='TvDotComScraperCache'
 $Database_host='mysql.osnetwork'
 $Database_user='TvDotCom'
 $Database_password='omgrandom'
-$anti_flood=0
+$anti_flood=2
 $Use_Mysql=TRUE
 $Sql_Check=FALSE
 $Populate_Bios=TRUE
+$seriesCacheTime=7
 
 #Credit for origional generate_hash function goes to 
 #http://blog.arctus.co.uk/articles/2007/09/17/compatible-md5-sha-1-file-hashes-in-ruby-java-and-net-c/
@@ -98,11 +99,17 @@ module TvDotComScraper
 		end
 		option_string = options.collect {|x| x.to_s.capitalize}.join('/')
 		answer = nil
-		loop {
-			answer = ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
-			answer=default if answer==:nil
-			break if options.member? answer
-		}
+		begin
+			loop {
+				answer = ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
+				answer=default if answer==:nil
+				break if options.member? answer
+			}
+		rescue Timeout::Error => e
+			raise $! unless e.to_s.match(/execution expired/i)
+			puts "OMGNEVERBEENHEREBEFORE!"
+			retry
+		end
 		answer
 	end
 	def self.agent(timeout=300)
@@ -189,8 +196,14 @@ module TvDotComScraper
 					return FALSE
 				end
 			when 'show score'
+				begin
 				return page_as_string.match(/\<h\d\>Show Score\<\/h\d\>\s+?\<div.+?\<\/div\>\s+?<div class="global_score"\>.+?\<\/div\>/im)[0].
 					gsub(/\<.+?\>/, '').match(/(\d){1,}\.(\d){1,}/)[0]
+				rescue NoMethodError => e
+					raise $! unless e.to_s.match(/undefined method `\[\]' for nil:nilclass/i)
+					#FFSOMGBBQ This show has no score!!!!!!
+					return '0.0'
+				end
 			when 'title'
 				return page_as_string.match(/\<!--\/header_area--\>\s+?(\<div.+?\>\s+?){1,4}?(\s+?\<span.+?\<\/span\>\s+?){1}?\<h\d( class="show_title")?\>.+?\<\/h\d\>/im)[0].
 					match(/\<h\d( class="show_title")?\>.+?\<\/h\d\>$/i)[0].gsub(/\<.+?\>/, '')
@@ -506,6 +519,7 @@ The search_results array is in this format
 							if $Populate_Bios.class==TrueClass
 								actor['birthplace']=FALSE
 								actor['birthday']=FALSE
+								actor['death']=FALSE
 								actor['aka']=FALSE
 								actor['recent_role']=FALSE
 								actor['recent_role_series']=FALSE
@@ -515,6 +529,7 @@ The search_results array is in this format
 								unless bio.empty?
 									#TODO
 									#MERGE BIO INFO
+									puts "\nAlready got this bio!! YAY!!!"
 									actor.merge!(bio)
 								else
 									#db_has_bio returned nothing, get bio
@@ -552,6 +567,24 @@ The search_results array is in this format
 									actor['summary']=good_parts.match(/\<span class="long"\>.+?\<\/span\>/im)[0].gsub(/^\<.+?\>/, '').gsub(/\<.+?\>$/, '') unless good_parts.match(/Add\<\/a\> biographical information for/i)
 
 									actor['gender']=good_parts.match(/\<dt\>gender:\<\/dt\>\s+?\<dd\>.+?\<\/dd\>/im)[0].gsub(/^.+?\n\s+\<dd\>/, '').gsub(/\<\/dd\>$/, '') if good_parts.match(/gender:/i)
+
+									if good_parts.match(/death:/i)
+										begin
+											date=good_parts.match(/\<dt\>death:\<\/dt\>\s+?\<dd\>.+?\<\/dd\>/im)[0].gsub(/^\<.+?\>.+?\<.+?\>\s+?\<.+?\>/i, '').gsub(/\<\/.+?\>$/, '')
+											formatted_date= date.match(/-\d+-/)[0].chop.reverse.chop.reverse + '-' + date.match(/\d+/)[0] + '-' + date.match(/\d+$/)[0]
+											actor['death']=DateTime.parse(formatted_date)
+										rescue ArgumentError => e
+											raise e unless e.to_s.match(/invalid date/i)
+											unless formatted_date=='0-0-0'
+												puts "\n\nBio for #{actor['Name']} has an invalid date in it for his/her death? '#{formatted_date}'"
+												puts "page is at =>    #{actor_bio_url}\n\n"
+											end
+											actor['death']=FALSE
+										rescue NoMethodError => e
+											raise e unless e.to_s.match(/undefined method `\[\]' for nil:nilclass/i)
+											actor['death']=FALSE
+										end
+									end
 
 								end
 							end
@@ -600,7 +633,7 @@ The search_results array is in this format
 			printf '=>>>'
 			begin
 				allepisode_page_as_string=TvDotComScraper.agent(300).get(episode_page_as_string.match(/\<ul class="tab_links"\>.+?\<\/ul\>/im)[0].
-					match(/\<a\s+href=".+?"\>all\<\/a\>/i)[0].
+					match(/\<a\s+?(class="selected"\s+?)?href=".+?"\>all\<\/a\>/i)[0].match(/href=".+?"/i)[0].
 					match(/".+?"/)[0].chop.reverse.chop.reverse).body
 			rescue Timeout::Error => e
 				retry if TvDotComScraper.deal_with_timeout(e)==TRUE
@@ -665,7 +698,7 @@ The search_results array is in this format
 						end
 
 						#Episode Name
-						episode['EpName']=episode_as_string.match(/\<h\d\>\s+?\<a.+?\>.+?\<\/a\>\s+?\<\/h\d\>/im)[0].
+						episode['EpName']=episode_as_string.match(/\<h\d\>\s+?\<a.+?\>.*?\<\/a\>\s+?\<\/h\d\>/im)[0].
 							gsub(/^(\<.+?\>(\s+)?){2}/, '').gsub(/(\<.+?\>(\s+)?){2}$/,'')
 
 						#EpRating
@@ -703,6 +736,7 @@ The search_results array is in this format
 					rescue
 						puts "ERROR!!  DEBUG - Printing episode that caused the problem..."
 						pp episode_as_string
+						$it=episode_as_string
 						raise $!
 					end
 				}
@@ -758,11 +792,19 @@ The search_results array is in this format
 					count=count+1
 				}
 				rowNum=rowNum+1
-			end
+			end			
 
 			formatted_result={'Details'=> {}, 'Episodes'=>[], 'Credits'=>[]}
 			attrs=['Status', 'Originally on', 'Show score', 'Premiered', 'Title', 'Summary', 'Show Categories', 'Last Aired']
 			unless arry.empty? 
+				if DateTime.parse(arry[0]['DateAdded'].to_s) < DateTime.now.-($seriesCacheTime) 
+					puts "SERIES HAS EXPIRED"
+					$dbh.do "DELETE FROM Series_Details WHERE tvcomID='#{seriesID}'"
+					$dbh.do "DELETE FROM Episodes WHERE tvcomID='#{seriesID}'"
+					$dbh.do "DELETE FROM Cast_and_Crew WHERE tvcomID='#{seriesID}'"
+					return {}
+				end
+	
 				attrs.each {|attribute|
 					attribute1='Originally_On'	if attribute.match(/originally on/i)
 					attribute1='Show_Score' if attribute.match(/show score/i)
@@ -887,7 +929,7 @@ The search_results array is in this format
 	#The only way actor biographies are populated is when a search is performed
 	#Takes the actor's name, and will check for that in Name, and if no results are found, will also search AKA
 	def self.db_has_bio?(name)
-		return {} unless $Use_Mysql
+		return {} unless $Use_Mysql and $Populate_Bios
 		raise "db_has_bio?(): takes a single string as an argument you idiot, if I have to tell you that do I have to tell you its supposed to be a name too?" unless name.class==String
 		actor={}
 		
@@ -910,9 +952,15 @@ The search_results array is in this format
 			end
 
 			unless arry.empty?
+				if DateTime.parse(arry[0]['DateAdded'].to_s) < DateTime.now.-($seriesCacheTime)
+					puts "ACTOR-BIO EXPIRED!"
+					$dbh.do "DELETE FROM Actor_Biographies WHERE Name='#{Mysql.escape_string(name)}'"
+					return {}
+				end
 				actor['Name']=arry[0]['Name']
 				actor['birthplace']=arry[0]['Birthplace']
 				arry[0]['Birthdate'].class==NilClass ? actor['birthday']=FALSE : actor['birthday']=DateTime.parse(arry[0]['Birthdate'].to_s)
+				arry[0]['death'].class==NilClass ? actor['death']=FALSE : actor['death']=DateTime.parse(arry[0]['Death'].to_s)
 				actor['aka']=arry[0]['AKA']
 				actor['recent_role']=arry[0]['Recent_Role']
 				actor['recent_role_series']=arry[0]['Recent_Role_Series']
@@ -924,7 +972,7 @@ The search_results array is in this format
 	end
 
 	def self.store_bio_in_db(actor)
-		return 0 unless $Use_Mysql
+		return 0 if !$Populate_Bios or !$Use_Mysql
 		badargs="store_bio_in_db(): BAD ARGUMENTS, OH-EM-GEE YOU FOOL!"
 		person=actor[1]
 		if !person['Role'].class==String
@@ -955,7 +1003,7 @@ The search_results array is in this format
 			raise badargs
 		end
 		unless person['summary'].class==FalseClass
-			if person['summary'].length >= 12000
+			if person['summary'].length >= 25000
 				puts "OMG! THIS ONE WONT FIT IN ZE DATABASE!!! MAKE ZE DATABASE ZE BIGGER! ZE!"
 				raise "YOU ARE A DEMENTED SHEEPLE-SUCKER! Unless you work(ed) for Microsoft or something, don't want to make fun of the mentally handicapped."
 			end 
@@ -968,15 +1016,16 @@ The search_results array is in this format
 			person[key]='' if person[key].class==FalseClass
 		}
 
-		sql_String="INSERT INTO Actor_Biographies (Name, Birthplace, Birthdate, AKA, Recent_Role, Recent_Role_Series, Summary, gender) VALUES ("
+		sql_String="INSERT INTO Actor_Biographies (Name, Birthplace, Birthdate, Death, AKA, Recent_Role, Recent_Role_Series, Summary, gender, DateAdded) VALUES ("
 		sql_String << "'#{Mysql.escape_string(person['Name'])}', "
 		sql_String << "'#{Mysql.escape_string(person['birthplace'])}', "
 		sql_String << "'#{person['birthday'].to_s}', "
+		sql_String << "'#{person['death'].to_s}', "
 		sql_String << "'#{Mysql.escape_string(person['aka'])}', "
 		sql_String << "'#{Mysql.escape_string(person['recent_role'])}', "
 		sql_String << "'#{Mysql.escape_string(person['recent_role_series'].to_s)}', "
 		sql_String << "'#{Mysql.escape_string(person['summary'])}', "
-		sql_String << "'#{Mysql.escape_string(person['gender'])}')"
+		sql_String << "'#{Mysql.escape_string(person['gender'])}', NOW() )"
 		TvDotComScraper.sql_do(sql_String)
 
 		return 0

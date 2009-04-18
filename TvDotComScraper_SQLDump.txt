@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 -- 
 -- Host: localhost
--- Generation Time: Apr 14, 2009 at 03:21 PM
+-- Generation Time: Apr 17, 2009 at 05:52 PM
 -- Server version: 5.0.32
 -- PHP Version: 5.2.0-8+etch13
 -- 
@@ -21,14 +21,16 @@ CREATE TABLE `Actor_Biographies` (
   `Name` varchar(42) NOT NULL,
   `Birthplace` varchar(150) default NULL,
   `Birthdate` datetime default NULL,
+  `Death` datetime default NULL COMMENT 'The ''Death'' field on their bio.  Rare.',
   `AKA` varchar(255) default NULL,
   `Recent_Role` varchar(42) default NULL,
   `Recent_Role_Series` int(12) default NULL,
-  `Summary` varchar(6000) default NULL,
+  `Summary` varchar(25000) default NULL,
   `gender` varchar(7) default NULL COMMENT 'shouldn''t be null?',
+  `DateAdded` datetime NOT NULL,
   PRIMARY KEY  (`uid`),
   KEY `Name` (`Name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=98 ;
 
 -- --------------------------------------------------------
 
@@ -45,7 +47,7 @@ CREATE TABLE `Cast_and_Crew` (
   `DateAdded` datetime NOT NULL,
   PRIMARY KEY  (`uid`),
   KEY `tvcomID` (`tvcomID`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=86 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=98 ;
 
 -- --------------------------------------------------------
 
@@ -65,7 +67,7 @@ CREATE TABLE `Episodes` (
   `EpNum` varchar(12) default NULL,
   PRIMARY KEY  (`uid`),
   KEY `tvcomID` (`tvcomID`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 COMMENT='Episodes for the series stored in Series_Details, reference ' AUTO_INCREMENT=266 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 COMMENT='Episodes for the series stored in Series_Details, reference ' AUTO_INCREMENT=81 ;
 
 -- --------------------------------------------------------
 
@@ -89,5 +91,5 @@ CREATE TABLE `Series_Details` (
   PRIMARY KEY  (`uid`),
   UNIQUE KEY `tvcomID` (`tvcomID`),
   KEY `Title` (`Title`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
 
