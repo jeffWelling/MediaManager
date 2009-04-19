@@ -85,10 +85,13 @@ module MM_TVDB2
 
 		search_results.each {|result|
 			#TODO Lookup info from SQL here, series details and episodes TODO#
-			raw_info= XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{result['thetvdb_id']}/all/en.xml").body )
-
 			series={}
 			series['Episodes']=[]
+			cache=MM_TVDB2.db_has_series?(result['thetvdb_id'])
+			series.merge!(cache) unless cache.empty?
+
+			raw_info= XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{result['thetvdb_id']}/all/en.xml").body )
+
 			series.merge! result	
 			result=raw_info
 			result['Series'][0]['Actors'][0].class==String ? series['Actors']=result['Series'][0]['Actors'][0] : series['Actors']=FALSE
@@ -113,6 +116,7 @@ module MM_TVDB2
 			}						
 		
 			populated_results << series
+			MM_TVDB2.
 		} #End search_results.each |result|
 		return populated_results
 	end
