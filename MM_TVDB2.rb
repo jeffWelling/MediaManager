@@ -92,7 +92,7 @@ module MM_TVDB2
 			#TODO Lookup info from SQL here, series details and episodes TODO#
 			series={}
 			series['Episodes']=[]
-			cachde={}
+			cache={}
 			cache=MM_TVDB2.db_has_series?(result['thetvdb_id'])
 			series.merge!(cache) unless cache.empty?
 
