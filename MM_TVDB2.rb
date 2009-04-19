@@ -31,9 +31,10 @@ end
 
 module MM_TVDB2
 	def self.store_series_in_db(series)
-		
+		return {}
 	end
 	def self.db_has_series?(thetvdb_id)
+		return {}
 	end
 	def self.searchTVDB(name)
 		$TVDB_search_cache||={}
