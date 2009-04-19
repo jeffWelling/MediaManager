@@ -31,11 +31,18 @@ end
 
 module MM_TVDB2
 	def self.store_series_in_db(series)
+
 		return {}
 	end
+
 	def self.db_has_series?(thetvdb_id)
+		#Sanity check argument
+		raise "db_has_series?(): Takes a string only, and it must be a thetvdb_id" unless thetvdb_id.class==String
+
+			
 		return {}
 	end
+
 	def self.searchTVDB(name)
 		$TVDB_search_cache||={}
  		raise "searchTVDB(): Only takes a string as an argument, and I hope I don't have to also tell you its the name your looking for..." unless name.class==String
