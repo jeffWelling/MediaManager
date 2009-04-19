@@ -30,6 +30,11 @@ end
 
 
 module MM_TVDB2
+	def self.store_series_in_db(series)
+		
+	end
+	def self.db_has_series(thetvdb_id)
+	end
 	def self.searchTVDB(name)
 		$TVDB_search_cache||={}
  		raise "searchTVDB(): Only takes a string as an argument, and I hope I don't have to also tell you its the name your looking for..." unless name.class==String
@@ -116,7 +121,7 @@ module MM_TVDB2
 			}						
 		
 			populated_results << series
-			MM_TVDB2.
+			MM_TVDB2.store_series_in_db(series)
 		} #End search_results.each |result|
 		return populated_results
 	end
