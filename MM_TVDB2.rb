@@ -137,15 +137,21 @@ module MM_TVDB2
 		if lastupdated!=0
 			#Do the update
 			updates=XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=all&time=#{lastupdated}").body)
-			$it=updates
 			puts "Updating based on lastupdated."
+			raise "huh?" unless updates.has_key? 'Series'
+			raise "huh?" unless updates.has_key? 'Episodes'
+			raise "NOTIME!!!" unless updates.has_key? 'Time'
 
+			updates['Episodes'].each {|ep_id|
+				episode=[]
+				ep_as_xml=XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/episodes/#{ep_id}").body)
+				$it <<  ep_as_xml
+			}
 		else
 			##update every series in the database
 			series=[]
 			puts "Updating based on no lastupdated."
 			sql_results=sqlSearch("SELECT thetvdb_id, Title FROM Tvdb_Series")
-			$it=sql_results
 			empty=MM_TVDB2.populate_results(sql_results, FALSE)
 			puts "YAYOMGDONEUPDATING!"
 			
