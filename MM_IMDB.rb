@@ -38,20 +38,22 @@ module MediaManager
 			ret = $?    #return codes
 			#35584  =  Segmentation Fault, output produced.  Term too ambiguous.
 			#   11  =  Segmentation Fault, output produced.  Term too ambiguous.
-			#    9  =  Killed, DO NOT RUN AGAIN!! No output.  Term too ambiguous.
+			#    137,9  =  Killed, DO NOT RUN AGAIN!! No output.  Term too ambiguous.
 			#    0  =  Output produced, cache results.  Success.
 				
-			if ret==9
+			if ret==9 or ret==137
 				add2Blacklist name
 				puts "Blacklisted #{name}, won't search for that term again.  Sorry!"
 				return ""
-			elsif ret==11 || result.empty? || ret==35584
+			elsif ret==11 || result.empty? || ret==35072
 				#We could return 'result' here, which should be a very large
 				#array of information, but it is clear that this is an ambiguous
 				#term so there is a greater chance of accuracy by using other terms
 				return ""
 			elsif ret!=0
 				raise "Error:  WTF, unexpected error value from moviedb? #{ret.inspect}"
+			else
+				raise "huh?"
 			end
 			
 			return $IMDB_CACHE[nameHash] = mdb2info(result)

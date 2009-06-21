@@ -132,12 +132,14 @@ module MediaManager
 				puts e.to_s
 				sanity=nil
 			ensure
-				$dbh.disconnect if $dbh.connected?
+				($dbh.disconnect if $dbh.connected?) unless $dbh.nil?
 			end
 
       #PHP is installed and useable
       #FIXME  Check for curl
-      sanity=`php -r "print('sane');"`.to_sym if sanity==:sane
+      php=`php -r "print('sane');"`
+			raise "ERROR: Couldn't find that 'php' thing, you sure you gots it?" if php.empty?
+      sanity=php.to_sym if sanity==:sane
 
 			#load the blacklist
 			loadBlacklist
