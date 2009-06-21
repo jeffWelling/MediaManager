@@ -1,5 +1,5 @@
 $MMCONF_TVDB_APIKEY="722A9E49CA2070A2"
-$cacheLifetime="30"
+$cacheLifetime=30
 
 load 'MMCommon.rb'
 require 'xmlsimple'
@@ -60,14 +60,80 @@ def sqlSearch(query)
 	$dbh.disconnect if $dbh.connected?
 	return arry
 end
+	
+def extract_ep_info(raw_ep)
+	episode_attributes=['id', 'SeasonNumber', 'Director', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'ProductionCode', 
+		'IMDB_ID', 'Overview', 'Writer', 'EpisodeName' ]
+	ep={}
+	episode_attributes.each {|atr|
+		raw_ep[atr][0].class==String ? ep[atr]=raw_ep[atr][0] : ep[atr]=FALSE
+	}
+	return ep
+end
+
+def store_series(series)
+	badargs="store_series(): Bad arguments."
+	raise badargs unless series.class==Hash
+	cols=['Status', 'Runtime', 'FirstAired', 'Genre', 'lastupdated', 'IMDB_ID', 'Title', 'Network', 'Overview', 'Rating', 'ContentRating', 'Actors', 'thetvdb_id']
+	series['thetvdb_id']=series['thetvdb_id'].to_s
+
+	#Series has no Title, should RARELY happen
+	series['Title']='' if series['Title'].class==Hash
+	puts "store_series(): CRITICAL WARNING - THIS SERIES HAS NO TITLE" if series['Title'].class==Hash
+
+	cols.each {|col|
+		raise "#{badargs + "   " + col + " : " + "#{series[col].class}" }" unless series[col].class==String or series[col].class==FalseClass
+	}
+
+	sql_do("DELETE FROM Tvdb_Series WHERE thetvdb_id='#{series['thetvdb_id']}'")
+	sql_string='INSERT INTO Tvdb_Series (Status, Runtime, FirstAired, Genre, lastupdated, IMDB_ID, Title, Network, Overview, Rating, ContentRating, Actors, thetvdb_id, DateAdded) VALUES ('
+	columns=['Status', 'Runtime', 'FirstAired', 'Genre', 'lastupdated', 'IMDB_ID', 'Title', 'Network', 'Overview', 'Rating', 'ContentRating', 'Actors', 'thetvdb_id']
+	begin
+		series['FirstAired']=DateTime.parse(series['FirstAired']).to_s unless series['FirstAired'].class==FalseClass
+	rescue ArgumentError => e
+		raise $! unless e.to_s.match(/invalid date/i)
+		series['FirstAired']=FALSE
+	end
+
+	columns.each {|col|
+			series[col].class==FalseClass ? sql_string << "NULL, " : sql_string << "'#{Mysql.escape_string("#{series[col]}")}', "
+	}
+	sql_string << ' NOW() )'
+
+	return sql_do(sql_string).to_i
+end
+
+def store_ep_in_db(ep, thetvdb_series_id)
+	sql_do("DELETE FROM Tvdb_Episodes WHERE id='#{ep['id']}'")
+	columns=['id', 'Director', 'SeasonNumber', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'IMDB_ID', 'ProductionCode', 'Overview', 'Writer', 'EpisodeName']
+	sql_string="INSERT INTO Tvdb_Episodes (thetvdb_id, id, Director, SeasonNumber, GuestStars, FirstAired, EpisodeNumber, lastupdated, IMDB_ID, ProductionCode, Overview, Writer, EpisodeName, DateAdded) VALUES ( '#{thetvdb_series_id}', "
+
+	columns.each {|col|
+		if col.match(/firstaired/i)
+			begin
+				ep['FirstAired']=DateTime.parse(ep['FirstAired']).to_s unless ep['FirstAired'].class==FalseClass
+			rescue ArgumentError => e
+				raise $! unless e.to_s.match(/invalid date/i)
+				ep['FirstAired']=FALSE
+			end
+		end
+
+		ep[col].class==FalseClass ? sql_string << "NULL, " : sql_string << "'#{Mysql.escape_string("#{ep[col]}")}', "
+	}
+	sql_string << " NOW())"
+	return sql_do(sql_string).to_i
+end
 
 module MM_TVDB2
 	def self.store_series_in_db(series)
 		badargs="store_series_in_db(): Bad arguments."
 		raise badargs unless series.class==Hash
 		cols=['Status', 'Runtime', 'FirstAired', 'Genre', 'lastupdated', 'IMDB_ID', 'Title', 'Network', 'Overview', 'Rating', 'ContentRating', 'Actors', 'thetvdb_id']
-		ep_cols=['Director', 'SeasonNumber', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'IMDB_ID', 'ProductionCode', 'Overview', 'Writer', 'EpisodeName']
+		ep_cols=['id', 'Director', 'SeasonNumber', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'IMDB_ID', 'ProductionCode', 'Overview', 'Writer', 'EpisodeName']
 		series['thetvdb_id']=series['thetvdb_id'].to_s
+		#Series has no Title, should RARELY happen
+		series['Title']='' if series['Title'].class==Hash
+		puts "store_series(): CRITICAL WARNING - THIS SERIES HAS NO TITLE" if series['Title'].class==Hash
 		cols.each {|col|
 			raise "#{badargs + "   " + col + " : " + "#{series[col].class}" }" unless series[col].class==String or series[col].class==FalseClass
 		}
@@ -75,59 +141,37 @@ module MM_TVDB2
 		series['Episodes'].each {|episode|
 			raise badargs unless !episode.empty?
 			ep_cols.each {|col|
-				raise badargs unless episode[col].class==String or episode[col].class==FalseClass
+				raise badargs unless episode.has_key?(col) and episode[col].class==String or episode[col].class==FalseClass
 			}
 		}
 		printf "store_series_in_db(): ... "
 		count=0
 		sql_do("DELETE FROM Tvdb_Series WHERE thetvdb_id='#{series['thetvdb_id']}'")
 		sql_do("DELETE FROM Tvdb_Episodes WHERE thetvdb_id='#{series['thetvdb_id']}'")
-		sql_string='INSERT INTO Tvdb_Series (Status, Runtime, FirstAired, Genre, lastupdated, IMDB_ID, Title, Network, Overview, Rating, ContentRating, Actors, thetvdb_id, DateAdded) VALUES ('
-		columns=['Status', 'Runtime', 'FirstAired', 'Genre', 'lastupdated', 'IMDB_ID', 'Title', 'Network', 'Overview', 'Rating', 'ContentRating', 'Actors', 'thetvdb_id']
-		begin
-			series['FirstAired']=DateTime.parse(series['FirstAired']).to_s unless series['FirstAired'].class==FalseClass
-		rescue ArgumentError => e
-			raise $! unless e.to_s.match(/invalid date/i)
-			series['FirstAired']=FALSE
-		end
 
-		columns.each {|col|
-				series[col].class==FalseClass ? sql_string << "NULL, " : sql_string << "'#{Mysql.escape_string("#{series[col]}")}', "
-		}
-		sql_string << ' NOW() )'
-
-		count += sql_do(sql_string).to_i
-		sql_string='INSERT INTO Tvdb_Episodes (Director, SeasonNumber, GuestStars, FirstAired, EpisodeNumber, lastupdated, IMDB_ID, ProductionCode, Overview, Writer, EpisodeName, DateAdded) VALUES ('
-		columns=['Director', 'SeasonNumber', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'IMDB_ID', 'ProductionCode', 'Overview', 'Writer', 'EpisodeName']
-
+		count += store_series(series)		
 		series['Episodes'].each {|ep|
-			sql_string="INSERT INTO Tvdb_Episodes (thetvdb_id, Director, SeasonNumber, GuestStars, FirstAired, EpisodeNumber, lastupdated, IMDB_ID, ProductionCode, Overview, Writer, EpisodeName, DateAdded) VALUES ( '#{series['thetvdb_id']}', "
-			begin
-				ep['FirstAired']=DateTime.parse(ep['FirstAired']).to_s unless ep['FirstAired'].class==FalseClass
-			rescue ArgumentError => e
-				raise $! unless e.to_s.match(/invalid date/i)
-				ep['FirstAired']=FALSE
-			end
-		
-			columns.each {|col|
-				ep[col].class==FalseClass ? sql_string << "NULL, " : sql_string << "'#{Mysql.escape_string("#{ep[col]}")}', "
-			}
-			sql_string << " NOW())"
-			count += sql_do(sql_string).to_i
+			count += store_ep_in_db(ep, series['thetvdb_id'])
 		}
 		puts "Done."
 		return count
-
 	end
 
 	#This method is run only by the db_has_series?() method, when an 'expired' item is found
 	#it gets all the thetvdb_ids from the database, and updates them all, pursuant to the API
 	def self.update_db
+		$TVDB_Mirror||= XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml").body)['Mirror'][0]['mirrorpath'][0]
 		#Get the timestamp to use
 		lastupdated=sqlSearch("SELECT * FROM Tvdb_lastupdated")[0]
 		if lastupdated.class==Hash
+			local_lastupdated=DateTime.now.-(9999)
+			local_lastupdated=DateTime.parse(lastupdated['DateAdded'].to_s) unless lastupdated['DateAdded'].nil?
 			lastupdated=lastupdated['lastupdated']
 
+			if DateTime.now.-(15) > DateTime.parse(local_lastupdated.to_s.gsub(/.\d\d:\d\d$/i,''))
+				puts "update_db(): Last update was too long ago, updating everything."
+				lastupdated=0
+			end
 		else
 			#Have never done update before, update every series in the database and store the time.
 			lastupdated=0
@@ -135,49 +179,110 @@ module MM_TVDB2
 
 		#If there is no lastupdated in the database, or the one in the database is more than 30 days old
 		if lastupdated!=0
+			#900 = 60Secs in a minute * 15 minutes
+			time1= DateTime.parse(DateTime.parse(Time.now.-(300).to_s).to_s.gsub(/.\d\d:\d\d$/i,''))
+			time2= DateTime.parse(local_lastupdated.to_s.gsub(/.\d\d:\d\d$/i,''))
+			#pp time1.to_s
+			#pp time2.to_s
+			#pp local_lastupdated
+			if time1 < time2
+				puts "update_db(): Already updated less than 5 minutes ago."
+				return 0
+			end
 			#Do the update
+			puts "update_db(): Updating based on lastupdated."
 			updates=XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=all&time=#{lastupdated}").body)
-			puts "Updating based on lastupdated."
-			raise "huh?" unless updates.has_key? 'Series'
-			raise "huh?" unless updates.has_key? 'Episodes'
+			$it=updates
 			raise "NOTIME!!!" unless updates.has_key? 'Time'
+			return 0 unless updates.has_key?('Series') or updates.has_key?('Episode')
+			series_columns=['Actors', 'Status', 'ContentRating', 'Runtime', 'Genre', 'FirstAired', 'lastupdated', 'Rating', 'Overview', 'Network', 'IMDB_ID']
 
-			updates['Episodes'].each {|ep_id|
-				episode=[]
-				ep_as_xml=XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/episodes/#{ep_id}").body)
-				$it <<  ep_as_xml
-			}
+			if updates.has_key? 'Series'
+				printf "update_db(): Updating #{updates['Series'].length} series; "
+				updates['Series'].each {|seriesID|
+					next unless sqlSearch("SELECT 'thetvdb_id' FROM Tvdb_Series WHERE thetvdb_id='#{seriesID}'").empty?
+					series={}
+					raw_series_xml=XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{seriesID}/en.xml").body)
+					series['Title']=raw_series_xml['Series'][0]['SeriesName'][0]
+					series['thetvdb_id']=raw_series_xml['Series'][0]['id'][0]
+					
+					series_columns.each {|col|
+						raw_series_xml['Series'][0][col][0].class==String ? series[col]=raw_series_xml['Series'][0][col][0] : series[col]=FALSE
+					}
+					store_series(series)
+					printf '.'
+				}
+				printf "\n"
+				puts "update_db(): Done updating series."
+				end
+
+			if updates.has_key? 'Episode'
+				printf "update_db(): Updating #{updates['Episode'].length} episodes; "
+				updates['Episode'].each {|ep_id|
+					next unless sqlSearch("SELECT 'id' FROM Tvdb_Episodes WHERE id='#{ep_id}'").empty?
+					episode=[]
+					begin
+						ep_as_xml=XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/episodes/#{ep_id}/en.xml").body)
+					rescue
+						pp "#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/episodes/#{ep_id}/en.xml"
+						puts "update_db(): ERROR during processing/getting the above link"
+						raise PANIC
+					end
+					store_ep_in_db(extract_ep_info(ep_as_xml['Episode'][0]), ep_as_xml['Episode'][0]['seriesid'][0] )
+					printf "."
+				}
+				printf "\n"
+				puts "update_db(): Done updating episodes."
+			end
+			time=updates['Time']
 		else
 			##update every series in the database
 			series=[]
-			puts "Updating based on no lastupdated."
+			puts "update_db(): Updating based on no lastupdated."
+			time=XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=none").body)['Time'][0]
 			sql_results=sqlSearch("SELECT thetvdb_id, Title FROM Tvdb_Series")
-			empty=MM_TVDB2.populate_results(sql_results, FALSE)
-			puts "YAYOMGDONEUPDATING!"
-			
+			MM_TVDB2.populate_results(sql_results, FALSE, FALSE)
 		end
+		sql_do("TRUNCATE TABLE Tvdb_lastupdated")
+		sql_do("INSERT INTO Tvdb_lastupdated (lastupdated, DateAdded) VALUES ('#{time}', NOW())")
+		puts "update_db(): Done."
 	end
 
 	def self.db_has_series?(thetvdb_id)
 		#Sanity check argument
-		raise "db_has_series?(): Takes a string only, and it must be a thetvdb_id" unless thetvdb_id.class==Fixnum
+		raise "db_has_series?(): Takes a Fixnum only, and it must be a thetvdb_id" unless thetvdb_id.class==Fixnum
 		series={}
 
-		$it1=series_cache=sqlSearch("SELECT * FROM Tvdb_Series WHERE thetvdb_id='#{thetvdb_id}'")
-		$it2=series_eps_cache=sqlSearch("SELECT * FROM Tvdb_Episodes WHERE thetvdb_id='#{thetvdb_id}'")
+		series_cache=sqlSearch("SELECT * FROM Tvdb_Series WHERE thetvdb_id='#{thetvdb_id}'")
+		series_eps_cache=sqlSearch("SELECT * FROM Tvdb_Episodes WHERE thetvdb_id='#{thetvdb_id}'")
 
-		if DateTime.parse(series_cache['DateAdded'].to_s) < DateTime.now.-($cacheLifetime)
-			#Series may be outdated, do update and if necessary redo sqlsearches
-			
+		#There is some kind of bug that results in series_cache sometimes being an array with the part we want at the first element
+		if series_cache.class==Array
+			series_cache=series_cache[0]
+		end
+
+$it=series_cache
+		if series_cache.nil? or series_cache.empty?
+			return {}
+		else
+			if DateTime.parse(series_cache['DateAdded'].to_s) < DateTime.now.-($cacheLifetime)
+				#Series may be outdated, do update and if necessary redo sqlsearches
+				
+			end
 		end
 
 		series_columns=['Status', 'Runtime', 'FirstAired', 'Genre', 'lastupdated', 'IMDB_ID', 'Title', 'Network', 'Overview', 'Rating', 'ContentRating', 'Actors', 'thetvdb_id', 'DateAdded']
-		episode_columns=['Director', 'SeasonNumber', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'IMDB_ID', 'ProductionCode', 'Overview', 'Writer', 'EpisodeName', 'DateAdded']
+		episode_columns=['id', 'Director', 'SeasonNumber', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'IMDB_ID', 'ProductionCode', 'Overview', 'Writer', 'EpisodeName', 'DateAdded']
 
 		series_columns.each {|col|
 			series[col]=FALSE
 			if col.match(/firstaired/i) or col.match(/dateadded/i)
-				series[col]=DateTime.parse(series_cache[col].to_s)
+				begin
+					series[col]=DateTime.parse(series_cache[col].to_s)
+				rescue ArgumentError => e
+					raise $! unless e.to_s.match(/invalid date/i)
+					raise $! unless series_cache[col].to_s
+				end
 			else
 				series[col]=series_cache[col].to_s unless series_cache[col].nil?
 			end
@@ -189,7 +294,13 @@ module MM_TVDB2
 			episode_columns.each {|col|
 				ep[col]=FALSE unless col.match(/dateadded/i)
 				if col.match(/firstaired/i) or col.match(/dateadded/i)
-					ep[col]=DateTime.parse(cached_ep[col].to_s) unless col.match(/dateadded/i)
+					begin
+						ep[col]=DateTime.parse(cached_ep[col].to_s) unless col.match(/dateadded/i)
+					rescue ArgumentError => e
+						raise $! unless e.to_s.match(/invalid date/i)
+						raise $! unless cached_ep[col].nil?
+						ep[col]=FALSE
+					end
 				else
 					ep[col]=cached_ep[col].to_s
 				end
@@ -197,12 +308,13 @@ module MM_TVDB2
 			series['Episodes'] << ep
 		}
 
-		return {}
+		return series
 	end
 
 	def self.wipe_cache
 		sql_do "TRUNCATE TABLE Tvdb_Series"
 		sql_do "TRUNCATE TABLE Tvdb_Episodes"
+		sql_do "TRUNCATE TABLE Tvdb_lastupdated"
 	end
 
 	def self.searchTVDB(name)
@@ -231,6 +343,7 @@ module MM_TVDB2
 		end
 
 		search_results=[]
+		return [] if page['Series'].nil?
 		page['Series'].each {|search_result|
 			series={}
 			series['thetvdb_id']=FALSE
@@ -242,15 +355,13 @@ module MM_TVDB2
 			search_results << series
 		}
 		
-#		$it=$TVDB_search_cache
-#		return $TVDB_search_cache[name_hash]
 		puts "searchTVDB('#{name}'): Done."
 		return search_results
 
 	end
 
 	#This function is called by the user on the search_results returned by the searchTVDB() defined above
-	def self.populate_results(search_results, check_cache=TRUE)
+	def self.populate_results(search_results, check_cache=TRUE, updatedb=TRUE)
 		#Sanity check input
 		populated_results=[]
 		badargs="populate_results(): Argument MUST be a search result as returned from searchTVDB() method."
@@ -262,9 +373,12 @@ module MM_TVDB2
 			raise badargs if !result['thetvdb_id'].class==Fixnum
 			raise badargs if result.has_key?('IMDB_ID') and !result['IMDB_ID'].class==String
 		}
+		if updatedb
+			puts "populate_results(): Calling update_db() first."
+			MM_TVDB2.update_db
+		end
 		puts "populate_results(): Processing #{search_results.length} items..."
-
-		#Incase its not already there
+		#Incase its not already there 
 		$TVDB_Mirror||= XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml").body)['Mirror'][0]['mirrorpath'][0]
 
 
@@ -273,12 +387,15 @@ module MM_TVDB2
 			series={}
 			series['Episodes']=[]
 			cache={}
+
+			#Check the cache, return if found
 			cache=MM_TVDB2.db_has_series?(result['thetvdb_id']) if check_cache
 			puts "populate_results('#{result['Title']}'): Already cached." unless cache.empty?
-			return series.merge!(cache) unless cache.empty?
+			series.merge!(cache) unless cache.empty?
+			next unless cache.empty?
 			
 			printf "populate_results('#{result['Title']}'): "
-			raw_info= XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{result['thetvdb_id']}/all/en.xml").body )
+			raw_info= XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{result['thetvdb_id']}/all/en.xml").body )			
 			puts "Gotcha!"
 
 			series.merge! result	
@@ -288,16 +405,13 @@ module MM_TVDB2
 			series_columns.each {|col|
 				result['Series'][0][col][0].class==String ? series[col]=result['Series'][0][col][0] : series[col]=FALSE
 			}
+			result['Series'][0]['SeriesName'][0].class==String ? series['Title']=result['Series'][0]['SeriesName'][0] : series['Title']=FALSE
 			
-			episode_attributes=['SeasonNumber', 'Director', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'ProductionCode', 
+			episode_attributes=['id', 'SeasonNumber', 'Director', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'ProductionCode', 
 				'IMDB_ID', 'Overview', 'Writer', 'EpisodeName' ]
 			unless result['Episode'].nil?
 			result['Episode'].each {|episode|
-				ep={}
-				episode_attributes.each {|atr|
-					episode[atr][0].class==String ? ep[atr]=episode[atr][0] : ep[atr]=FALSE
-				}
-				series['Episodes'] << ep
+				series['Episodes'] << extract_ep_info(episode)
 			}					
 			end
 		
