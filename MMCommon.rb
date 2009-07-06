@@ -408,6 +408,43 @@ module MediaManager
 			end
 			return FALSE
 		end
+		def clearFileHashCache
+			puts "Clearing FileHashCache"
+			sqlAddUpdate( "TRUNCATE TABLE FileHashCache" )
+		end
+		def	clearMediaFiles
+			puts "Clearing mediaFiles"
+			sqlAddUpdate( "TRUNCATE TABLE mediaFiles" )
+		end
+		def clearTvdb_Series
+			puts "Clearing tvdb_Series"
+			sqlAddUpdate( "TRUNCATE TABLE Tvdb_Series" )
+		end
+		def clearTvdb_Episodes
+			puts "Clearing Tvdb_Episodes"
+			sqlAddUpdate( "TRUNCATE TABLE Tvdb_Episodes" )
+		end
+		def	clearTvdb_lastupdated
+			puts "Clearing Tvdb_lastupdated"
+			sqlAddUpdate( "TRUNCATE TABLE Tvdb_lastupdated" )
+		end
+		def clearTvdbSeriesEpisodeCache
+			puts "Clearing TvdbSeriesEpisodeCache"
+			sqlAddUpdate( "TRUNCATE TABLE TvdbSeriesEpisodeCache" )
+		end
+		def clearEpisodeCache
+			puts "Clearing EpisodeCache"
+			sqlAddUpdate( "TRUNCATE TABLE EpisodeCache" )
+		end
+		def clearAll
+			clearFileHashCache
+			clearMediaFiles
+			clearTvdb_Series
+			clearTvdb_Episodes
+			clearTvdb_lastupdated
+			clearTvdbSeriesEpisodeCache
+			clearEpisodeCache
+		end
 
 	end #MMCommon
 end

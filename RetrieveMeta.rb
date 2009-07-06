@@ -223,10 +223,14 @@ module MediaManager
 				break if queue.empty?
 				#break if searchTerm[i-1].nil?
 				break if queue.match(/[\w']*\b/i).nil?
-				searchTerm[i]=match= queue.match(/[\w']*\b/i); match=match[0]
-				unless searchTerm[i][0].match(/s[\d]+e[\d]+/i)    #Dont add the episode tag to the search string
+				searchTerm[i]=match= queue.match(/[\w']*\b/i)
+				match=match[0]
+				if searchTerm[i][0].match(/s[\d]+e[\d]+/i).nil?    #Dont add the episode tag to the search string
 					searchTerm[i]=searchTerm[i][0] 
 					searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
+				else
+					#searchTerm[i] is a MatchData type of match
+					searchTerm[i]=''
 				end
 				queue= queue.slice( queue.index(match)+match.length, queue.length ).strip 
 				ignore=TRUE if searchTerm[i].length < 3 or searchTerm[i].downcase=='the' or searchTerm[i].downcase=='and'
@@ -235,7 +239,7 @@ module MediaManager
 			end
 			#searchTerm is now an array of search terms
 			#search for each, and store the results.
-			searchTerm=searchTerm.delete_if {|it| TRUE if it.empty? }
+			searchTerm=searchTerm.delete_if {|it| TRUE if it.nil? or it.empty? }
 			results={}
 			if source==:tvdb
 				searchTerm.each_index {|i|

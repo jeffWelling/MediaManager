@@ -52,10 +52,7 @@ module MediaManager
 				return ""
 			elsif ret!=0
 				raise "Error:  WTF, unexpected error value from moviedb? #{ret.inspect}"
-			else
-				raise "huh?"
-			end
-			
+			end	
 			return $IMDB_CACHE[nameHash] = mdb2info(result)
 		end
 
