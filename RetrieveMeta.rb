@@ -89,7 +89,7 @@ module MediaManager
 
 		#This function does its  best to extract information from the filename
 		def self.extractData(movieData, isRar=:no)
-			puts "Reaching blindly into /dev/null and pulling out some meta-data...."
+			puts "Reaching up my /dev/null and pulling out some meta-data...."
 			raise "OMG CANT HANDLE RARS YET!!FIXMEYOUIDIOT!!" if isRar!=:no
 			#Return False unless is movie, then
 
@@ -205,48 +205,55 @@ module MediaManager
 
 			#remove any sourceDirs from fpath
 			$MEDIA_SOURCES_DIR.each {|sourceDir|
-				if fpath.downcase.index( sourceDir.downcase )
-					fpath=fpath.slice( fpath.downcase.index(sourceDir.downcase), fpath.length)
+				if fpath.match(Regexp.new(sourceDir))
+					fpath=fpath.gsub(sourceDir, '')
 				end
 			}
 			filename=pathToArray fpath
-
 
 			#Extract 'words' from filename, one at a time, and search for them.
 			queue=filename[1].gsub('.', ' ').gsub('_', ' ')
 			done=FALSE;
 			i=0
 			searchTerm=[]
-			loop do  #FIXME Can't this be optimized any further?
-				searchTerm[i] ||= ''
+			filename.each_index {|partOfilename|
+				queue=filename[partOfilename].gsub('.', ' ').gsub('_', ' ')
 				ignore=FALSE
-				break if queue.empty?
-				#break if searchTerm[i-1].nil?
-				break if queue.match(/[\w']*\b/i).nil?
-				searchTerm[i]=match= queue.match(/[\w']*\b/i)
-				match=match[0]
-				if searchTerm[i][0].match(/s[\d]+e[\d]+/i).nil?    #Dont add the episode tag to the search string
-					searchTerm[i]=searchTerm[i][0] 
-					searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
-				else
-					#searchTerm[i] is a MatchData type of match
-					searchTerm[i]=''
-				end
-				queue= queue.slice( queue.index(match)+match.length, queue.length ).strip 
-				ignore=TRUE if searchTerm[i].length < 3 or searchTerm[i].downcase=='the' or searchTerm[i].downcase=='and'
+				loop do  #FIXME Can't this be optimized any further?
+					searchTerm[i] ||= ''
+					ignore=FALSE
+					break if queue.empty?
+					#break if searchTerm[i-1].nil?
+					break if queue.match(/[\w']*\b/i).nil?
+					searchTerm[i]=match= queue.match(/[\w']*\b/i)
+					match=match[0]
+					if searchTerm[i][0].match(/s[\d]+e[\d]+/i).nil?    #Dont add the episode tag to the search string
+						searchTerm[i]=searchTerm[i][0]
+						searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
+					else
+						#searchTerm[i] is a MatchData type of match
+						searchTerm[i]=''
+					end
+					queue= queue.slice( queue.index(match)+match.length, queue.length ).strip 
+#Using 'ignore's in this area is less effective and more problematic than just running a delete_if loop later.
+#					ignore=TRUE if searchTerm[i].length < 3 or searchTerm[i].strip.downcase=='the' or searchTerm[i].strip.downcase=='and'
 
-				i=i+1 unless ignore
-			end
+					i=i+1# unless ignore
+				end
+				i=i+1# unless ignore
+			}
 			#searchTerm is now an array of search terms
 			#search for each, and store the results.
-			searchTerm=searchTerm.delete_if {|it| TRUE if it.nil? or it.empty? }
+			searchTerm=searchTerm.delete_if {|it| TRUE if it.nil? or it.empty? or name_match?(it, filename[0].reverse.chop.reverse, :no)}.each_index {|lineN| searchTerm[lineN]=searchTerm[lineN].strip }
+			searchTerm=searchTerm.delete_if {|word| TRUE if ['the','and'].include?(word) or word.length <= 3 }
 			results={}
+			pp searchTerm
 			if source==:tvdb
 				searchTerm.each_index {|i|
 					temp=[]
 					results[searchTerm[i]]||=[]
 					temp= MediaManager::MM_TVDB.searchTVDB( searchTerm[i] )
-					break if temp.length == 0
+					next if temp.length == 0
 					results[searchTerm[i]]= temp
 				}
 			else
@@ -298,30 +305,14 @@ module MediaManager
 						#If the episode name begins with 'the', strip it to ease matching.
 						#Required to match files that were named without 'the' at the beginning of the name
 						epName=epName.gsub(/^the[\s]+/i, '') if epName.index(/^the[\s]+/i)
-						
-=begin
-#FIXME Need to also match EpisodeID tags in the form of 1x08, and hopefully, 108
-#TODO Moving me to the bottom of this nested loop will assure that I'm only run if there are no other matches!
-#TODO This section should match even if the name does not match the filename, but it should issue a warning that the only thing that indicates this name is the EpisodeID tag
-#TODO Remember to use the variable we have stored the EpisodeID tag in, because it is stripped from name
-						#If we already have the EpisodeID tag then we can look for that instead of trying to match the name.
-						#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
-						#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
-						if epID and epNum and occurance[0][0][0]==seriesHash[0][0] 
-							_epID=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
-							_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
-							#printf "epID: #{epID}  _epID: #{_epID}  epNum: #{epNum}  _epNum: #{_epNum}      "
-							if epID==_epID and epNum==_epNum
-								puts "Match based on epID and epNum extracted from filename!"
-								matches << episode
-								next
-							end
-						end
-=end
+
+						##Begin attempting to match	
 						if MediaManager.name_match?(name, epName)
 							matches << episode
 							next
 						end
+						
+						pp episode if epName.match(/christmas/i)
 
 						if epName.index(/\([\d]+\)/)
 							next unless name.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
@@ -481,7 +472,25 @@ module MediaManager
 								end
 							end
 						end
-						
+
+						#FIXME Need to also match EpisodeID tags in the form of 1x08, and hopefully, 108
+						#TODO This section should match even if the name does not match the filename, but it should issue a warning that the only thing that indicates this name is the EpisodeID tag and the series title
+						#TODO Remember to use the variable we have stored the EpisodeID tag in, because it is stripped from name
+						#If we already have the EpisodeID tag then we can look for that instead of trying to match the name.
+						#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
+						#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
+						# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR name_match?
+						if epID and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( name,seriesHash[1]['Title'][0], :no))
+							episodes_epID=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
+							episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
+							#printf "epID: #{epID}  episodes_epID: #{episodes_epID}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
+							if epID.to_i==episodes_epID.to_i and epNum.to_i==episodes_epNum.to_i
+								puts "Match based on title found in filename, and season and episode number match from filename."
+								matches << episode
+								next
+							end
+						end
+
 						#Next before here if already matched
 						#
 					}
@@ -508,10 +517,10 @@ module MediaManager
 				name=hash_filename(match.to_s)
 				scores[name]||=0
 				pp match
-				if name_match?(pathToArray(movieData['Path'])[1], match['Title'] )==TRUE
+				if name_match?(pathToArray(movieData['Path'])[1], match['Title'], :no )==TRUE
 					scores[name]=scores[name]+1
 					
-					#add the length to the score because if a name is very long and still matches, thats better than mattching a small name
+					#add the length to the score because if a name is very long and still matches, thats better than matching a small name
 					scores[name]+= match['Title'].length
 					pp scores
 				end

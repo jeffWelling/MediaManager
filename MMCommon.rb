@@ -373,9 +373,9 @@ module MediaManager
 		#Return true if they match, return false if they do not
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
-		def name_match?(name, epName)
+		def name_match?(name, epName, verbose=:yes)
 			if epName.nil? or epName.length==0 
-				puts "name_match?(): blank episode name?"
+				puts "name_match?(): blank episode name?" unless verbose==:no
 				return FALSE
 			end 
 			epName=Regexp.escape(epName)

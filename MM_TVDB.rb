@@ -159,6 +159,10 @@ module MediaManager
 				exist= sqlSearch(sqlStr)
 				
 				printf '_' if exist.empty? != TRUE
+				if exist.empty? != TRUE
+					pp exist
+					raise 'panix'
+				end
 				printf '-' if exist.empty?
 
 				#puts "getAllEpisodes: Not adding duplicate episode #{seriesID} #{episodeList[i]['EpisodeID']}" unless exist.empty?
