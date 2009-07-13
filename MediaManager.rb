@@ -16,6 +16,7 @@ $IMDB_BLACKLIST=[]
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__))
 
 load 'MM_TVDB.rb'
+load 'MM_TVDB2.rb'
 load 'MM_IMDB.rb'
 load 'RetrieveMeta.rb'
 load 'movieInfo_Specification.rb'

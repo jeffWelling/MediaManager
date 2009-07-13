@@ -40,11 +40,12 @@ module MediaManager
       return default if :empty == answer
       answer
     end
-    def agent
-      a = WWW::Mechanize.new
-#      a.read_timeout = 5 
-      a   
-    end
+		def agent(timeout=300)
+			a = WWW::Mechanize.new
+			a.read_timeout = timeout if timeout
+			a.user_agent_alias= 'Mac Safari'
+			a   
+		end
 		def prompt question, default = :yes, add_options = nil, delete_options = nil
 			options = ([default] + [:yes,:no] + [add_options] + [:quit]).flatten.uniq
 			if delete_options.class == Array
