@@ -120,9 +120,11 @@ module MediaManager
 			return count
 		end
 
-		#This method is run only by the db_has_series?() method, when an 'expired' item is found
+		#This method is run only by the db_has_series?() method, when an 'expired' item is found or
+		#from the populate_results() method, to make sure the results we are pulling are up to date
 		#it gets all the thetvdb_ids from the database, and updates them all, pursuant to the API
-		def self.update_db
+		def self.update_db(err=:no)
+			begin
 			$TVDB_Mirror||= XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml").body)['Mirror'][0]['mirrorpath'][0]
 			#Get the timestamp to use
 			lastupdated=sqlSearch("SELECT * FROM Tvdb_lastupdated")[0]
@@ -141,7 +143,7 @@ module MediaManager
 				lastupdated=0
 			end
 
-			#If there is no lastupdated in the database, or the one in the database is more than 30 days old
+			#If there is no lastupdated in the database, or the one in the database is more than 15 days old
 			if lastupdated!=0
 				#900 = (60Secs in a minute * 15 minutes)
 				#the gsub below is supposed to remove the timezone info from the DateTimes
@@ -157,7 +159,6 @@ module MediaManager
 				#Do the update
 				puts "update_db(): Updating based on lastupdated."
 				updates=XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=all&time=#{lastupdated}").body)
-				$it=updates
 				raise "NOTIME!!!" unless updates.has_key? 'Time'
 				return 0 unless updates.has_key?('Series') or updates.has_key?('Episode')
 				series_columns=['Actors', 'Status', 'ContentRating', 'Runtime', 'Genre', 'FirstAired', 'lastupdated', 'Rating', 'Overview', 'Network', 'IMDB_ID']
@@ -212,6 +213,14 @@ module MediaManager
 			sqlAddUpdate("TRUNCATE TABLE Tvdb_lastupdated")
 			sqlAddUpdate("INSERT INTO Tvdb_lastupdated (lastupdated, DateAdded) VALUES ('#{time}', NOW())")
 			puts "update_db(): Done."
+			rescue
+				if err==:no
+					puts "\nupdate_db(): Update Failed! If this is the first (couple) times you've seen this, ignore it for ~1 hour."
+					return
+				else
+					raise $!
+				end
+			end
 		end
 
 		def self.db_has_series?(thetvdb_id)
@@ -227,13 +236,12 @@ module MediaManager
 				series_cache=series_cache[0]
 			end
 
-	$it=series_cache
 			if series_cache.nil? or series_cache.empty?
 				return {}
 			else
 				if DateTime.parse(series_cache['DateAdded'].to_s) < DateTime.now.-($cacheLifetime)
 					#Series may be outdated, do update and if necessary redo sqlsearches
-					
+					raise "db_has_series?(): expired episode found, FIXME!"
 				end
 			end
 
@@ -298,7 +306,13 @@ module MediaManager
 			$TVDB_Mirror||= XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml").body)['Mirror'][0]['mirrorpath'][0]
 
 			#To be used when adding new series to mysql
-			$Time= XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=none").body)['Time'][0].to_i
+			begin
+				number_of_times ||=0
+				$Time= XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=none").body)['Time'][0].to_i
+			rescue
+				number_of_times+= 1
+				retry if number_of_times < 5
+			end
 
 			begin
 				page= XmlSimple.xml_in( agent.get("#{$TVDB_Mirror}/api/GetSeries.php?seriesname=#{ERB::Util.url_encode name}").body )
@@ -328,7 +342,6 @@ module MediaManager
 
 		#This function is called by the user on the search_results returned by the searchTVDB() defined above
 		def self.populate_results(search_results, check_cache=TRUE, updatedb=TRUE)
-			$it=search_results
 			#Sanity check input
 			populated_results=[]
 			badargs="populate_results(): Argument MUST be a search result as returned from searchTVDB() method."

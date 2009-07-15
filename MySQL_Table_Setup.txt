@@ -4,13 +4,12 @@ and updated your config accordingly.
 Below is the Mysql command I copied from PhpMyAdmin, which is what I initially used to configure the table.
 Anyone familiar with MySQL database design who is able to help streamline the database would be welcome
 to contribute, I an a total NOOB when it comes to MySQL database design.
-
 -- phpMyAdmin SQL Dump
 -- version 2.9.1.1-Debian-10
 -- http://www.phpmyadmin.net
 -- 
 -- Host: localhost
--- Generation Time: Apr 04, 2009 at 02:23 PM
+-- Generation Time: Jul 15, 2009 at 04:36 AM
 -- Server version: 5.0.32
 -- PHP Version: 5.2.0-8+etch13
 -- 
@@ -33,7 +32,7 @@ CREATE TABLE `EpisodeCache` (
   `DateAdded` datetime NOT NULL,
   `LastModified` datetime NOT NULL,
   PRIMARY KEY  (`uid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7751 ;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -66,6 +65,73 @@ CREATE TABLE `TvdbSeriesEpisodeCache` (
 -- --------------------------------------------------------
 
 -- 
+-- Table structure for table `Tvdb_Episodes`
+-- 
+
+DROP TABLE IF EXISTS `Tvdb_Episodes`;
+CREATE TABLE `Tvdb_Episodes` (
+  `uid` bigint(20) NOT NULL auto_increment,
+  `id` bigint(20) NOT NULL COMMENT 'Thetvdb.com''s EpisodeID, unique per episode, used to update episodes',
+  `Episode` bigint(20) NOT NULL COMMENT 'Thetvdb.com''s EpisodeID, unique per episode, used to lookup updates for episodes.',
+  `thetvdb_id` bigint(12) NOT NULL COMMENT 'Used to lookup episodes from series.  This is the series'' thetvdb_id, not the episodes ID itself (it has its own unique ID as well)',
+  `Director` varchar(42) default NULL,
+  `SeasonNumber` smallint(6) NOT NULL,
+  `GuestStars` varchar(255) default NULL,
+  `FirstAired` datetime default NULL,
+  `EpisodeNumber` smallint(6) NOT NULL,
+  `lastupdated` bigint(20) NOT NULL,
+  `IMDB_ID` varchar(20) default NULL,
+  `ProductionCode` varchar(20) default NULL,
+  `Overview` varchar(25000) default NULL,
+  `Writer` varchar(42) default NULL,
+  `EpisodeName` varchar(100) default NULL,
+  `DateAdded` datetime NOT NULL,
+  PRIMARY KEY  (`uid`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1324 ;
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `Tvdb_Series`
+-- 
+
+DROP TABLE IF EXISTS `Tvdb_Series`;
+CREATE TABLE `Tvdb_Series` (
+  `uid` int(11) NOT NULL auto_increment,
+  `Status` varchar(42) default NULL,
+  `Runtime` varchar(5) default NULL,
+  `FirstAired` datetime default NULL,
+  `Genre` varchar(400) default NULL,
+  `lastupdated` bigint(11) NOT NULL,
+  `IMDB_ID` varchar(16) default NULL,
+  `Title` varchar(255) default NULL COMMENT 'Should RARELY if ever, be null.  This has only been sighted once when the API was not synced with thetvdb.com''s database.',
+  `Network` varchar(42) default NULL,
+  `Overview` varchar(25000) default NULL,
+  `Rating` varchar(4) default NULL,
+  `ContentRating` varchar(12) default NULL,
+  `Actors` varchar(1000) default NULL,
+  `thetvdb_id` bigint(12) NOT NULL,
+  `DateAdded` datetime NOT NULL,
+  PRIMARY KEY  (`uid`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=128 ;
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `Tvdb_lastupdated`
+-- 
+
+DROP TABLE IF EXISTS `Tvdb_lastupdated`;
+CREATE TABLE `Tvdb_lastupdated` (
+  `lastupdated` bigint(20) NOT NULL COMMENT 'This is the last time that an update was performed. (Yes, I really did create a table just for this one thing.)',
+  `DateAdded` datetime NOT NULL,
+  PRIMARY KEY  (`lastupdated`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+-- 
 -- Table structure for table `mediaFiles`
 -- 
 
@@ -92,4 +158,5 @@ CREATE TABLE `mediaFiles` (
   UNIQUE KEY `sha1` (`FileSHA`),
   KEY `Title` (`Title`),
   FULLTEXT KEY `Title_2` (`Title`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=61 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=63 ;
+

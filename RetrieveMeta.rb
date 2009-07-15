@@ -8,7 +8,34 @@ require 'linguistics'
 module MediaManager
 	module RetrieveMeta
 		extend MMCommon
-		
+		def self.get_episode_id(random_string, reformat_to_standard=:no)
+			#Note that the order here matters, search for the most likely format first
+			tag=random_string.match(/s[\d]+e[\d]+/i)
+			unless tag.nil?
+				return [tag[0]]
+			end
+
+			tag=random_string.match(/[\d]+x[\d]+/i)
+			unless tag.nil?
+				bad=:no
+				#verify that we aren't looking at a resolution
+				bad=:yes if tag[0].match(/^\d+/)[0].to_i > 59    #There shouldn't be any season number higher than this
+				bad=:yes if tag[0].match(/\d+$/)[0].to_i > 999		#There shouldn't be any episode number higher than this
+				
+				if bad==:yes
+					#Recurse, stripping out each resolution (if theres more than one?) until we get something good, or nothing at all
+					return get_episode_id(random_string.gsub(tag[0],' '))
+				else
+					pp tag[0]
+					reformat_to_standard==:no ? (return [tag[0]]) : (return ["s#{tag[0].match(/^\d+/)[0]}e#{tag[0].match(/\d+$/)[0]}"])
+				end
+
+				
+				#End of trying to match an episodeID, and we got nothing.
+			end
+			return nil
+		end
+	
 		#Returns info in the form of a hash conforming to movieInfo_Specification.rb
 		#isRar is :yes if the filename passed is a folder containing a rared file
 	  def self.filenameToInfo(filename, isRar=:no)
@@ -138,10 +165,10 @@ module MediaManager
 			#4.
 			#Does it have a series tag (S01E02)?
 			answers[4]=FALSE
-			id=movieData['Path'].match(/[s]\d+[e]\d+/i)
+			id=MediaManager::RetrieveMeta.get_episode_id(movieData['Path'], :reformat_to_standard)
 			unless id.nil?
 				id=id[0]
-				puts "Found season tag #{id}, extracting Season and EpisodeID..."
+				puts "Found season tag #{id} (may have been reformatted), extracting Season and EpisodeID..."
 				movieData['Season'] = id.match(/\d+/)[0].to_i
 				movieData['EpisodeID'] = id.upcase
 				answers[4]=TRUE
@@ -152,15 +179,16 @@ module MediaManager
 			#Is it in IMDB/TVDB?
 			result=''
 			result= db_include?( :tvdb, movieData)
+			puts "extractData(): db_include?() returned this match..."
 			pp result
 			answers[5]=TRUE unless result.empty?
 			unless result.empty?
+				movieData['tvdbSeriesID']= result[0]['tvdbSeriesID']
+				movieData['Season']= result[0]['SeasonNumber']
 				movieData['Title']= result[0]['Title']
 				movieData['EpisodeID']= result[0]['EpisodeID'].upcase
-				movieData['Season']= result[0]['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
+				movieData['imdbID']= result[0]['IMDB_ID']
 				movieData['EpisodeName']= result[0]['EpisodeName']
-				movieData['tvdbSeriesID']= result[0]['tvdbSeriesID']
-				movieData['imdbID']= result[0]['imdbID'] if result[0].has_key?('imdbID')
 			end
 			#db_include?( :imdb, movieData)
 			
@@ -227,7 +255,8 @@ module MediaManager
 					break if queue.match(/[\w']*\b/i).nil?
 					searchTerm[i]=match= queue.match(/[\w']*\b/i)
 					match=match[0]
-					if searchTerm[i][0].match(/s[\d]+e[\d]+/i).nil?    #Dont add the episode tag to the search string
+					pp searchTerm[i][0]
+					if MediaManager::RetrieveMeta.get_episode_id(searchTerm[i][0]).nil?    #If it's NOT an episodeID tag
 						searchTerm[i]=searchTerm[i][0]
 						searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
 					else
@@ -252,8 +281,26 @@ module MediaManager
 				searchTerm.each_index {|i|
 					temp=[]
 					results[searchTerm[i]]||=[]
-					temp= MediaManager::MM_TVDB.searchTVDB( searchTerm[i] )
+					temp= MediaManager::MM_TVDB2.searchTVDB( searchTerm[i] )
 					next if temp.length == 0
+					temp=MediaManager::MM_TVDB2.populate_results(temp)
+
+					#reformat it to what was expected from MM_TVDB
+					temp.each {|series|
+						series.each_key {|attribute|
+							if series[attribute].class==Array
+								series[attribute].each_index {|ep_i|
+#									series[attribute][ep_i].each_key {|ep_attr|
+#										series[attribute][ep_i][ep_attr]=[series[attribute][ep_i][ep_attr]]
+#									}
+									series[attribute][ep_i]['EpisodeID']="S#{series[attribute][ep_i]['SeasonNumber'].to_i}E#{series[attribute][ep_i]['EpisodeNumber']}"
+								}
+							else
+								series[attribute]=[series[attribute]]
+							end
+						}
+						series['EpisodeList']=series['Episodes']
+					}
 					results[searchTerm[i]]= temp
 				}
 			else
@@ -273,38 +320,54 @@ module MediaManager
 			results.each_key {|searchWord|
 				#For each result returned for each search, increase the popularity counter for that series
 				results[searchWord].each {|result|
-					occurance[result['tvdbSeriesID']] ||=0
-					occurance[result['tvdbSeriesID']]=occurance[result['tvdbSeriesID']]+1
+					occurance[result['thetvdb_id']] ||=0
+					occurance[result['thetvdb_id']]=occurance[result['thetvdb_id']]+1
 				}
 			}
 			series={}
 			results.each {|listOfSeries|
 				listOfSeries[1].each {|seriesHash|
-					unless series.has_key? seriesHash['tvdbSeriesID']
-						series.merge!({ seriesHash['tvdbSeriesID'] => seriesHash })
+					unless series.has_key? seriesHash['thetvdb_id']
+						series.merge!({ seriesHash['thetvdb_id'] => seriesHash })
 					end
 				}
 			}
 			occurance=occurance.sort {|a,b| a[1]<=>b[1]}.reverse
 			#No longer have to use results array, can use series.
 			matches=[]
-			if (epID=movieData['EpisodeID'].match(/s[\d]+/i)) and (epNum=movieData['EpisodeID'].match(/[\d]+$/))
-				epID=epID[0].reverse.chop.reverse.to_i
+			if (seasonNum=movieData['EpisodeID'].match(/s[\d]+/i)) and (epNum=movieData['EpisodeID'].match(/[\d]+$/))
+				seasonNum=seasonNum[0].reverse.chop.reverse.to_i
 				epNum=epNum[0]
 			end
-			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub(/s[\d]+e[\d]+/i, '').gsub(/\dx\d\d/i, '')
+			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
+			name=name.gsub(MediaManager::RetrieveMeta.get_episode_id(name)[0], '').squeeze(' ') if MediaManager::RetrieveMeta.get_episode_id(name)
+			pp name
 			series.each {|seriesHash|
 				unless seriesHash[1]['EpisodeList'].empty?
 					seriesHash[1]['EpisodeList'].each {|episode|
 						episode.merge!({ 
 							'Title' => seriesHash[1]['Title'][0],
-							'tvdbSeriesID' => seriesHash[1]['tvdbSeriesID'][0] 
+							'tvdbSeriesID' => seriesHash[1]['thetvdb_id'][0] 
 						})
 						episode.merge!({ 'imdbID' => seriesHash[1]['imdbID'][0] }) if seriesHash[1].has_key?('imdbID')
 						epName=episode['EpisodeName']     #For convenience
+						epName='' if epName.class==FalseClass  #convert no episode name into an empty string from it's usual 'false' state for the sake of matching
 						#If the episode name begins with 'the', strip it to ease matching.
 						#Required to match files that were named without 'the' at the beginning of the name
+						if epName.class==FalseClass
+							$it=seriesHash
+						end
 						epName=epName.gsub(/^the[\s]+/i, '') if epName.index(/^the[\s]+/i)
+
+						if epName.match(/christmas/i)
+							pp epName
+							pp name
+						end
+
+						if name==epName
+							matches << episode
+							next
+						end
 
 						##Begin attempting to match	
 						if MediaManager.name_match?(name, epName)
@@ -312,8 +375,6 @@ module MediaManager
 							next
 						end
 						
-						pp episode if epName.match(/christmas/i)
-
 						if epName.index(/\([\d]+\)/)
 							next unless name.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
 							epName=episode['EpisodeName'].gsub(/[:;]/, '')
@@ -480,11 +541,11 @@ module MediaManager
 						#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
 						#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
 						# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR name_match?
-						if epID and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( name,seriesHash[1]['Title'][0], :no))
-							episodes_epID=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
+						if seasonNum and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( name,seriesHash[1]['Title'][0], :no))
+							episodes_seasonNum=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
 							episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
-							#printf "epID: #{epID}  episodes_epID: #{episodes_epID}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
-							if epID.to_i==episodes_epID.to_i and epNum.to_i==episodes_epNum.to_i
+							#printf "seasonNum: #{seasonNum}  episodes_seasonNum: #{episodes_seasonNum}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
+							if seasonNum.to_i==episodes_seasonNum.to_i and epNum.to_i==episodes_epNum.to_i
 								puts "Match based on title found in filename, and season and episode number match from filename."
 								matches << episode
 								next
@@ -508,26 +569,24 @@ module MediaManager
 				pp matches
 				return []
 			end
-			puts "Oh wow!  More than one match!  Guess theres a first for everything.  Better code a contingency for this...\n db_include?() cannot return more than one match!" if matches.length > 1
-
+			#From this point forward, by process of elimination, there can only be more >1 match remaining
+			puts "More than one match found for this file.  Trying to get rid of extaneous matches..."
+			
 			scores={}
 			matches.each_index {|ind|
-				matches[ind].merge( { 'Hash' => hash_filename(matches[ind].to_s) })
+				name=hash_filename(matches[ind].to_s)
+				matches[ind].merge!( { 'Hash' => hash_filename(matches[ind].to_s) })
 				match=matches[ind]
-				name=hash_filename(match.to_s)
 				scores[name]||=0
-				pp match
 				if name_match?(pathToArray(movieData['Path'])[1], match['Title'], :no )==TRUE
 					scores[name]=scores[name]+1
 					
 					#add the length to the score because if a name is very long and still matches, thats better than matching a small name
 					scores[name]+= match['Title'].length
-					pp scores
 				end
 			}
 			
-			_scores=scores.sort {|a,b| a<=>b}.delete_if {|hash, score| score == 0}
-			
+			_scores=scores.sort {|a,b| a[1]<=>b[1]}.delete_if {|hash, score| score == 0}
 			duplicates=[]
 			if _scores.length != 1
 				#For each match, search through all other matches for an episode name that fits inside the first
@@ -548,7 +607,7 @@ module MediaManager
 					}
 				end	 
 			end	
-			_scores=scores.sort {|a,b| a<=>b}.delete_if {|hash, score| score == 0}
+			_scores=scores.sort {|a,b| a[1]<=>b[1]}.delete_if {|hash, score| score == 0}
 
 			#Scores will either be of length 1, and you can return that, or
 			#it will have a list of matches with the highest-rated sorted to the top, and return that one.
@@ -565,8 +624,19 @@ module MediaManager
 						return [match]
 					end
 				}
+			elsif _scores.length==1
+				#raise "HUH"
+				still_exists=[]
+				_scores.each {|popularity_score|
+					still_exists << popularity_score[0]
+				}
+				matches=matches.delete_if {|match|
+					!still_exists.include?(match['Hash'])
+				}
+			else
+				#what would cause the program to get here?
+				raise "WHATHUH??"
 			end
-			pp scores	
 			raise "Error, more than one match remains!" if matches.length > 1
 			return matches
 		end

@@ -66,7 +66,6 @@ module MediaManager
 		end
  
 		#/credits ct 
-	
 
     def reloadConfig askOnFail = :yes
       begin
@@ -375,10 +374,14 @@ module MediaManager
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
 		def name_match?(name, epName, verbose=:yes)
-			if epName.nil? or epName.length==0 
-				puts "name_match?(): blank episode name?" unless verbose==:no
+			if epName.nil? or epName.length==0
+				puts "name_match?(): arg2 is empty??" unless verbose==:no
 				return FALSE
-			end 
+			elsif name.nil? or name.length==0
+				puts "name_match?(): arg1 is empty??" unless verbose==:no
+				return FALSE
+			end
+			
 			epName=Regexp.escape(epName)
 			if name.match(Regexp.new(Regexp.escape(epName), TRUE))   #Basic name match
 				return TRUE
