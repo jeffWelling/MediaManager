@@ -70,6 +70,7 @@ module MediaManager
 			files.each_index { |filesP|
 				ignore=FALSE
 				movieInfo=MediaManager::RetrieveMeta.filenameToInfo files[filesP]
+				next if movieInfo==:ignore
 				#pp_movieInfo movieInfo
 				
 				#If its a duplicate
@@ -108,8 +109,27 @@ module MediaManager
 	end
 
 	#This function is called by the user to create the Library tree of symlinks to all of the movies
-	def createLibrary
-		#files=
+	def self.createLibrary
+		# categories = ['TVShows', 'Movies']
+		entries=MediaManager.sqlSearch('SELECT * FROM mediaFiles')
+		entries.each {|entry|
+			if entry['Categorization'].empty?
+				link_path="#{$MEDIA_LIBRARY_DIR}" << '/Misc/' << File.basename(entry['Path'])
+				File.makedirs link_path
+				File.symlink( entry['Path'], link_path) unless File.exists? link_path
+				next
+				#raise "createLibrary():  Can't create link for file that has no category"
+			end
+
+			link_path="#{$MEDIA_LIBRARY_DIR}" << '/' << entry['Categorization'] << '/' << entry['Title'] << '/' << "Season #{entry['Season']}" << '/'
+			
+			File.makedirs link_path 
+			#This part determins the symlink name's format
+			link_path << entry['EpisodeID'].match(/\d+$/)[0] << ' - ' << entry['EpisodeName'] << entry['Path'].match(/\.[^\.]+?$/)[0]
+			File.symlink(entry['Path'], link_path) unless File.exists? link_path
+			
+		}
+		return TRUE
 	end
 
 	#This function recieves a search term from the user, a name, id number, or identifiable string
@@ -117,9 +137,6 @@ module MediaManager
 	# and if it is identifiable it begins playing that file to the requested host
 	def play searchTerm, target=nil
 		
-		
-
-
 	end
 
 end

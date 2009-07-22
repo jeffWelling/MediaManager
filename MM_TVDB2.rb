@@ -80,7 +80,7 @@ module MediaManager
 						ep['FirstAired']=FALSE
 					end
 				end
-
+				ep[col]=999999 if col=='SeasonNumber' and ep[col].class==FalseClass
 				ep[col].class==FalseClass ? sql_string << "NULL, " : sql_string << "'#{Mysql.escape_string("#{ep[col]}")}', "
 			}
 			sql_string << " NOW())"
@@ -124,8 +124,10 @@ module MediaManager
 		#from the populate_results() method, to make sure the results we are pulling are up to date
 		#it gets all the thetvdb_ids from the database, and updates them all, pursuant to the API
 		def self.update_db(err=:no)
+			url=''
 			begin
-			$TVDB_Mirror||= XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml").body)['Mirror'][0]['mirrorpath'][0]
+			url="http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml"
+			$TVDB_Mirror||= XmlSimple.xml_in(agent.get(url).body)['Mirror'][0]['mirrorpath'][0]
 			#Get the timestamp to use
 			lastupdated=sqlSearch("SELECT * FROM Tvdb_lastupdated")[0]
 			if lastupdated.class==Hash
@@ -147,28 +149,34 @@ module MediaManager
 			if lastupdated!=0
 				#900 = (60Secs in a minute * 15 minutes)
 				#the gsub below is supposed to remove the timezone info from the DateTimes
-				fiveMinAgo= DateTime.parse(DateTime.parse(Time.now.-(300).to_s).to_s.gsub(/.\d\d:\d\d$/i,''))
+				halfHourAgo= DateTime.parse(DateTime.parse(Time.now.-(300).to_s).to_s.gsub(/.\d\d:\d\d$/i,''))
 				wen_lastupdated= DateTime.parse(lastupdated_DateAdded.to_s.gsub(/.\d\d:\d\d$/i,''))
 				#pp fiveMinAgo.to_s
 				#pp wen_lastupdated.to_s
 				#pp lastupdated_DateAdded
-				if wen_lastupdated > fiveMinAgo
-					puts "update_db(): Already updated less than 5 minutes ago."
+				if wen_lastupdated > halfHourAgo
+					puts "update_db(): Already updated less than 30 minutes ago."
 					return 0
 				end
 				#Do the update
 				puts "update_db(): Updating based on lastupdated."
-				updates=XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=all&time=#{lastupdated}").body)
+				url="http://www.thetvdb.com/api/Updates.php?type=all&time=#{lastupdated}"
+				updates=XmlSimple.xml_in(agent.get(url).body)
 				raise "NOTIME!!!" unless updates.has_key? 'Time'
+				(lastupdated=0 and break) if (updates.has_key? 'Series' and updates['Series'].length == 1000)
+				(lastupdated=0 and break) if (updates.has_key? 'Episode' and updates['Episode'].length == 1000)
 				return 0 unless updates.has_key?('Series') or updates.has_key?('Episode')
 				series_columns=['Actors', 'Status', 'ContentRating', 'Runtime', 'Genre', 'FirstAired', 'lastupdated', 'Rating', 'Overview', 'Network', 'IMDB_ID']
-
+				puts "update_db():  Number of series/episodes to update and number of '.' printed may differ.  See source for info."
+				#The '.' denotes an item that was ^actually^ updates, whereas the line that prints the number of series to update
+				#prints the total number of series that have changed not just the ones that have changed that we have.
 				if updates.has_key? 'Series'
 					printf "update_db(): Updating #{updates['Series'].length} series; "
 					updates['Series'].each {|seriesID|
 						next unless sqlSearch("SELECT 'thetvdb_id' FROM Tvdb_Series WHERE thetvdb_id='#{seriesID}'").empty?
 						series={}
-						raw_series_xml=XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{seriesID}/en.xml").body)
+						url="#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{seriesID}/en.xml"
+						raw_series_xml=XmlSimple.xml_in(agent.get(url).body)
 						series['Title']=raw_series_xml['Series'][0]['SeriesName'][0]
 						series['thetvdb_id']=raw_series_xml['Series'][0]['id'][0]
 						
@@ -182,15 +190,16 @@ module MediaManager
 					puts "update_db(): Done updating series."
 				end
 
-				if updates.has_key? 'Episode'
+				if updates.has_key? 'Episode' 
 					printf "update_db(): Updating #{updates['Episode'].length} episodes; "
 					updates['Episode'].each {|ep_id|
 						next unless sqlSearch("SELECT 'id' FROM Tvdb_Episodes WHERE id='#{ep_id}'").empty?
 						episode=[]
 						begin
-							ep_as_xml=XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/episodes/#{ep_id}/en.xml").body)
+							url="#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/episodes/#{ep_id}/en.xml"
+							ep_as_xml=XmlSimple.xml_in(agent.get(url).body)
 						rescue
-							pp "#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/episodes/#{ep_id}/en.xml"
+							pp url
 							puts "update_db(): ERROR during processing/getting the above link"
 							raise PANIC
 						end
@@ -201,11 +210,14 @@ module MediaManager
 					puts "update_db(): Done updating episodes."
 				end
 				time=updates['Time']
-			else
+			end
+			
+			if lastupdated==0
 				##update every series in the database
 				series=[]
 				puts "update_db(): Updating based on no lastupdated."
-				time=XmlSimple.xml_in(agent.get("http://www.thetvdb.com/api/Updates.php?type=none").body)['Time'][0]
+				url="http://www.thetvdb.com/api/Updates.php?type=none"
+				time=XmlSimple.xml_in(agent.get(url).body)['Time'][0]
 				sql_results=sqlSearch("SELECT thetvdb_id, Title FROM Tvdb_Series")
 				#if sql_results.length == 0 than there are no series in the database yet, therefor nothing to update.
 				MM_TVDB2.populate_results(sql_results, FALSE, FALSE) unless sql_results.length==0
@@ -213,11 +225,16 @@ module MediaManager
 			sqlAddUpdate("TRUNCATE TABLE Tvdb_lastupdated")
 			sqlAddUpdate("INSERT INTO Tvdb_lastupdated (lastupdated, DateAdded) VALUES ('#{time}', NOW())")
 			puts "update_db(): Done."
-			rescue
-				if err==:no
-					puts "\nupdate_db(): Update Failed! If this is the first (couple) times you've seen this, ignore it for ~1 hour."
-					return
-				else
+			rescue => e
+				if e.to_s.match(/404/) #The expected failure that happens once in awhile
+					if err==:no
+						puts "\nupdate_db(): Update Failed! If this is the first (couple) times you've seen this, ignore it for ~1 hour."
+						return
+					else
+						pp url
+						raise $!
+					end
+				else #Hm, irregular failure
 					raise $!
 				end
 			end
@@ -312,6 +329,7 @@ module MediaManager
 			rescue
 				number_of_times+= 1
 				retry if number_of_times < 5
+				raise $!
 			end
 
 			begin
@@ -323,7 +341,10 @@ module MediaManager
 			end
 
 			search_results=[]
-			return [] if page['Series'].nil?
+			if page['Series'].nil?
+				puts "searchTVDB('#{name}'): Done."
+				return []
+			end
 			page['Series'].each {|search_result|
 				series={}
 				series['thetvdb_id']=FALSE

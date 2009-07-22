@@ -59,7 +59,7 @@ module MediaManager
 			answer = nil
 			loop {
 				answer = MediaManager.ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
-			 	answer=default if answer==:nil
+			 	(answer=default if answer==:nil) unless default.nil?
 				break if options.member? answer
 			}
 			answer
@@ -382,7 +382,7 @@ module MediaManager
 				return FALSE
 			end
 			
-			epName=Regexp.escape(epName)
+			#epName=Regexp.escape(epName)
 			if name.match(Regexp.new(Regexp.escape(epName), TRUE))   #Basic name match
 				return TRUE
 			elsif name.include?("'")    #If the name includes as "'' then strip it out, it only makes trouble
@@ -441,6 +441,7 @@ module MediaManager
 			sqlAddUpdate( "TRUNCATE TABLE EpisodeCache" )
 		end
 		def clearAll
+			puts "Your a fucking retard.  If you used this function, you ^have^ done something wrong.  Go read the documentation before doing this again you R-Tard."
 			clearFileHashCache
 			clearMediaFiles
 			clearTvdb_Series
