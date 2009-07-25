@@ -1,4 +1,3 @@
-$MMCONF_TVDB_APIKEY="722A9E49CA2070A2"
 $cacheLifetime=30
 
 require 'xmlsimple'
@@ -126,6 +125,10 @@ module MediaManager
 		def self.update_db(err=:no)
 			url=''
 			begin
+			if $last_failed_at != nil and $last_failed_at > (Time.now.-120)
+				puts "update_db(): Failed to update less than 2 minutes ago, no need to rapid-fail; let the server fix itself."
+				return 0
+			end
 			url="http://www.thetvdb.com/api/#{$MMCONF_TVDB_APIKEY}/mirrors.xml"
 			$TVDB_Mirror||= XmlSimple.xml_in(agent.get(url).body)['Mirror'][0]['mirrorpath'][0]
 			#Get the timestamp to use
@@ -147,6 +150,7 @@ module MediaManager
 
 			#If there is no lastupdated in the database, or the one in the database is more than 15 days old
 			if lastupdated!=0
+				skip=FALSE
 				#900 = (60Secs in a minute * 15 minutes)
 				#the gsub below is supposed to remove the timezone info from the DateTimes
 				halfHourAgo= DateTime.parse(DateTime.parse(Time.now.-(300).to_s).to_s.gsub(/.\d\d:\d\d$/i,''))
@@ -163,14 +167,14 @@ module MediaManager
 				url="http://www.thetvdb.com/api/Updates.php?type=all&time=#{lastupdated}"
 				updates=XmlSimple.xml_in(agent.get(url).body)
 				raise "NOTIME!!!" unless updates.has_key? 'Time'
-				(lastupdated=0 and break) if (updates.has_key? 'Series' and updates['Series'].length == 1000)
-				(lastupdated=0 and break) if (updates.has_key? 'Episode' and updates['Episode'].length == 1000)
+				(lastupdated=0 and skip=TRUE) if (updates.has_key? 'Series' and updates['Series'].length == 1000)
+				(lastupdated=0 and skip=TRUE) if (updates.has_key? 'Episode' and updates['Episode'].length == 1000)
 				return 0 unless updates.has_key?('Series') or updates.has_key?('Episode')
 				series_columns=['Actors', 'Status', 'ContentRating', 'Runtime', 'Genre', 'FirstAired', 'lastupdated', 'Rating', 'Overview', 'Network', 'IMDB_ID']
 				puts "update_db():  Number of series/episodes to update and number of '.' printed may differ.  See source for info."
 				#The '.' denotes an item that was ^actually^ updates, whereas the line that prints the number of series to update
 				#prints the total number of series that have changed not just the ones that have changed that we have.
-				if updates.has_key? 'Series'
+				if updates.has_key?('Series') and skip.class==FalseClass
 					printf "update_db(): Updating #{updates['Series'].length} series; "
 					updates['Series'].each {|seriesID|
 						next unless sqlSearch("SELECT 'thetvdb_id' FROM Tvdb_Series WHERE thetvdb_id='#{seriesID}'").empty?
@@ -190,7 +194,7 @@ module MediaManager
 					puts "update_db(): Done updating series."
 				end
 
-				if updates.has_key? 'Episode' 
+				if updates.has_key?('Episode') and skip.class==FalseClass
 					printf "update_db(): Updating #{updates['Episode'].length} episodes; "
 					updates['Episode'].each {|ep_id|
 						next unless sqlSearch("SELECT 'id' FROM Tvdb_Episodes WHERE id='#{ep_id}'").empty?
@@ -216,6 +220,9 @@ module MediaManager
 				##update every series in the database
 				series=[]
 				puts "update_db(): Updating based on no lastupdated."
+				puts "update_db(): NOTICE!! This will take a long time if you have many shows cached.  \n\t\tIf you are not interested in waiting, you can purge the cache and run me again...\n"
+				sleep 3
+				puts "update_db(): Starting database update."
 				url="http://www.thetvdb.com/api/Updates.php?type=none"
 				time=XmlSimple.xml_in(agent.get(url).body)['Time'][0]
 				sql_results=sqlSearch("SELECT thetvdb_id, Title FROM Tvdb_Series")
@@ -225,10 +232,12 @@ module MediaManager
 			sqlAddUpdate("TRUNCATE TABLE Tvdb_lastupdated")
 			sqlAddUpdate("INSERT INTO Tvdb_lastupdated (lastupdated, DateAdded) VALUES ('#{time}', NOW())")
 			puts "update_db(): Done."
+			$last_failed_at=nil
 			rescue => e
 				if e.to_s.match(/404/) #The expected failure that happens once in awhile
 					if err==:no
 						puts "\nupdate_db(): Update Failed! If this is the first (couple) times you've seen this, ignore it for ~1 hour."
+						$last_failed_at=Time.now
 						return
 					else
 						pp url

@@ -114,7 +114,7 @@ module MediaManager
 		entries=MediaManager.sqlSearch('SELECT * FROM mediaFiles')
 		entries.each {|entry|
 			if entry['Categorization'].empty?
-				link_path="#{$MEDIA_LIBRARY_DIR}" << '/Misc/' << File.basename(entry['Path'])
+				link_path="#{$MEDIA_LIBRARY_DIR}" << '/Library/Misc/' << File.basename(entry['Path'])
 				File.makedirs link_path
 				File.symlink( entry['Path'], link_path) unless File.exists? link_path
 				next
