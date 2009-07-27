@@ -4,9 +4,8 @@
 #For testing purposes, the home directory must be dynamically determined
 #to allow for testing to be done on Apple computers who's users' home dirs
 #are in /Users/
-$MM_CONFIG = "#{`cd ~;pwd`.chomp}/Documents/Projects/MediaManager/MediaManager.cfg"
-raise "Cannot read config file!!!" unless load $MM_CONFIG
-$MMCONF_TVDB_APIKEY="722A9E49CA2070A2"
+$mmconfig = "#{`cd ~;pwd`.chomp}/Documents/Projects/MediaManager/MediaManager.cfg"
+raise "Cannot read config file!!!" unless load $mmconfig
 
 #Initialize the cache and blacklist arrays
 $TVDB_CACHE||={}
@@ -25,63 +24,63 @@ load 'movieInfo_Specification.rb'
 module MediaManager
   extend MMCommon
 
-	#scanMedia scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
+	#scan_media scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
 	#verbose speaks for itself
-	#scan_directory is an optional argument, if a directory is given that dir will be scanned instead of the directory[ies]
+	#scanDirectory is an optional argument, if a directory is given that dir will be scanned instead of the directory[ies]
 	#	specified in the config file.
-	#scan_item_limit is the maximum number of files to scan, this number only includes files with recognized extentions.  
+	#scanItemLimit is the maximum number of files to scan, this number only includes files with recognized extentions.  
 	#	The default of zero indicates no limit.
-	#update_duplicates? is used to specify wether you wish to update the metainfo for duplicate files, or simply ignore them.
+	#updateDuplicates? is used to specify wether you wish to update the metainfo for duplicate files, or simply ignore them.
 	#	When a recognized file is found, the file is hashed and the database is searched for the hash.  If a match is found, this
 	#	indicates that the file has been processed before and may be a duplicate.  If this happens, the program looks at the location
 	#	the file was thought to be in previously, if it is not there for any reason the database is silently updated.  If it does exist
 	#	then this option specifies what to do, update the database with the new location or use the old location.
-	def self.scanMedia( verbose=FALSE, scan_directory=nil, scan_item_limit=0, update_duplicates= :yes )
+	def self.scan_media( verbose=FALSE, scanDirectory=nil, scanItemLimit=0, updateDuplicates= :yes )
 		catch :quit do
-			raise "Sanity check failed!" unless sanityCheck==:sane
+			raise "Sanity check failed!" unless sanity_check==:sane
 
-			scan_dirs=$MEDIA_SOURCES_DIR
-			scan_dirs=[scan_directory] if scan_directory
+			sourcesArray=$MEDIA_SOURCES_DIR
+			sourcesArray=[scanDirectory] if scanDirectory
 
 			puts "Scanning source directories:"
 			puts "This may take a moment..."
 			puts "{ skipped = '.', mediafile = '+' }\n" if verbose
 			files=[]
-			scanned_items=0
-			scan_dirs.each { |dir_to_scan|
-				Find.find(dir_to_scan) { |item_path|
-					break if scanned_items >= scan_item_limit unless scan_item_limit==0
+			scannedItems=0
+			sourcesArray.each { |sourceDir|
+				Find.find(sourceDir) { |filePath|
+					break if scannedItems >= scanItemLimit unless scanItemLimit==0
 					acceptable=FALSE
-					$MEDIA_RECOGNIZED_FORMATS.each { |recognized_format|
-						#If the last 4 chars from item_path are a recognized good extention,,,
-						if item_path.reverse.slice(0,4).reverse.match(Regexp.new(recognized_format))
+					$MEDIA_RECOGNIZED_FORMATS.each { |goodExtention|
+						#If the last 4 chars from filePath are a recognized good extention,,,
+						if filePath.reverse.slice(0,4).reverse.match(Regexp.new(goodExtention))
 							acceptable=TRUE
 						end
 					}
 					if acceptable
-						files << item_path
+						files << filePath
 						printf('+') if verbose
-						scanned_items=scanned_items+1
+						scannedItems=scannedItems+1
 					else
 						printf('.') if verbose
 					end
 				}
 			} 
 			
-			files.each_index { |files_index|
+			files.each_index { |filesP|
 				ignore=FALSE
-				movieInfo=MediaManager::RetrieveMeta.filenameToInfo files[files_index]
+				movieInfo=MediaManager::RetrieveMeta.filenameToInfo files[filesP]
 				next if movieInfo==:ignore
 				#pp_movieInfo movieInfo
 				
 				#If its a duplicate
 				if movieInfo.has_key?('id')==true
-					if movieInfo['Path']==files[files_index] and update_duplicates == :yes
+					if movieInfo['Path']==files[filesP] and updateDuplicates == :yes
 						puts "Silently skipping..."
 						next
 					end
 					pp movieInfo['Path']
-					pp files[files_index]
+					pp files[filesP]
 					s="Duplicate found and , OMG THINK OF SOME OPTIONS FOR HERE!"
 					raise s
 					#case MediaManager.prompt(s, :)
@@ -142,5 +141,5 @@ module MediaManager
 
 end
 
-MediaManager.sanityCheck
+MediaManager.sanity_check
 

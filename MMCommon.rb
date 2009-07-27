@@ -8,10 +8,8 @@ module MediaManager
 			require 'dbi'
 #			require 'amatch'    #For checking for spelling errors
 	 		require 'find'
-			require 'pp'
-			require 'fileutils'
 		rescue LoadError => e
-			puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module/gem installed?"
+			puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module installed?"
 			puts "Error is fatal, terminating."
 			exit
 		end
@@ -36,7 +34,7 @@ module MediaManager
 			return default if symbolize(answer)==:empty
       answer
     end
-    def askSymbol question, default
+    def ask_symbol question, default
       answer = symbolize ask(question)
       throw :quit if :quit == answer
       return default if :empty == answer
@@ -60,7 +58,7 @@ module MediaManager
 			option_string = options.collect {|x| x.to_s.capitalize}.join('/')
 			answer = nil
 			loop {
-				answer = MediaManager.askSymbol "#{question} (#{option_string.gsub('//', '/')}):", default
+				answer = MediaManager.ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
 			 	(answer=default if answer==:nil) unless default.nil?
 				break if options.member? answer
 			}
@@ -69,13 +67,13 @@ module MediaManager
  
 		#/credits ct 
 
-    def reloadConfig ask_if_failed = :yes
+    def reloadConfig askOnFail = :yes
       begin
 				load $MEDIA_CONFIG_FILE
 			rescue LoadError => e
 				puts "Could not find config file...? Cannot continue without it!\n #{e.inspect}"
-				if ask_if_failed? == :yes
-					if askSymbol("Retry loading config file? (Have you corrected the problem?)",:no) == :yes
+				if askOnFail? == :yes
+					if ask_symbol("Retry loading config file? (Have you corrected the problem?)",:no) == :yes
 						return reloadConfig(:no)
 					else #Dont want to retry reading config
 						exit
@@ -95,7 +93,7 @@ module MediaManager
       FileUtils.cd($MEDIA_CONFIG_DIR.chomp)
     end
 
-		#This is to be run during sanityCheck to populate the blacklist
+		#This is to be run during sanity_check to populate the blacklist
 		#It is required by the MM_IMDB file to operate properly
 		def loadBlacklist
 			if File.exist?($MMCONF_MOVIEDB_BLACKLIST)
@@ -105,7 +103,7 @@ module MediaManager
 			end
 		end
 
-    def sanityCheck
+    def sanity_check
       MediaManager::reloadConfig :yes			#reloadConfig will exit unless successful
 			sanity=:sane
       require "find"
@@ -121,7 +119,7 @@ module MediaManager
 				sanity=:iNsAnE!
 			end
 
-			#Check MySQL Connection
+			#Instantiate MySQL Connection
 			begin
 				$dbh =  DBI.connect("DBI:Mysql:#{$MMCONF_MYSQL_DBASE}:#{$MMCONF_MYSQL_HOST}", $MMCONF_MYSQL_USER, $MMCONF_MYSQL_PASS)
 			rescue Mysql::Error => e
@@ -139,7 +137,6 @@ module MediaManager
 
       #PHP is installed and useable
       #FIXME  Check for curl
-      #TODO  This is only required if we are going to be using the google search function.
       php=`php -r "print('sane');"`
 			raise "ERROR: Couldn't find that 'php' thing, you sure you gots it?" if php.empty?
       sanity=php.to_sym if sanity==:sane
@@ -155,46 +152,47 @@ module MediaManager
 				puts "Must call with a query string.\n"
 				return
 			end
-		  big_string=`php -f #{$MEDIA_CONFIG_DIR}google_api_php.php "#{query}"`
+		  bigstring=`php -f #{$MEDIA_CONFIG_DIR}google_api_php.php "#{query}"`
 
-		  big_string=big_string.split('<level1>')
+		  bigstring=bigstring.split('<level1>')
 
 		  counter=0
-		  big_string.each do |str|
+		  bigstring.each do |str|
 		    counter1=0
-		    big_string[counter]=str.split('<level2>')
-		    big_string[counter].each do |str2|
-		      tmp= big_string[counter][counter1].split('<:>')
-		      big_string[counter][counter1]= {tmp[0]=>tmp[1]}
+		    hsh={}
+		    bigstring[counter]=str.split('<level2>')
+		    bigstring[counter].each do |str2|
+		      tmp= bigstring[counter][counter1].split('<:>')
+		      bigstring[counter][counter1]= {tmp[0]=>tmp[1]}
 		      counter1=counter1+1
 		    end 
 		    counter=counter+1
 		  end 
-		  # newstring = big_string.split().collect {|line| line.split().collect {|word| x,y = word.split('<:>' ; { x => y } } }
-		  return big_string
+		  # newstring = bigstring.split().collect {|line| line.split().collect {|word| x,y = word.split('<:>' ; { x => y } } }
+		  return bigstring
 		end
 
 		#This function is run on a directory to determine if it contains a split rar'ed archive
-		#return true if file_path contains a rar archive, false otherwise
-		def isRAR? file_path
+		#return true if fPath contains a rar archive, false otherwise
+		def isRAR? fPath
 			path=[]
 
 			#Do not return true if the 'rar' files are more than one level deep
 			#aka dont return true if there are no 'rar' files in the immediate directory
 
 			#Find all files in that path to check them
-			Dir.open(file_path).each {|file|
+			Dir.open(fPath).each {|file|
 				path.push file unless file=='.'||file='..'
 			}
-			path.each_index {|index|
-				path[index] = pathToArray path[index]
+			path.each_index {|arrIndx|
+				path[arrIndx] = pathToArray path[arrIndx]
 			}
 
 			#one of the files should have the 'rar' extention.        One but no more than, more than one indicated devilish trickery!
 			rar=nil
 			path.each_index {|i|
 				if path[i][0]=='.rar' && rar != nil
-					raise "Directory has more than one '.rar' master file! Sinister trickery detected $!@#! Aborting!"
+					raise "Directory has more than one '.rar' master file! Aborting!"
 					return FALSE
 				end
 				unless rar then
@@ -219,25 +217,25 @@ module MediaManager
 		end
 
 		#take a full file path and turn it into an array, including turning the extention into the first element.
-		def pathToArray path
+		def pathToArray fPath
 			first=TRUE
-			path = path.split('/').reverse.collect {|path_segment|
+			fPath = fPath.split('/').reverse.collect {|pathSeg|
 				unless first==FALSE then
 					first=FALSE
-					extention= path_segment=~/\.([^\.]+)$/
-					if extention then path_segment = { path_segment.slice(0,extention) => path_segment.slice(extention,path_segment.length) } end
+					extBegins= pathSeg=~/\.([^\.]+)$/
+					if extBegins then pathSeg = { pathSeg.slice(0,extBegins) => pathSeg.slice(extBegins,pathSeg.length) } end
 				end
-				path_segment
+				pathSeg
 			}
-			path.pop
+			fPath.pop
 
 			#Flatten it out again; make first element extention and second the file's name
-			clipboard=path[0].select { TRUE }[0].reverse
-			path = path.insert( 0,clipboard[0])
-			path = path.insert( 1, clipboard[1])
-			path.delete( path[2] )
+			clipboard=fPath[0].select { TRUE }[0].reverse
+			fPath = fPath.insert( 0,clipboard[0])
+			fPath = fPath.insert( 1, clipboard[1])
+			fPath.delete( fPath[2] )
 
-			return path
+			return fPath
 		end
 		
 		#This function returns true if the capitalization in the string argument is irregular.
@@ -268,7 +266,7 @@ module MediaManager
 				values << "'" << "#{Mysql.escape_string(movieInfo[key].to_s)}" << "', "
 			}
 			sqlString << 'PathSHA, DateAdded '
-			values << "'#{hashFilename movieInfo['Path']}', NOW()  "
+			values << "'#{hash_filename movieInfo['Path']}', NOW()  "
 			
 			sqlString = (sqlString.chomp(', ')) << ") VALUES (" << (values.chomp(', ')) << ');'
 			sqlAddUpdate(sqlString)
@@ -281,7 +279,7 @@ module MediaManager
 
 			movieInfo.each_key {|key|
 				if key=='PathSHA'
-					sqlString << key << '=' << "'#{hashFilename movieInfo['Path']}', " 
+					sqlString << key << '=' << "'#{hash_filename movieInfo['Path']}', " 
 					next
 				elsif key=='DateModified'   #FIXME  Check MySQL database to see if it actually changed, and only then update DataModified
 					sqlString << key << '=' << "NOW(),"
@@ -371,44 +369,44 @@ module MediaManager
 			pp peopleFriendly
 		end
 
-		#nameMatch?(name, epName) searches for epName in name and returns true if found
+		#name_match?(name, epName) searches for epName in name and returns true if found
 		#Return true if they match, return false if they do not
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
-		def nameMatch?(name, ep_name, verbose=:yes)
-			if ep_name.nil? or ep_name.length==0
-				puts "nameMatch?(): arg2 is empty??" unless verbose==:no
+		def name_match?(name, epName, verbose=:yes)
+			if epName.nil? or epName.length==0
+				puts "name_match?(): arg2 is empty??" unless verbose==:no
 				return FALSE
 			elsif name.nil? or name.length==0
-				puts "nameMatch?(): arg1 is empty??" unless verbose==:no
+				puts "name_match?(): arg1 is empty??" unless verbose==:no
 				return FALSE
 			end
 			
-			#ep_name=Regexp.escape(ep_name)
-			if name.match(Regexp.new(Regexp.escape(ep_name), TRUE))   #Basic name match
+			#epName=Regexp.escape(epName)
+			if name.match(Regexp.new(Regexp.escape(epName), TRUE))   #Basic name match
 				return TRUE
 			elsif name.include?("'")    #If the name includes as "'' then strip it out, it only makes trouble
-				if name.gsub("'", '').match(Regexp.new( Regexp.escape(ep_name), TRUE))
+				if name.gsub("'", '').match(Regexp.new( Regexp.escape(epName), TRUE))
 					return TRUE
 				end
-			elsif ep_name.include?("'")
-				if name.match(Regexp.new(Regexp.escape(ep_name.gsub("'", '')), TRUE))
+			elsif epName.include?("'")
+				if name.match(Regexp.new(Regexp.escape(epName.gsub("'", '')), TRUE))
 					return TRUE
 				end
-			elsif ep_name.include?(",")
-				if name.match(Regexp.new(Regexp.escape(ep_name.gsub(",",'')), TRUE))
+			elsif epName.include?(",")
+				if name.match(Regexp.new(Regexp.escape(epName.gsub(",",'')), TRUE))
 					return TRUE
 				end
 			elsif name.include?(',')
-				if name.gsub(',', '').match(Regexp.new(Regexp.escape(ep_name), TRUE))
+				if name.gsub(',', '').match(Regexp.new(Regexp.escape(epName), TRUE))
 					return TRUE
 				end
-			elsif ep_name.include?('.')
-				if name.match(Regexp.new(Regexp.escape(ep_name.gsub('.', '')), TRUE))
+			elsif epName.include?('.')
+				if name.match(Regexp.new(Regexp.escape(epName.gsub('.', '')), TRUE))
 					return TRUE
 				end
 			elsif name.include?('.')
-				if name.gsub('.', '').match(Regexp.new(Regexp.escape(ep_name), TRUE))
+				if name.gsub('.', '').match(Regexp.new(Regexp.escape(epName), TRUE))
 					return TRUE
 				end
 			end
