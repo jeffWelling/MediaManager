@@ -54,8 +54,8 @@ module MediaManager
 			end
 			
 			#Check the consistency of the file
-			filehash=hashFile filename
-			unless filehash==movieData['FileSHA']
+			filehash=hashFile( filename )
+			if filehash != movieData['FileSHA']
 				raise "filenameToInfo: File hash has changed!" \
 					<< "\nIf you have not changed the file, it may have become corrupt."
 			end
@@ -346,14 +346,14 @@ module MediaManager
 			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
 			name=name.gsub(MediaManager::RetrieveMeta.getEpisodeID(name)[0], '').squeeze(' ') if MediaManager::RetrieveMeta.getEpisodeID(name)
 			cleaned_path=movieData['Path'].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
-			series.each {|series|
-				unless series[1]['EpisodeList'].empty?
-					series[1]['EpisodeList'].each {|episode|
+			series.each {|a_series|
+				unless a_series[1]['EpisodeList'].empty?
+					a_series[1]['EpisodeList'].each {|episode|
 						episode.merge!({ 
-							'Title' => series[1]['Title'][0],
-							'tvdbSeriesID' => series[1]['thetvdb_id'][0] 
+							'Title' => a_series[1]['Title'][0],
+							'tvdbSeriesID' => a_series[1]['thetvdb_id'][0] 
 						})
-						episode.merge!({ 'imdbID' => series[1]['imdbID'][0] }) if series[1].has_key?('imdbID')
+						episode.merge!({ 'imdbID' => a_series[1]['imdbID'][0] }) if a_series[1].has_key?('imdbID')
 						current_episode_name=episode['EpisodeName']     #For convenience
 						current_episode_name='' if current_episode_name.class==FalseClass  #convert no episode name into an empty string from it's usual 'false' state for the sake of matching
 						#If the episode name begins with 'the', strip it to ease matching.
@@ -544,7 +544,7 @@ module MediaManager
 						#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
 						#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
 						# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in series OR nameMatch?
-						if season_number and ep_number and (occurance[0][0][0]==series[0][0] or nameMatch?( name,series[1]['Title'][0], :no))
+						if season_number and ep_number and (occurance[0][0][0]==a_series[0][0] or nameMatch?( name,a_series[1]['Title'][0], :no))
 							episodes_season_number=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
 							episodes_ep_number=episode['EpisodeID'].match(/[\d]+$/)[0]
 							#printf "season_number: #{season_number}  episodes_season_number: #{episodes_season_number}  ep_number: #{ep_number}  episodes_ep_number: #{episodes_ep_number}      \n"
