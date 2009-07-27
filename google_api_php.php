@@ -9,7 +9,7 @@ if (strlen($argv[1]) > 0) {
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, $url);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_REFERER, "email://jeff.welling@gmail.com");
+  curl_setopt($ch, CURLOPT_REFERER, "mail://jeff.welling@gmail.com");
   $body = curl_exec($ch);
   curl_close($ch);
 

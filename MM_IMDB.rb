@@ -22,9 +22,9 @@ module MediaManager
 			#this argument is called, the output of 'title' may be different than when
 			#previously invoked with the same name, but the
 			#proxy does not recognize this and may return old/invalid data.
-			nameHash = Digest::SHA1.hexdigest(name.downcase)
-			puts "retrieved from cache." if $IMDB_CACHE.include?(nameHash)
-			return $IMDB_CACHE[nameHash] if $IMDB_CACHE.include?(nameHash)
+			name_hash = Digest::SHA1.hexdigest(name.downcase)
+			puts "retrieved from cache." if $IMDB_CACHE.include?(name_hash)
+			return $IMDB_CACHE[name_hash] if $IMDB_CACHE.include?(name_hash)
 
 			
 			command=$MMCONF_MOVIEDB_LOC+"title -t '#{name.downcase}' -s"
@@ -53,49 +53,49 @@ module MediaManager
 			elsif ret!=0
 				raise "Error:  WTF, unexpected error value from moviedb? #{ret.inspect}"
 			end	
-			return $IMDB_CACHE[nameHash] = mdb2info(result)
+			return $IMDB_CACHE[name_hash] = mdb2info(result)
 		end
 
 		#Check the blacklist for an item
-		def self.inBlacklist? badItem
+		def self.inBlacklist? bad_item
 			#no need to check file, kept in sync by add2Blacklist
-			$IMDB_BLACKLIST.include?(badItem.downcase)
+			$IMDB_BLACKLIST.include?(bad_item.downcase)
 		end
 
 		#Add an item to the blacklist
-		def self.add2Blacklist badItem
+		def self.add2Blacklist bad_item
 			#Add an item to the blacklist, and write to file.
-			raise "Cannot add item to blacklist.txt #{badItem.downcase}" unless `echo #{badItem.downcase} >> #{$MMCONF_MOVIEDB_BLACKLIST}`
-			$IMDB_BLACKLIST << badItem.downcase
+			raise "Cannot add item to blacklist.txt #{bad_item.downcase}" unless `echo #{bad_item.downcase} >> #{$MMCONF_MOVIEDB_BLACKLIST}`
+			$IMDB_BLACKLIST << bad_item.downcase
 		end
 
 		#This function takes the result of the IMDB moviedb 'title' operation
 		#and returns the titles that match in an array
 		#Or FALSE
-		def self.mdb2info outputBlob
-			return FALSE if outputBlob.empty?
-			outputBlob = outputBlob.split("\n").reject {|line| line==""}
+		def self.mdb2info output_blob
+			return FALSE if output_blob.empty?
+			output_blob = output_blob.split("\n").reject {|line| line==""}
 			result=[]
 
 			#Need to know where all the 'page breaks' are for parsing
 			pageBreaks=[]   #Populate pageBreaks with a list of all the line numbers which contain page breaks
-			outputBlob.each_index {|index|
-				pageBreaks << index if outputBlob[index].match( /^[-]*$/ )
+			output_blob.each_index {|index|
+				pageBreaks << index if output_blob[index].match( /^[-]*$/ )
 			}	
 
 			if pageBreaks.length == 1  #One result
-				result[0]={ 'Titles' => outputBlob[2].strip} #This array can be used as a reference for a list of
-				result[1]={ 'Title' => outputBlob[2].strip}        #all available titles.  It just makes processing
+				result[0]={ 'Titles' => output_blob[2].strip} #This array can be used as a reference for a list of
+				result[1]={ 'Title' => output_blob[2].strip}        #all available titles.  It just makes processing
 				#get url from output
 				urlLine=0
-				pp outputBlob
-				outputBlob.each_index {|index|
+				pp output_blob
+				output_blob.each_index {|index|
 					urlLine=index
-					break if outputBlob[index].match( /URL:/ )
+					break if output_blob[index].match( /URL:/ )
 				}
-				result[1].merge!({'Url' => "#{outputBlob[urlLine+1].strip}"})												#the return value more streamline
-				outputBlob.each_index {|index|
-					result[1].merge!({'URL' => outputBlob[index+1].strip}) if outputBlob[index].match( /URL:/ )
+				result[1].merge!({'Url' => "#{output_blob[urlLine+1].strip}"})												#the return value more streamline
+				output_blob.each_index {|index|
+					result[1].merge!({'URL' => output_blob[index+1].strip}) if output_blob[index].match( /URL:/ )
 					break if result[1]['URL']
 				}
 				return result
@@ -103,15 +103,15 @@ module MediaManager
 
 			#pageBreaks should never be less than 2 {unless 1 item returned}
 			raise "Unparsable output from 'title'; Insufficient delimiters for parsing <--->." if pageBreaks.length < 2
-			numItemsReturned = pageBreaks[1] - 2
+			num_items = pageBreaks[1] - 2
 			
 			result[0]={ 'Titles'=>[] }
-			numItemsReturned.times do
+			num_items.times do
 				#Don't process TV show episodes that are returned in results
 				#TV show episodes can be identified as having '{' and '}' in the
 				#name, enclosing the episode title.
-				result[0]['Titles'] << outputBlob[numItemsReturned+1] unless outputBlob[numItemsReturned+1].match( /[{].*[}]/ )
-				numItemsReturned=numItemsReturned-1
+				result[0]['Titles'] << output_blob[num_items+1] unless output_blob[num_items+1].match( /[{].*[}]/ )
+				num_items=num_items-1
 			end
 
 			return result

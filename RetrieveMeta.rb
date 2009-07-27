@@ -36,15 +36,15 @@ module MediaManager
 		end
 	
 		#Returns info in the form of a hash conforming to movieInfo_Specification.rb
-		#isRar is :yes if the filename passed is a folder containing a rared file
-	  def self.filenameToInfo(filename, isRar=:no)
+		#is_rar is :yes if the filename passed is a folder containing a rared file
+	  def self.filenameToInfo(filename, is_rar=:no)
 	    puts "\nWorking on #{filename}"
 			movieData=$movieInfoSpec.clone
 			movieData['Path']=filename
 
-			sqlresult=sqlSearch( "SELECT * FROM mediaFiles WHERE PathSHA = '#{hash_filename movieData['Path']}'" )
-			unless sqlresult.empty?
-				movieData=sqlresult[0]
+			sql_result=sqlSearch( "SELECT * FROM mediaFiles WHERE PathSHA = '#{hash_filename movieData['Path']}'" )
+			unless sql_result.empty?
+				movieData=sql_result[0]
 				puts "Metainformation is available based on a hash of the filename."
 				puts "Checking that file has not changed..."
 			end			
@@ -62,35 +62,35 @@ module MediaManager
 
 			#Don't need to update if they're the same...
 			#Get data from MySQL if possible
-			sqlresult2=''
-			sqlresult2=sqlSearch( "SELECT * FROM mediaFiles WHERE FileSHA = '#{movieData['FileSHA']}'" )
-			unless sqlresult2.empty?
-				unless sqlresult.empty?
-					if sqlresult[0]['id'] != sqlresult2[0]['id']
+			sql_result2=''
+			sql_result2=sqlSearch( "SELECT * FROM mediaFiles WHERE FileSHA = '#{movieData['FileSHA']}'" )
+			unless sql_result2.empty?
+				unless sql_result.empty?
+					if sql_result[0]['id'] != sql_result2[0]['id']
 						raise "filenameToInfo(): Lookup Conflict! filename based lookup and file based lookup product conflicting results."
 					end
 				end
 
-				#Because this sqlresult is produced based on the file's hash, the filename may not match
+				#Because this sql_result is produced based on the file's hash, the filename may not match
 				#FIXME When comparing paths, some filesystems are case senesetive and others are not.  
-				if movieData['Path'] != sqlresult2[0]['Path']
+				if movieData['Path'] != sql_result2[0]['Path']
 					puts "Looking up the file's hash produces a different path!"
-					if File.exist?(sqlresult2[0]['Path'])
+					if File.exist?(sql_result2[0]['Path'])
 						if File.exist?(movieData['Path'])
 							#By not doing anything here, the movieData is overwritten with the 'old' path which
 							#is still valid.  This MUST be detected after filenameToInfo() returns to properly
 							#handle duplicates!
 							puts "WARNING!!: this file is a duplicate!"					
 						end
-					else #The sqlresult2 path leads to a file that doesn't exist.
+					else #The sql_result2 path leads to a file that doesn't exist.
 						puts "NOTICE: The file's hash brings up database results whos path points to a non-existant file."
-						puts "NOTICE: Old path: #{sqlresult2[0]['Path']}"
+						puts "NOTICE: Old path: #{sql_result2[0]['Path']}"
 						puts "NOTICE: Because the old file is not accessible, continuing using new path for file."
-						sqlresult2[0]['PathSHA']= hash_filename(movieData['Path'])     #Just for posterities sake, don't want to show the old hash for the new path ><
-						sqlresult2[0]['Path']= movieData['Path']
+						sql_result2[0]['PathSHA']= hash_filename(movieData['Path'])     #Just for posterities sake, don't want to show the old hash for the new path ><
+						sql_result2[0]['Path']= movieData['Path']
 					end
 				end
-				movieData=sqlresult2[0]
+				movieData=sql_result2[0]
 			end
 			puts "File already in database, using info..." unless movieData['id'].nil?
 			return movieData unless movieData['id'].nil?
@@ -103,7 +103,7 @@ module MediaManager
 	    end 
 
 			#seperated into two lines so that extractData() is run once not twice
-			it= extractData(movieData, isRar)
+			it= extractData(movieData, is_rar)
 			return it if it==:ignore
 	    if it != FALSE then movieData = it end
 
@@ -115,9 +115,9 @@ module MediaManager
 	  end 
 
 		#This function does its  best to extract information from the filename
-		def self.extractData(movieData, isRar=:no)
+		def self.extractData(movieData, is_rar=:no)
 			puts "Reaching up my /dev/null and pulling out some meta-data...."
-			raise "OMG CANT HANDLE RARS YET!!FIXMEYOUIDIOT!!" if isRar!=:no
+			raise "OMG CANT HANDLE RARS YET!!FIXMEYOUIDIOT!!" if is_rar!=:no
 			#Return False unless is movie, then
 
 		  #Store the results from each assesment attempt
@@ -230,63 +230,63 @@ module MediaManager
 
 		#This function takes a source, either :tvdb or :imdb, and a filePath to search for within that DB
 		def self.db_include?( source, movieData )
-			fpath = movieData['Path'] #FIXME  Just use movieData['Path'] everywhere instead of fpath
+			full_path = movieData['Path'] #FIXME  Just use movieData['Path'] everywhere instead of full_path
 
-			#remove any sourceDirs from fpath
+			#remove any sourceDirs from full_path
 			$MEDIA_SOURCES_DIR.each {|sourceDir|
-				if fpath.match(Regexp.new(sourceDir))
-					fpath=fpath.gsub(sourceDir, '')
+				if full_path.match(Regexp.new(sourceDir))
+					full_path=full_path.gsub(sourceDir, '')
 				end
 			}
-			filename=pathToArray fpath
+			filename=pathToArray full_path
 
 			#Extract 'words' from filename, one at a time, and search for them.
 			queue=filename[1].gsub('.', ' ').gsub('_', ' ')
 			done=FALSE;
 			i=0
-			searchTerm=[]
-			filename.each_index {|partOfilename|
-				queue=filename[partOfilename].gsub('.', ' ').gsub('_', ' ')
+			search_terms=[]
+			filename.each_index {|filename_index|
+				queue=filename[filename_index].gsub('.', ' ').gsub('_', ' ')
 				ignore=FALSE
 				loop do  #FIXME Can't this be optimized any further?
-					searchTerm[i] ||= ''
+					search_terms[i] ||= ''
 					ignore=FALSE
 					break if queue.empty?
-					#break if searchTerm[i-1].nil?
+					#break if search_terms[i-1].nil?
 					break if queue.match(/[\w']*\b/i).nil?
-					searchTerm[i]=match= queue.match(/[\w']*\b/i)
+					search_terms[i]=match= queue.match(/[\w']*\b/i)
 					match=match[0]
-					if MediaManager::RetrieveMeta.get_episode_id(searchTerm[i][0]).nil?    #If it's NOT an episodeID tag
-						searchTerm[i]=searchTerm[i][0]
-						searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
+					if MediaManager::RetrieveMeta.get_episode_id(search_terms[i][0]).nil?    #If it's NOT an episodeID tag
+						search_terms[i]=search_terms[i][0]
+						search_terms[i] = "#{search_terms[i-1]} " << search_terms[i] unless i==0
 					else
-						#searchTerm[i] is a MatchData type of match
-						searchTerm[i]=''
+						#search_terms[i] is a MatchData type of match
+						search_terms[i]=''
 					end
 					queue= queue.slice( queue.index(match)+match.length, queue.length ).strip 
 #Using 'ignore's in this area is less effective and more problematic than just running a delete_if loop later.
-#					ignore=TRUE if searchTerm[i].length < 3 or searchTerm[i].strip.downcase=='the' or searchTerm[i].strip.downcase=='and'
+#					ignore=TRUE if search_terms[i].length < 3 or search_terms[i].strip.downcase=='the' or search_terms[i].strip.downcase=='and'
 
 					i=i+1# unless ignore
 				end
 				i=i+1# unless ignore
 			}
-			#searchTerm is now an array of search terms
+			#search_terms is now an array of search terms
 			#search for each, and store the results.
-			searchTerm=searchTerm.delete_if {|it| TRUE if it.nil? or it.empty? or name_match?(it, filename[0].reverse.chop.reverse, :no)}.each_index {|lineN| searchTerm[lineN]=searchTerm[lineN].strip }
-			searchTerm=searchTerm.delete_if {|word| TRUE if ['the','and'].include?(word) or word.length <= 3 }
+			search_terms=search_terms.delete_if {|it| TRUE if it.nil? or it.empty? or name_match?(it, filename[0].reverse.chop.reverse, :no)}.each_index {|lineN| search_terms[lineN]=search_terms[lineN].strip }
+			search_terms=search_terms.delete_if {|word| TRUE if ['the','and'].include?(word) or word.length <= 3 }
 			results={}
-			searchResults=[]
+			search_results=[]
 			if source==:tvdb
-				searchTerm.each_index {|i|
+				search_terms.each_index {|i|
 					temp=[]
-					results[searchTerm[i]]||=[]
-					temp= MediaManager::MM_TVDB2.searchTVDB( searchTerm[i] )
+					results[search_terms[i]]||=[]
+					temp= MediaManager::MM_TVDB2.searchTVDB( search_terms[i] )
 					next if temp.length == 0
-					searchResults << temp
+					search_results << temp
 				}
-				searchResults.each_index {|i|
-					temp=searchResults[i]
+				search_results.each_index {|i|
+					temp=search_results[i]
 					temp=MediaManager::MM_TVDB2.populate_results(temp)
 
 					#reformat it to what was expected from MM_TVDB
@@ -305,15 +305,15 @@ module MediaManager
 						}
 						series['EpisodeList']=series['Episodes']
 					}
-					results[searchTerm[i]]= temp
+					results[search_terms[i]]= temp
 				}
 			else
-				searchTerm.each_index{|i|
+				search_terms.each_index{|i|
 					temp=[]
-					results[searchTerm[i]]||=[]
-					temp= MediaManager::MM_IMDB.searchIMDB( searchTerm[i] )
+					results[search_terms[i]]||=[]
+					temp= MediaManager::MM_IMDB.searchIMDB( search_terms[i] )
 					break if temp.length == 0
-					results[searchTerm[i]]= temp
+					results[search_terms[i]]= temp
 				}
 			end
 			$results = results
@@ -321,66 +321,66 @@ module MediaManager
 			occurance={}
 			#Try and pick a few top results
 			#Present results to user, have user pick
-			results.each_key {|searchWord|
+			results.each_key {|search_word|
 				#For each result returned for each search, increase the popularity counter for that series
-				results[searchWord].each {|result|
+				results[search_word].each {|result|
 					occurance[result['thetvdb_id']] ||=0
 					occurance[result['thetvdb_id']]=occurance[result['thetvdb_id']]+1
 				}
 			}
 			series={}
-			results.each {|listOfSeries|
-				listOfSeries[1].each {|seriesHash|
-					unless series.has_key? seriesHash['thetvdb_id']
-						series.merge!({ seriesHash['thetvdb_id'] => seriesHash })
+			results.each {|list_of_series|
+				list_of_series[1].each {|series|
+					unless series.has_key? series['thetvdb_id']
+						series.merge!({ series['thetvdb_id'] => series })
 					end
 				}
 			}
 			occurance=occurance.sort {|a,b| a[1]<=>b[1]}.reverse
 			#No longer have to use results array, can use series.
 			matches=[]
-			if (seasonNum=movieData['EpisodeID'].match(/s[\d]+/i)) and (epNum=movieData['EpisodeID'].match(/[\d]+$/))
-				seasonNum=seasonNum[0].reverse.chop.reverse.to_i
-				epNum=epNum[0]
+			if (season_number=movieData['EpisodeID'].match(/s[\d]+/i)) and (ep_number=movieData['EpisodeID'].match(/[\d]+$/))
+				season_number=season_number[0].reverse.chop.reverse.to_i
+				ep_number=ep_number[0]
 			end
 			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
 			name=name.gsub(MediaManager::RetrieveMeta.get_episode_id(name)[0], '').squeeze(' ') if MediaManager::RetrieveMeta.get_episode_id(name)
 			cleaned_path=movieData['Path'].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
-			series.each {|seriesHash|
-				unless seriesHash[1]['EpisodeList'].empty?
-					seriesHash[1]['EpisodeList'].each {|episode|
+			series.each {|series|
+				unless series[1]['EpisodeList'].empty?
+					series[1]['EpisodeList'].each {|episode|
 						episode.merge!({ 
-							'Title' => seriesHash[1]['Title'][0],
-							'tvdbSeriesID' => seriesHash[1]['thetvdb_id'][0] 
+							'Title' => series[1]['Title'][0],
+							'tvdbSeriesID' => series[1]['thetvdb_id'][0] 
 						})
-						episode.merge!({ 'imdbID' => seriesHash[1]['imdbID'][0] }) if seriesHash[1].has_key?('imdbID')
-						epName=episode['EpisodeName']     #For convenience
-						epName='' if epName.class==FalseClass  #convert no episode name into an empty string from it's usual 'false' state for the sake of matching
+						episode.merge!({ 'imdbID' => series[1]['imdbID'][0] }) if series[1].has_key?('imdbID')
+						current_episode_name=episode['EpisodeName']     #For convenience
+						current_episode_name='' if current_episode_name.class==FalseClass  #convert no episode name into an empty string from it's usual 'false' state for the sake of matching
 						#If the episode name begins with 'the', strip it to ease matching.
 						#Required to match files that were named without 'the' at the beginning of the name
 	
-						epName=epName.gsub(/^the[\s]+/i, '') if epName.index(/^the[\s]+/i)
+						current_episode_name=current_episode_name.gsub(/^the[\s]+/i, '') if current_episode_name.index(/^the[\s]+/i)
 
-						if name==epName
+						if name==current_episode_name
 							puts "db_include?(): Matched one to one"
 							matches << episode.merge('Matched'=>:oneToOne)
 							next
 						end
 
 						##Begin attempting to match	
-						if (epName.length > 1 and MediaManager.name_match?(name, epName))
+						if (current_episode_name.length > 1 and MediaManager.name_match?(name, current_episode_name))
 							puts "db_include?(): Matched name_match?()"
 							matches << episode.merge('Matched'=>:name_match?)
 							next
 						end
 						
-						if epName.index(/\([\d]+\)/)
+						if current_episode_name.index(/\([\d]+\)/)
 							next unless name.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
-							epName=episode['EpisodeName'].gsub(/[:;]/, '')
-#							puts epName.slice( 0,epName.index(/\([\d]+\)/) )
-#							puts epName.slice( (epName.index(/\([\d]+\)/) + epName.match(/\([\d]+\)/)[0].length),epName.length )
-							part2= epName.slice( epName.index(/\([\d]+\)/)+epName.match(/\([\d]+\)/)[0].length,epName.length ).downcase
-							regex1= Regexp.new( Regexp.escape(epName.slice( 0,epName.index(/\([\d]+\)/) ).downcase))
+							current_episode_name=episode['EpisodeName'].gsub(/[:;]/, '')
+#							puts current_episode_name.slice( 0,current_episode_name.index(/\([\d]+\)/) )
+#							puts current_episode_name.slice( (current_episode_name.index(/\([\d]+\)/) + current_episode_name.match(/\([\d]+\)/)[0].length),current_episode_name.length )
+							part2= current_episode_name.slice( current_episode_name.index(/\([\d]+\)/)+current_episode_name.match(/\([\d]+\)/)[0].length,current_episode_name.length ).downcase
+							regex1= Regexp.new( Regexp.escape(current_episode_name.slice( 0,current_episode_name.index(/\([\d]+\)/) ).downcase))
 							regex2= Regexp.new( Regexp.escape(part2) )
 							unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
 								if name.downcase.match(regex1) and name.downcase.match(regex2)
@@ -391,7 +391,7 @@ module MediaManager
 							end
 							#Should only get here if the string following ([\d]) is empty or the match above wasn't successful
 							#Use the first digit in the ( ) as the part number if it matches.
-							regex2= Regexp.new( Regexp.escape(epName.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
+							regex2= Regexp.new( Regexp.escape(current_episode_name.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
 							if part=name.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
 								part=part[0].match(/[\d]+/)[0]
 								if part.match(regex2)  #Match
@@ -404,36 +404,36 @@ module MediaManager
 						
 						#Attempt to deal with Roman Numerals
 						#The following regex was adapted from Example 7.8 of http://thehazeltree.org/diveintopython/7.html
-						numeralMatch=/\s[M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})]+\s/
-						romMatch= (((name.reverse) + ' ').reverse) + ' ' # This allows us to use whitespace as delimiters for either side of a RN (Roman Numeral)
-						epName= ((epName + ' ').reverse + ' ').reverse
-						if epName.match(numeralMatch) or romMatch.match(numeralMatch)
+						roman_numeral_regex=/\s[M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})]+\s/
+						padded_name= (((name.reverse) + ' ').reverse) + ' ' # This allows us to use whitespace as delimiters for either side of a RN (Roman Numeral)
+						current_episode_name= ((current_episode_name + ' ').reverse + ' ').reverse
+						if current_episode_name.match(roman_numeral_regex) or padded_name.match(roman_numeral_regex)
 							#NOTE To the reader
 							#This is my attempt at identifying a roman numeral in the filename
 							#and converting it to an integer for comparison with the digit
 							#in the episode name.  I whole heartedly believe there ^is^ a 
 							#better way to do this that I haven't found yet.
 							#NOTE We do not anticipate more than one Roman Numeral in the filename.
-							#printf "Episode name: "; puts epName
-							#printf "Filename: "; puts romMatch
-							if romMatch.match( numeralMatch )
+							#printf "Episode name: "; puts current_episode_name
+							#printf "Filename: "; puts padded_name
+							if padded_name.match( roman_numeral_regex )
 								#puts "Roman numeral found in filename, it is printed on the following line."
-								#pp romMatch.match(numeralMatch)[0].strip
-								romMatch=romMatch.gsub(Regexp.new(Regexp.escape(romMatch.match(numeralMatch)[0])), 
-									"#{toArabic( romMatch.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romMatch.match(numeralMatch)[0].strip)==0
-								if epName.match(Regexp.new(Regexp.escape(romMatch), TRUE))
+								#pp padded_name.match(roman_numeral_regex)[0].strip
+								padded_name=padded_name.gsub(Regexp.new(Regexp.escape(padded_name.match(roman_numeral_regex)[0])), 
+									"#{toArabic( padded_name.match(roman_numeral_regex)[0].strip ).to_s} " ) unless toArabic(padded_name.match(roman_numeral_regex)[0].strip)==0
+								if current_episode_name.match(Regexp.new(Regexp.escape(padded_name), TRUE))
 									puts "db_include()?:  Matched based on roman numeral in filename and converted"
 									matches << episode.merge('Matched'=>:romanNumerals)
 									next
 								end
-							elsif epName.match(numeralMatch)
+							elsif current_episode_name.match(roman_numeral_regex)
 								#puts "Roman numeral found in episode name, it is printed on the following line."
-								#printf "Matching: "; pp epName.match(numeralMatch)[0].strip
-								#printf "Replacing with: "; pp toArabic(epName.match(numeralMatch)[0].strip).to_s
-								epName=epName.gsub(Regexp.new(Regexp.escape(epName.match(numeralMatch)[0])), 
-									" #{toArabic(epName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(epName.match(numeralMatch)[0].strip)==0
-								#puts romMatch
-								if romMatch.match(Regexp.new(Regexp.escape(epName), TRUE))
+								#printf "Matching: "; pp current_episode_name.match(roman_numeral_regex)[0].strip
+								#printf "Replacing with: "; pp toArabic(current_episode_name.match(roman_numeral_regex)[0].strip).to_s
+								current_episode_name=current_episode_name.gsub(Regexp.new(Regexp.escape(current_episode_name.match(roman_numeral_regex)[0])), 
+									" #{toArabic(current_episode_name.match(roman_numeral_regex)[0].strip).to_s} " ) unless toArabic(current_episode_name.match(roman_numeral_regex)[0].strip)==0
+								#puts padded_name
+								if padded_name.match(Regexp.new(Regexp.escape(current_episode_name), TRUE))
 									puts "db_include()?: Matched based on roman numeral found in episodename and converted"
 									matches << episode.merge('Matched'=>:romanNumerals)
 									next
@@ -442,10 +442,10 @@ module MediaManager
 						end
 
 
-						if epName.index(':') #May be split into parts, try and match each side of the :
-							epName=episode['EpisodeName'].gsub(/\([\d]+\)/, '')   #Strip out any () parts
-							regex1= Regexp.new( Regexp.escape(epName.slice(0,epName.index(':')).downcase) )
-							regex2= Regexp.new( Regexp.escape(epName.slice(epName.index(':')+1,epName.length).downcase) )
+						if current_episode_name.index(':') #May be split into parts, try and match each side of the :
+							current_episode_name=episode['EpisodeName'].gsub(/\([\d]+\)/, '')   #Strip out any () parts
+							regex1= Regexp.new( Regexp.escape(current_episode_name.slice(0,current_episode_name.index(':')).downcase) )
+							regex2= Regexp.new( Regexp.escape(current_episode_name.slice(current_episode_name.index(':')+1,current_episode_name.length).downcase) )
 
 							if name.downcase.match(regex1) and name.downcase.match(regex2)
 								matches << episode.merge('Matched'=>:parts)
@@ -455,61 +455,61 @@ module MediaManager
 							end
 						end
 						
-						#If an epName has 'a.k.a.' in it, check either side.  Just like any other delimiter
-						if epName.index('a.k.a.')
+						#If an current_episode_name has 'a.k.a.' in it, check either side.  Just like any other delimiter
+						if current_episode_name.index('a.k.a.')
 							#For the purposes of matching the 'a.k.a.' it appears necessary to strip out parenthesis
-							#from the epName, Regexp throws an error if it encounters unmatched parenthesis
-							epName=epName.gsub('(', '').gsub(')', '')
-							firstPart= epName.slice( 0,epName.index('a.k.a.')-1 )
-							lastPart= epName.slice( epName.index('a.k.a.')+ 'a.k.a.'.length, epName.length)
-							if name.match(Regexp.new(firstPart, TRUE))
+							#from the current_episode_name, Regexp throws an error if it encounters unmatched parenthesis
+							current_episode_name=current_episode_name.gsub('(', '').gsub(')', '')
+							first_part= current_episode_name.slice( 0,current_episode_name.index('a.k.a.')-1 )
+							last_part= current_episode_name.slice( current_episode_name.index('a.k.a.')+ 'a.k.a.'.length, current_episode_name.length)
+							if name.match(Regexp.new(first_part, TRUE))
 								puts "db_include?(): Matched the first part of the name, up to 'a.k.a.'."
 								matches << episode.merge('Matched'=>:aka)
 								next
-							elsif name.match(Regexp.new(lastPart, TRUE))
+							elsif name.match(Regexp.new(last_part, TRUE))
 								puts "db_include?(): Matched the last part of the name, after the 'a.k.a.'."
 								matches << episode.merge('Matched'=>:aka)
 								next
 							end
 						end
 
-						#Here I am trying to look for the epName in name the same way that I would as a human
+						#Here I am trying to look for the current_episode_name in name the same way that I would as a human
 						#I think the way to do this is to break the string into words, and look for a single 
-						#character from the beginning and end of each respective word in epName and try
+						#character from the beginning and end of each respective word in current_episode_name and try
 						#match those beginnings and ends of words to beginnings and ends of words in name.
 						#This can be further refined by looking for characters that stand out, like 't' or 'g'
 						#as opposed to ones that don't like 'a' or 'c'.  Looking for characters that stand out 
-						#in name that aren't in epName can accomplish this.  This may be further refined without 
+						#in name that aren't in current_episode_name can accomplish this.  This may be further refined without 
 						#updating this little blurb.i
 						#Note: Admittedly, this cannot catch spelling mistakes at the beginning or end of a word.
 						if name.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').length > 2
-							epName=epName.strip
+							current_episode_name=current_episode_name.strip
 							distance=3
-							epNameResult=[]
+							ep_name_result=[]
 
-							epNameAr=[]
-							nameAr=[]
-							epName.split(' ').each {|word|
-								epNameAr << word unless word.length <= 2
+							ep_name_array=[]
+							name_array=[]
+							current_episode_name.split(' ').each {|word|
+								ep_name_array << word unless word.length <= 2
 							}
 							
 							name.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').each {|word|
-								nameAr << word unless word.length <= 2
+								name_array << word unless word.length <= 2
 							}
-							epNameAr.each_index {|epNameI|
-								nameAr.each_index { |nameI|
-									if epNameAr[epNameI].slice(0,1)==nameAr[nameI].slice(0,1) and
-											epNameAr[epNameI].slice(epNameAr[epNameI].length-1, 1)==nameAr[nameI].slice(nameAr[nameI].length-1, 1)
+							ep_name_array.each_index {|ep_name_index|
+								name_array.each_index { |name_index|
+									if ep_name_array[ep_name_index].slice(0,1)==name_array[name_index].slice(0,1) and
+											ep_name_array[ep_name_index].slice(ep_name_array[ep_name_index].length-1, 1)==name_array[name_index].slice(name_array[name_index].length-1, 1)
 
-										epNameResult[epNameI]=TRUE
+										ep_name_result[ep_name_index]=TRUE
 									else
-										epNameResult[epNameI]=FALSE
+										ep_name_result[ep_name_index]=FALSE
 									end
 								}
 							}
 							#matched
-							epNameResult= epNameResult.delete_if {|wordMatched| wordMatched == FALSE}
-							if epNameResult.length == nameAr.length
+							ep_name_result= ep_name_result.delete_if {|wordMatched| wordMatched == FALSE}
+							if ep_name_result.length == name_array.length
 								puts "db_include?(): Matched based on blind comparison of characters at word boundaries, accurate?"
 								matches << episode.merge('Matched'=>:wordBoundaries)
 								next
@@ -518,18 +518,18 @@ module MediaManager
 
 						#Convert integer to word and try to match
 						if name.match(/\d+/)
-							longName=name.gsub(name.match(/\d+/)[0], Linguistics::EN.numwords(name.match(/\d+/)[0]))
-							if longName.match(Regexp.new(Regexp.escape(epName), TRUE))
-								unless epName.empty?    #To prevent matching an empty episode name
+							long_name=name.gsub(name.match(/\d+/)[0], Linguistics::EN.numwords(name.match(/\d+/)[0]))
+							if long_name.match(Regexp.new(Regexp.escape(current_episode_name), TRUE))
+								unless current_episode_name.empty?    #To prevent matching an empty episode name
 									puts "db_include?(): Matched after converting the number to a word, no space."
 									matches << episode.merge('Matched'=>:intWord)
 									next
 								end
 							end
 
-							longName=name.gsub(name.match(/\d+/)[0], " #{Linguistics::EN.numwords(name.match(/\d+/)[0])} ")
-							if longName.match(Regexp.new(Regexp.escape(epName), TRUE))
-								unless epName.empty?
+							long_name=name.gsub(name.match(/\d+/)[0], " #{Linguistics::EN.numwords(name.match(/\d+/)[0])} ")
+							if long_name.match(Regexp.new(Regexp.escape(current_episode_name), TRUE))
+								unless current_episode_name.empty?
 									puts "db_include?():  Matched after converting the number to a word, with space."
 									matches << episode.merge('Matched'=>:intWord)
 									next
@@ -543,12 +543,12 @@ module MediaManager
 						#If we already have the EpisodeID tag then we can look for that instead of trying to match the name.
 						#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
 						#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
-						# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR name_match?
-						if seasonNum and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( name,seriesHash[1]['Title'][0], :no))
-							episodes_seasonNum=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
-							episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
-							#printf "seasonNum: #{seasonNum}  episodes_seasonNum: #{episodes_seasonNum}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
-							if seasonNum.to_i==episodes_seasonNum.to_i and epNum.to_i==episodes_epNum.to_i
+						# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in series OR name_match?
+						if season_number and ep_number and (occurance[0][0][0]==series[0][0] or name_match?( name,series[1]['Title'][0], :no))
+							episodes_season_number=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
+							episodes_ep_number=episode['EpisodeID'].match(/[\d]+$/)[0]
+							#printf "season_number: #{season_number}  episodes_season_number: #{episodes_season_number}  ep_number: #{ep_number}  episodes_ep_number: #{episodes_ep_number}      \n"
+							if season_number.to_i==episodes_season_number.to_i and ep_number.to_i==episodes_ep_number.to_i
 								puts "db_include?(): Match based on title found in filename, and season and episode number match from filename."
 								matches << episode.merge('Matched'=>:epid)
 								next
@@ -600,12 +600,12 @@ module MediaManager
 						puts "This is the file"
 						puts "#{movieData['Path']}"
 
-						$NameIDConflictHint||=[0]
-						if movieData['Path'].gsub(/\/[^\/]+?$/, '')==$NameIDConflictHint[0]
-							if MediaManager::prompt( "db_include?(): Use the stored hint for this folder? ('#{movieData['Path'].gsub(/\/[^\/]+?$/, '')}', Hint: #{ $NameIDConflictHint[1]==:id ? 'EpisodeID' : 'EpisodeName' })")==:yes
-								if $NameIDConflictHint[1]==:id
+						$name_id_conflict_hint||=[0]
+						if movieData['Path'].gsub(/\/[^\/]+?$/, '')==$name_id_conflict_hint[0]
+							if MediaManager::prompt( "db_include?(): Use the stored hint for this folder? ('#{movieData['Path'].gsub(/\/[^\/]+?$/, '')}', Hint: #{ $name_id_conflict_hint[1]==:id ? 'EpisodeID' : 'EpisodeName' })")==:yes
+								if $name_id_conflict_hint[1]==:id
 									scores[matches[ind]['Hash']]+=1000  #User said this is the right one
-								elsif $NameIDConflictHint[1]==:name
+								elsif $name_id_conflict_hint[1]==:name
 									scores[matches[other_index]['Hash']]+=1000
 								end
 							end
@@ -624,12 +624,12 @@ module MediaManager
 								puts "#{matches[other_index]['Title']} - #{matches[other_index]['EpisodeID']} - #{matches[other_index]['EpisodeName']}"
 								puts "Overview:    #{matches[other_index]['Overview']}"
 								response=MediaManager::prompt( "Which is correct, the id or the name?", nil, [:id, :name, :neither], [:yes, :no] )
-								$NameIDConflictHint[0]=movieData['Path'].gsub(/\/[^\/]+?$/, '')
+								$name_id_conflict_hint[0]=movieData['Path'].gsub(/\/[^\/]+?$/, '')
 								if response==:id
-									$NameIDConflictHint[1]=:id
+									$name_id_conflict_hint[1]=:id
 									scores[matches[ind]['Hash']]+=1000  #User said this is the right one
 								elsif response==:name
-									$NameIDConflictHint[1]=:name
+									$name_id_conflict_hint[1]=:name
 									scores[matches[other_index]['Hash']]+=1000
 								else #:neither
 									raise "Really? Neither?  What the fuck just happened?"
@@ -648,18 +648,18 @@ module MediaManager
 				#For each match, search through all other matches for an episode name that fits inside the first
 				#match's episodename.  If there are matches, they should be removed.
 				matches.each {|match|
-					matches.each {|othermatch|
-						next if match==othermatch
-						if match['EpisodeName'].index(othermatch['EpisodeName']) and match['EpisodeName']!=othermatch['EpisodeName']
-							duplicates<<othermatch
+					matches.each {|other_match|
+						next if match==other_match
+						if match['EpisodeName'].index(other_match['EpisodeName']) and match['EpisodeName']!=other_match['EpisodeName']
+							duplicates<<other_match
 							scores[match['Hash']]+=1
 							puts "One match fits inside one of the others, it has been removed."
-						elsif othermatch['EpisodeName'].index(match['EpisodeName']) and othermatch['EpisodeName']!=match['EpisodeName']
+						elsif other_match['EpisodeName'].index(match['EpisodeName']) and other_match['EpisodeName']!=match['EpisodeName']
 							duplicates<<match
-							scores[othermatch['Hash']]+=1
+							scores[other_match['Hash']]+=1
 							puts "One match fits inside one of the others, it has been removed."
-						elsif match['EpisodeName'].downcase.index(othermatch['EpisodeName'].downcase) and match['EpisodeName'].downcase!=othermatch['EpisodeName'].downcase
-							duplicates<<othermatch
+						elsif match['EpisodeName'].downcase.index(other_match['EpisodeName'].downcase) and match['EpisodeName'].downcase!=other_match['EpisodeName'].downcase
+							duplicates<<other_match
 							scores[match['Hash']]+=1
 							puts "One match fits inside one of the others after downcasing both, it has been removed."
 						end
@@ -680,7 +680,6 @@ module MediaManager
 				raise "false positive detected, sort matches and reduce!" 
 			elsif _scores.length > 1
 				#One match, remove all others and return this one match
-				oneMatch=[]
 				matches.each {|match|
 					pp match
 					if _scores[0][0] == hash_filename(match.to_s)

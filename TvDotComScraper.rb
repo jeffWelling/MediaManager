@@ -13,20 +13,20 @@ $anti_flood=2
 $Use_Mysql=TRUE
 $Sql_Check=FALSE
 $Populate_Bios=TRUE
-$seriesCacheTime=7
+$Series_cache_time=7
 
 #Credit for origional generate_hash function goes to 
 #http://blog.arctus.co.uk/articles/2007/09/17/compatible-md5-sha-1-file-hashes-in-ruby-java-and-net-c/
 #Adapted to be slightly verbose, and to use a cache, with the option of bypassing the cache.
 require 'digest/sha1'	
-def hash_file(file_path_and_name, bypassCache=nil) #Was generate_hash
+def hash_file(file_path_and_name, bypass_cache=nil) #Was generate_hash
 	cache=''
 
 	#Only delete files that are being processed so that the database may be consulted manually for information if thetvdb ever has problems or goes down	
 	n=sqlAddUpdate("DELETE FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}' AND DateAdded < '#{DateTime.now.-(3).strftime("%Y-%m-%d %H:%M:%S")}'")
 	puts "Deleted expired cache record of file's hash." if n==1
 	cache=sqlSearch("SELECT * FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}'")
-	unless cache.empty? or bypassCache
+	unless cache.empty? or bypass_cache
 		puts "This file was hashed less than 3 days ago, using cached hash."
 		return cache[0]['FileSHA']
 	end
@@ -140,16 +140,16 @@ module TvDotComScraper
 	#This method is to be used for sql statements that do not return results, except for the number of records processed
 	#THE SQL MUST ALREADY BE ESCAPEID
 	#It returns the number of records
-	def self.sql_do(sql_String)
+	def self.sql_do(sql_string)
 		if $Sql_Check
 			printf "\n"
-			pp sql_String
+			pp sql_string
 			prompt('Continue?')
 		end
 		r=FALSE
 		begin
 			$dbh =  DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
-			r= $dbh.do sql_String
+			r= $dbh.do sql_string
 		rescue Mysql::Error => e
 			puts "Mysql sanity check: FAILED"
 			puts "Error code: #{e.errno}"
@@ -751,23 +751,23 @@ The search_results array is in this format
 		return search_results
 	end
 
-	#Look in MySQL for this seriesID
+	#Look in MySQL for this series_id
 	#If it exists, AND has not expired, return info
 	#If expired and show_expired==TRUE, return info
 	#If expired and show_expired==FALSE, or does not exist, return []
 	#results are a hash, {['Details']=> X, ['Episodes']=> []}
-	def self.db_has_series?(seriesID, show_expired=FALSE)
-		raise "db_has_series?(): seriesID must be an integer" unless seriesID.class==Fixnum and seriesID!=0
+	def self.db_has_series?(series_id, show_expired=FALSE)
+		raise "db_has_series?(): series_id must be an integer" unless series_id.class==Fixnum and series_id!=0
 		return {} unless $Use_Mysql
-		printf "db_has_series?(): Checking database for tvcomID:'#{seriesID}'.     "
+		printf "db_has_series?(): Checking database for tvcomID:'#{series_id}'.     "
 		result={}
 		#Setup mysql connection
 		begin
 			$dbh =  DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
 
 
-			rez = $dbh.execute "SELECT * FROM Series_Details WHERE tvcomID='#{seriesID}'"
-			rez1 = $dbh.execute "SELECT * FROM Cast_and_Crew WHERE tvcomID='#{seriesID}"
+			rez = $dbh.execute "SELECT * FROM Series_Details WHERE tvcomID='#{series_id}'"
+			rez1 = $dbh.execute "SELECT * FROM Cast_and_Crew WHERE tvcomID='#{series_id}"
 			arry=[]
 			arry1=[]
 			columns=rez.column_names
@@ -797,11 +797,11 @@ The search_results array is in this format
 			formatted_result={'Details'=> {}, 'Episodes'=>[], 'Credits'=>[]}
 			attrs=['Status', 'Originally on', 'Show score', 'Premiered', 'Title', 'Summary', 'Show Categories', 'Last Aired']
 			unless arry.empty? 
-				if DateTime.parse(arry[0]['DateAdded'].to_s) < DateTime.now.-($seriesCacheTime) 
+				if DateTime.parse(arry[0]['DateAdded'].to_s) < DateTime.now.-($Series_cache_time) 
 					puts "SERIES HAS EXPIRED"
-					$dbh.do "DELETE FROM Series_Details WHERE tvcomID='#{seriesID}'"
-					$dbh.do "DELETE FROM Episodes WHERE tvcomID='#{seriesID}'"
-					$dbh.do "DELETE FROM Cast_and_Crew WHERE tvcomID='#{seriesID}'"
+					$dbh.do "DELETE FROM Series_Details WHERE tvcomID='#{series_id}'"
+					$dbh.do "DELETE FROM Episodes WHERE tvcomID='#{series_id}'"
+					$dbh.do "DELETE FROM Cast_and_Crew WHERE tvcomID='#{series_id}'"
 					return {}
 				end
 	
@@ -820,7 +820,7 @@ The search_results array is in this format
 					end
 				}
 				#Just for posterity
-				formatted_result['tvcomID']=seriesID
+				formatted_result['tvcomID']=series_id
 				printf "found!\n"
 			else 
 				formatted_result={}
@@ -861,20 +861,20 @@ The search_results array is in this format
 		return formatted_result
 	end
 
-	#Search the database for episodes for this tvcomID
+	#Search the database for episodes for this tvcom_id
 	#Return array of episodes to fit in series_results[result_i]['Episodes'], or empty array
 	#Show expired indicates wether to show episodes that have 'expired', it is intended for use for
 	#pulling episodes from the database when tv.com isn't available for updating.
-	def self.db_has_episodes?(tvcomID, show_expired=nil)
-		raise "db_has_episodes?(): tvcomID must be an integer." if !tvcomID.class==Fixnum
+	def self.db_has_episodes?(tvcom_id, show_expired=nil)
+		raise "db_has_episodes?(): tvcom_id must be an integer." if !tvcom_id.class==Fixnum
 		episodes=[]
 		return {} unless $Use_Mysql
-		printf "db_has_episodes?(): Getting episodes for tvcomID:'#{tvcomID}' \n"
+		printf "db_has_episodes?(): Getting episodes for tvcom_id:'#{tvcom_id}' \n"
 		result={}
 		begin
 			$dbh= DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
 
-			rez= $dbh.execute "SELECT * FROM Episodes WHERE tvcomID='#{tvcomID}'"
+			rez= $dbh.execute "SELECT * FROM Episodes WHERE tvcom_id='#{tvcom_id}'"
 			arry=[]
 			columns=rez.column_names
 			rowNum=0
@@ -906,7 +906,7 @@ The search_results array is in this format
 									episode[attr_name]=DateTime.parse(ep[attr_name].to_s)
 								rescue ArgumentError => e
 									raise $! unless e.to_s.match(/invalid date/i)
-									puts "db_has_episode?(): Invalid Date for '#{ep['EpName']}' in tvcomID '#{tvcomID}', cleansing."
+									puts "db_has_episode?(): Invalid Date for '#{ep['EpName']}' in tvcomID '#{tvcom_id}', cleansing."
 									episode[attr_name]=FALSE
 							end
 							when 'Summary'
@@ -952,7 +952,7 @@ The search_results array is in this format
 			end
 
 			unless arry.empty?
-				if DateTime.parse(arry[0]['DateAdded'].to_s) < DateTime.now.-($seriesCacheTime)
+				if DateTime.parse(arry[0]['DateAdded'].to_s) < DateTime.now.-($Series_cache_time)
 					puts "ACTOR-BIO EXPIRED!"
 					$dbh.do "DELETE FROM Actor_Biographies WHERE Name='#{Mysql.escape_string(name)}'"
 					return {}

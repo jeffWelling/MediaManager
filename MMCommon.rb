@@ -8,8 +8,10 @@ module MediaManager
 			require 'dbi'
 #			require 'amatch'    #For checking for spelling errors
 	 		require 'find'
+			require 'pp'
+			require 'fileutils'
 		rescue LoadError => e
-			puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module installed?"
+			puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module/gem installed?"
 			puts "Error is fatal, terminating."
 			exit
 		end
@@ -67,12 +69,12 @@ module MediaManager
  
 		#/credits ct 
 
-    def reloadConfig askOnFail = :yes
+    def reloadConfig ask_if_failed = :yes
       begin
 				load $MEDIA_CONFIG_FILE
 			rescue LoadError => e
 				puts "Could not find config file...? Cannot continue without it!\n #{e.inspect}"
-				if askOnFail? == :yes
+				if ask_if_failed? == :yes
 					if ask_symbol("Retry loading config file? (Have you corrected the problem?)",:no) == :yes
 						return reloadConfig(:no)
 					else #Dont want to retry reading config
@@ -119,7 +121,7 @@ module MediaManager
 				sanity=:iNsAnE!
 			end
 
-			#Instantiate MySQL Connection
+			#Check MySQL Connection
 			begin
 				$dbh =  DBI.connect("DBI:Mysql:#{$MMCONF_MYSQL_DBASE}:#{$MMCONF_MYSQL_HOST}", $MMCONF_MYSQL_USER, $MMCONF_MYSQL_PASS)
 			rescue Mysql::Error => e
@@ -137,6 +139,7 @@ module MediaManager
 
       #PHP is installed and useable
       #FIXME  Check for curl
+      #TODO  This is only required if we are going to be using the google search function.
       php=`php -r "print('sane');"`
 			raise "ERROR: Couldn't find that 'php' thing, you sure you gots it?" if php.empty?
       sanity=php.to_sym if sanity==:sane
@@ -152,47 +155,46 @@ module MediaManager
 				puts "Must call with a query string.\n"
 				return
 			end
-		  bigstring=`php -f #{$MEDIA_CONFIG_DIR}google_api_php.php "#{query}"`
+		  big_string=`php -f #{$MEDIA_CONFIG_DIR}google_api_php.php "#{query}"`
 
-		  bigstring=bigstring.split('<level1>')
+		  big_string=big_string.split('<level1>')
 
 		  counter=0
-		  bigstring.each do |str|
+		  big_string.each do |str|
 		    counter1=0
-		    hsh={}
-		    bigstring[counter]=str.split('<level2>')
-		    bigstring[counter].each do |str2|
-		      tmp= bigstring[counter][counter1].split('<:>')
-		      bigstring[counter][counter1]= {tmp[0]=>tmp[1]}
+		    big_string[counter]=str.split('<level2>')
+		    big_string[counter].each do |str2|
+		      tmp= big_string[counter][counter1].split('<:>')
+		      big_string[counter][counter1]= {tmp[0]=>tmp[1]}
 		      counter1=counter1+1
 		    end 
 		    counter=counter+1
 		  end 
-		  # newstring = bigstring.split().collect {|line| line.split().collect {|word| x,y = word.split('<:>' ; { x => y } } }
-		  return bigstring
+		  # newstring = big_string.split().collect {|line| line.split().collect {|word| x,y = word.split('<:>' ; { x => y } } }
+		  return big_string
 		end
 
 		#This function is run on a directory to determine if it contains a split rar'ed archive
-		#return true if fPath contains a rar archive, false otherwise
-		def isRAR? fPath
+		#return true if file_path contains a rar archive, false otherwise
+		def isRAR? file_path
 			path=[]
 
 			#Do not return true if the 'rar' files are more than one level deep
 			#aka dont return true if there are no 'rar' files in the immediate directory
 
 			#Find all files in that path to check them
-			Dir.open(fPath).each {|file|
+			Dir.open(file_path).each {|file|
 				path.push file unless file=='.'||file='..'
 			}
-			path.each_index {|arrIndx|
-				path[arrIndx] = pathToArray path[arrIndx]
+			path.each_index {|index|
+				path[index] = pathToArray path[index]
 			}
 
 			#one of the files should have the 'rar' extention.        One but no more than, more than one indicated devilish trickery!
 			rar=nil
 			path.each_index {|i|
 				if path[i][0]=='.rar' && rar != nil
-					raise "Directory has more than one '.rar' master file! Aborting!"
+					raise "Directory has more than one '.rar' master file! Sinister trickery detected $!@#! Aborting!"
 					return FALSE
 				end
 				unless rar then
@@ -217,25 +219,25 @@ module MediaManager
 		end
 
 		#take a full file path and turn it into an array, including turning the extention into the first element.
-		def pathToArray fPath
+		def pathToArray path
 			first=TRUE
-			fPath = fPath.split('/').reverse.collect {|pathSeg|
+			path = path.split('/').reverse.collect {|path_segment|
 				unless first==FALSE then
 					first=FALSE
-					extBegins= pathSeg=~/\.([^\.]+)$/
-					if extBegins then pathSeg = { pathSeg.slice(0,extBegins) => pathSeg.slice(extBegins,pathSeg.length) } end
+					extention= path_segment=~/\.([^\.]+)$/
+					if extention then path_segment = { path_segment.slice(0,extention) => path_segment.slice(extention,path_segment.length) } end
 				end
-				pathSeg
+				path_segment
 			}
-			fPath.pop
+			path.pop
 
 			#Flatten it out again; make first element extention and second the file's name
-			clipboard=fPath[0].select { TRUE }[0].reverse
-			fPath = fPath.insert( 0,clipboard[0])
-			fPath = fPath.insert( 1, clipboard[1])
-			fPath.delete( fPath[2] )
+			clipboard=path[0].select { TRUE }[0].reverse
+			path = path.insert( 0,clipboard[0])
+			path = path.insert( 1, clipboard[1])
+			path.delete( path[2] )
 
-			return fPath
+			return path
 		end
 		
 		#This function returns true if the capitalization in the string argument is irregular.
@@ -373,8 +375,8 @@ module MediaManager
 		#Return true if they match, return false if they do not
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
-		def name_match?(name, epName, verbose=:yes)
-			if epName.nil? or epName.length==0
+		def name_match?(name, ep_name, verbose=:yes)
+			if ep_name.nil? or ep_name.length==0
 				puts "name_match?(): arg2 is empty??" unless verbose==:no
 				return FALSE
 			elsif name.nil? or name.length==0
@@ -382,31 +384,31 @@ module MediaManager
 				return FALSE
 			end
 			
-			#epName=Regexp.escape(epName)
-			if name.match(Regexp.new(Regexp.escape(epName), TRUE))   #Basic name match
+			#ep_name=Regexp.escape(ep_name)
+			if name.match(Regexp.new(Regexp.escape(ep_name), TRUE))   #Basic name match
 				return TRUE
 			elsif name.include?("'")    #If the name includes as "'' then strip it out, it only makes trouble
-				if name.gsub("'", '').match(Regexp.new( Regexp.escape(epName), TRUE))
+				if name.gsub("'", '').match(Regexp.new( Regexp.escape(ep_name), TRUE))
 					return TRUE
 				end
-			elsif epName.include?("'")
-				if name.match(Regexp.new(Regexp.escape(epName.gsub("'", '')), TRUE))
+			elsif ep_name.include?("'")
+				if name.match(Regexp.new(Regexp.escape(ep_name.gsub("'", '')), TRUE))
 					return TRUE
 				end
-			elsif epName.include?(",")
-				if name.match(Regexp.new(Regexp.escape(epName.gsub(",",'')), TRUE))
+			elsif ep_name.include?(",")
+				if name.match(Regexp.new(Regexp.escape(ep_name.gsub(",",'')), TRUE))
 					return TRUE
 				end
 			elsif name.include?(',')
-				if name.gsub(',', '').match(Regexp.new(Regexp.escape(epName), TRUE))
+				if name.gsub(',', '').match(Regexp.new(Regexp.escape(ep_name), TRUE))
 					return TRUE
 				end
-			elsif epName.include?('.')
-				if name.match(Regexp.new(Regexp.escape(epName.gsub('.', '')), TRUE))
+			elsif ep_name.include?('.')
+				if name.match(Regexp.new(Regexp.escape(ep_name.gsub('.', '')), TRUE))
 					return TRUE
 				end
 			elsif name.include?('.')
-				if name.gsub('.', '').match(Regexp.new(Regexp.escape(epName), TRUE))
+				if name.gsub('.', '').match(Regexp.new(Regexp.escape(ep_name), TRUE))
 					return TRUE
 				end
 			end

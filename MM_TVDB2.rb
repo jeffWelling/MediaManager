@@ -34,8 +34,8 @@ module MediaManager
 		end
 
 		def self.store_series(series)
-			badargs="store_series(): Bad arguments."
-			raise badargs unless series.class==Hash
+			bad_args="store_series(): Bad arguments."
+			raise bad_args unless series.class==Hash
 			cols=['Status', 'Runtime', 'FirstAired', 'Genre', 'lastupdated', 'IMDB_ID', 'Title', 'Network', 'Overview', 'Rating', 'ContentRating', 'Actors', 'thetvdb_id']
 			series['thetvdb_id']=series['thetvdb_id'].to_s
 
@@ -44,7 +44,7 @@ module MediaManager
 			puts "store_series(): CRITICAL WARNING - THIS SERIES HAS NO TITLE" if series['Title'].class==Hash
 
 			cols.each {|col|
-				raise "#{badargs + "   " + col + " : " + "#{series[col].class}" }" unless series[col].class==String or series[col].class==FalseClass
+				raise "#{bad_args + "   " + col + " : " + "#{series[col].class}" }" unless series[col].class==String or series[col].class==FalseClass
 			}
 
 			sqlAddUpdate("DELETE FROM Tvdb_Series WHERE thetvdb_id='#{series['thetvdb_id']}'")
@@ -88,8 +88,8 @@ module MediaManager
 
 
 		def self.store_series_in_db(series)
-			badargs="store_series_in_db(): Bad arguments."
-			raise badargs unless series.class==Hash
+			bad_args="store_series_in_db(): Bad arguments."
+			raise bad_args unless series.class==Hash
 			cols=['Status', 'Runtime', 'FirstAired', 'Genre', 'lastupdated', 'IMDB_ID', 'Title', 'Network', 'Overview', 'Rating', 'ContentRating', 'Actors', 'thetvdb_id']
 			ep_cols=['id', 'Director', 'SeasonNumber', 'GuestStars', 'FirstAired', 'EpisodeNumber', 'lastupdated', 'IMDB_ID', 'ProductionCode', 'Overview', 'Writer', 'EpisodeName']
 			series['thetvdb_id']=series['thetvdb_id'].to_s
@@ -97,13 +97,13 @@ module MediaManager
 			series['Title']='' if series['Title'].class==Hash
 			puts "store_series(): CRITICAL WARNING - THIS SERIES HAS NO TITLE" if series['Title'].class==Hash
 			cols.each {|col|
-				raise "#{badargs + "   " + col + " : " + "#{series[col].class}" }" unless series[col].class==String or series[col].class==FalseClass
+				raise "#{bad_args + "   " + col + " : " + "#{series[col].class}" }" unless series[col].class==String or series[col].class==FalseClass
 			}
-			raise badargs unless series['Episodes'].class==Array
+			raise bad_args unless series['Episodes'].class==Array
 			series['Episodes'].each {|episode|
-				raise badargs unless !episode.empty?
+				raise bad_args unless !episode.empty?
 				ep_cols.each {|col|
-					raise badargs unless episode.has_key?(col) and episode[col].class==String or episode[col].class==FalseClass
+					raise bad_args unless episode.has_key?(col) and episode[col].class==String or episode[col].class==FalseClass
 				}
 			}
 			printf "store_series_in_db(): ... "
@@ -153,12 +153,12 @@ module MediaManager
 				skip=FALSE
 				#900 = (60Secs in a minute * 15 minutes)
 				#the gsub below is supposed to remove the timezone info from the DateTimes
-				halfHourAgo= DateTime.parse(DateTime.parse(Time.now.-(300).to_s).to_s.gsub(/.\d\d:\d\d$/i,''))
+				halfhour_ago= DateTime.parse(DateTime.parse(Time.now.-(300).to_s).to_s.gsub(/.\d\d:\d\d$/i,''))
 				wen_lastupdated= DateTime.parse(lastupdated_DateAdded.to_s.gsub(/.\d\d:\d\d$/i,''))
 				#pp fiveMinAgo.to_s
 				#pp wen_lastupdated.to_s
 				#pp lastupdated_DateAdded
-				if wen_lastupdated > halfHourAgo
+				if wen_lastupdated > halfhour_ago
 					puts "update_db(): Already updated less than 30 minutes ago."
 					return 0
 				end
@@ -371,19 +371,19 @@ module MediaManager
 		end
 
 		#This function is called by the user on the search_results returned by the searchTVDB() defined above
-		def self.populate_results(search_results, check_cache=TRUE, updatedb=TRUE)
+		def self.populate_results(search_results, check_cache=TRUE, update_db=TRUE)
 			#Sanity check input
 			populated_results=[]
-			badargs="populate_results(): Argument MUST be a search result as returned from searchTVDB() method."
+			bad_args="populate_results(): Argument MUST be a search result as returned from searchTVDB() method."
 			raise "populate_results(): check_cache argument MUST be either true or false." unless check_cache.class==TrueClass or check_cache.class==FalseClass
-			raise badargs unless search_results.class==Array
+			raise bad_args unless search_results.class==Array
 			raise "populate_results(): Was passed an empty arguments set?" if search_results.length==0
 			search_results.each {|result|
-				raise badargs if !result['Title'].class==String
-				raise badargs if !result['thetvdb_id'].class==Fixnum
-				raise badargs if result.has_key?('IMDB_ID') and !result['IMDB_ID'].class==String
+				raise bad_args if !result['Title'].class==String
+				raise bad_args if !result['thetvdb_id'].class==Fixnum
+				raise bad_args if result.has_key?('IMDB_ID') and !result['IMDB_ID'].class==String
 			}
-			if updatedb
+			if update_db
 				puts "populate_results(): Calling update_db() first."
 				MM_TVDB2.update_db
 			end
