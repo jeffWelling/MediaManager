@@ -50,12 +50,12 @@ module MediaManager
 			end			
 
 			if movieData['FileSHA'].empty?
-				movieData['FileSHA']=hash_file filename
+				movieData['FileSHA']=hash_file(filename) if $MM_MAINT_FILE_INTEGRITY==TRUE
 			end
 			
 			#Check the consistency of the file
-			filehash=hash_file filename
-			unless filehash==movieData['FileSHA']
+			filehash= ($MM_MAINT_FILE_INTEGRITY==TRUE) ? (hash_file(filename)) : ('')
+			unless filehash.length == 0 or filehash==movieData['FileSHA']
 				raise "filenameToInfo: File hash has changed!" \
 					<< "\nIf you have not changed the file, it may have become corrupt."
 			end
@@ -63,7 +63,7 @@ module MediaManager
 			#Don't need to update if they're the same...
 			#Get data from MySQL if possible
 			sqlresult2=''
-			sqlresult2=sqlSearch( "SELECT * FROM mediaFiles WHERE FileSHA = '#{movieData['FileSHA']}'" )
+			sqlresult2=sqlSearch( "SELECT * FROM mediaFiles WHERE FileSHA = '#{movieData['FileSHA']}'" ) unless $MM_MAINT_FILE_INTEGRITY!=TRUE
 			unless sqlresult2.empty?
 				unless sqlresult.empty?
 					if sqlresult[0]['id'] != sqlresult2[0]['id']
@@ -73,7 +73,7 @@ module MediaManager
 
 				#Because this sqlresult is produced based on the file's hash, the filename may not match
 				#FIXME When comparing paths, some filesystems are case senesetive and others are not.  
-				if movieData['Path'] != sqlresult2[0]['Path']
+				if movieData['Path'] != sqlresult2[0]['Path'] and $MM_MAINT_FILE_INTEGRITY==TRUE
 					puts "Looking up the file's hash produces a different path!"
 					if File.exist?(sqlresult2[0]['Path'])
 						if File.exist?(movieData['Path'])

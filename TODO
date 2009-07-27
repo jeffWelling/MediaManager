@@ -2,4 +2,5 @@ TODO file for Jeff's MediaManager program
 
 -(July 27 09) Alter search_tvdb() so that it uses MySQL to cache search results by the searchword for a short period of time
 -. Make hashing of the files an optional argument, default is not to hash every file (not to maintain integrity checks)
-
+--. If there are files that were imported/scanned while integrity checking was disabled, when they are scanned with integrity
+			checking enabled again, it should update the entry with the FileSHA.

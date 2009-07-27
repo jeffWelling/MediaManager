@@ -79,12 +79,14 @@ module MediaManager
 						puts "Silently skipping..."
 						next
 					end
-					pp movieInfo['Path']
-					pp files[filesP]
-					s="Duplicate found and , OMG THINK OF SOME OPTIONS FOR HERE!"
-					raise s
+					unless $MM_MAINT_FILE_INTEGRITY!=TRUE
+						pp movieInfo['Path']
+						pp files[filesP]
+						s="Duplicate found and , OMG THINK OF SOME OPTIONS FOR HERE!"
+						raise s
 					#case MediaManager.prompt(s, :)
 					#	when 
+					end
 				end
 			
 				pp_movieInfo movieInfo	
