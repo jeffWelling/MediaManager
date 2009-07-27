@@ -6,7 +6,7 @@ module MediaManager
 		extend MMCommon
 		#Take a name, and search for it in IMDB
 		#Returns array of movies, or FALSE
-		#This function is called directly by a helper function,       db_include?( source, dbname)
+		#This function is called directly by a helper function,       dbInclude?( source, dbname)
 		#which takes the name, and continues searching until a
 		#result is found, or the source is exhausted.
 

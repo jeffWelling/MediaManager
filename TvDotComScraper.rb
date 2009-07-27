@@ -19,13 +19,13 @@ $Series_cache_time=7
 #http://blog.arctus.co.uk/articles/2007/09/17/compatible-md5-sha-1-file-hashes-in-ruby-java-and-net-c/
 #Adapted to be slightly verbose, and to use a cache, with the option of bypassing the cache.
 require 'digest/sha1'	
-def hash_file(file_path_and_name, bypass_cache=nil) #Was generate_hash
+def hashFile(file_path_and_name, bypass_cache=nil) #Was generate_hash
 	cache=''
 
 	#Only delete files that are being processed so that the database may be consulted manually for information if thetvdb ever has problems or goes down	
-	n=sqlAddUpdate("DELETE FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}' AND DateAdded < '#{DateTime.now.-(3).strftime("%Y-%m-%d %H:%M:%S")}'")
+	n=sqlAddUpdate("DELETE FROM FileHashCache WHERE PathSHA = '#{hashFilename file_path_and_name}' AND DateAdded < '#{DateTime.now.-(3).strftime("%Y-%m-%d %H:%M:%S")}'")
 	puts "Deleted expired cache record of file's hash." if n==1
-	cache=sqlSearch("SELECT * FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}'")
+	cache=sqlSearch("SELECT * FROM FileHashCache WHERE PathSHA = '#{hashFilename file_path_and_name}'")
 	unless cache.empty? or bypass_cache
 		puts "This file was hashed less than 3 days ago, using cached hash."
 		return cache[0]['FileSHA']
@@ -48,11 +48,11 @@ def hash_file(file_path_and_name, bypass_cache=nil) #Was generate_hash
 	
   digest=hash_func.hexdigest
 	puts "100%  =>  #{digest}"
-	sqlAddUpdate("INSERT INTO FileHashCache (PathSHA, FileSHA, DateAdded) VALUES ('#{hash_filename file_path_and_name}', '#{digest}', NOW())") if cache.empty?
+	sqlAddUpdate("INSERT INTO FileHashCache (PathSHA, FileSHA, DateAdded) VALUES ('#{hashFilename file_path_and_name}', '#{digest}', NOW())") if cache.empty?
 	return digest
 end
 #Generate a hash of the path to a file for the purpose of MySQL lookup
-def hash_filename path
+def hashFilename path
 	hash_func = Digest::SHA1.new # SHA1 or MD5
 	hash_func.update(path)
 	return hash_func.hexdigest
@@ -82,7 +82,7 @@ module TvDotComScraper
 		return default if symbolize(answer)==:empty
 		answer
 	end
-	def self.ask_symbol question, default
+	def self.askSymbol question, default
 		answer = symbolize ask(question)
 		throw :quit if :quit == answer
 		return default if :empty == answer
@@ -101,7 +101,7 @@ module TvDotComScraper
 		answer = nil
 		begin
 			loop {
-				answer = ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
+				answer = askSymbol "#{question} (#{option_string.gsub('//', '/')}):", default
 				answer=default if answer==:nil
 				break if options.member? answer
 			}
@@ -118,16 +118,16 @@ module TvDotComScraper
 		a.user_agent_alias= 'Mac Safari'
 		a   
 	end
-	def self.get_page(url)
+	def self.getPage(url)
 		printf "\n"		
 		pp url
 		printf '=>'
 		begin
 			return TvDotComScraper.agent.get(url).body
 		rescue Timeout::Error => e
-			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+			retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 		rescue Errno::ETIMEDOUT => e
-			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+			retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 		ensure
 		printf "<= "
 
@@ -140,7 +140,7 @@ module TvDotComScraper
 	#This method is to be used for sql statements that do not return results, except for the number of records processed
 	#THE SQL MUST ALREADY BE ESCAPEID
 	#It returns the number of records
-	def self.sql_do(sql_string)
+	def self.sqlDo(sql_string)
 		if $Sql_Check
 			printf "\n"
 			pp sql_string
@@ -166,11 +166,11 @@ module TvDotComScraper
 		return r
 	end
 
-	#Run from populate_results()
+	#Run from populateResults()
 	#This is run with the value
 	#FIXME This method makes my eyes bleed, it needs to be fixed
-	def self.get_value_of(key, page_as_string)
-		raise "get_value_of(): Both arguments must be strings you idiot." unless key.class==String and page_as_string.class==String
+	def self.getValue(key, page_as_string)
+		raise "getValue(): Both arguments must be strings you idiot." unless key.class==String and page_as_string.class==String
 		#key=key+':' unless key.match(/:$/)||key.match(/show score/i)
 		#key=Regexp.escape(key)
 		case key.downcase
@@ -190,7 +190,7 @@ module TvDotComScraper
 					summary=page_as_string.match(/\<!--\/my_rating--\>.+?\<!--\/COLUMN_A1--\>/im)[0].
 						match(/\<h\d class="panel_title"\>\s+?show summary.+?\<\/h\d\>\s+?\<div class="text"\>.+?\<\/div\>/im)[0].
 						gsub(/^\<h\d.+?\<div class="text"\>/im, '').gsub(/\<\/div\>$/, '').strip
-					puts "get_value_of(): WARNING!!! Summary longer than database will allow!\n Summary will be truncated!" if summary.length > 32999
+					puts "getValue(): WARNING!!! Summary longer than database will allow!\n Summary will be truncated!" if summary.length > 32999
 					return summary
 				else
 					return FALSE
@@ -287,7 +287,7 @@ The search_results array is in this format
    "http://www.tv.com/star-trek/show/633/summary.html?q=star&amp;tag=search_results;title;3",
   "tvcomID"=>"633"}]
 =end
-	def self.search_tvcom (query)
+	def self.searchTvcom (query)
 		raise "search(): takes a non-empty string only." unless query.class==String and !query.empty?
 
 		pagecount_regex=/\<div class="pag_wrap"\>.*\<ul class="search_results_list"\>/im
@@ -298,13 +298,13 @@ The search_results array is in this format
 			safe_query=query
 		end
 		search_url="http://www.tv.com/search.php?type=Search&stype=ajax_search&qs=#{safe_query}&search_type=program&pg_results=0&sort="
-		printf "search_tvcom(): Searching for #{query}...   "
+		printf "searchTvcom(): Searching for #{query}...   "
 		begin
 			page_as_string=agent.get(search_url)    #Dont check for timeout here because it could indicate other things, like malicious attempt to stop us!
 		rescue Timeout::Error => e
-			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+			retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 		rescue Errno::ETIMEDOUT => e
-			retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+			retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 
 		end
 		printf "Done.\n"
@@ -319,7 +319,7 @@ The search_results array is in this format
 			#Check for no-results
 			return [] if page_as_string.match(/\<span class="empty"\>There are currently no results.\<\/span\>/im)
 
-			search_results += TvDotComScraper.scrape_results(page_as_string)
+			search_results += TvDotComScraper.scrapeResults(page_as_string)
 		else
 			#Multiple pages of results to process
 			current_page=1
@@ -327,9 +327,9 @@ The search_results array is in this format
 				match(pagecount_lockon_regex)[0].
 				match(/[\d]+/)[0]
 
-			printf "search_tvcom(): Processing #{num_of_pages} pages ."
+			printf "searchTvcom(): Processing #{num_of_pages} pages ."
 			#get results from first page,
-			search_results += TvDotComScraper.scrape_results(page_as_string)			
+			search_results += TvDotComScraper.scrapeResults(page_as_string)			
 
 			#then loop through remaining pages
 			#dont forget, url is zero-based.  Work based on that where possible.
@@ -341,11 +341,11 @@ The search_results array is in this format
 				begin
 					page_as_string=agent(30).get(looped_url).body
 				rescue Timeout::Error => e
-					retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+					retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 				rescue Errno::ETIMEDOUT => e
-					retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+					retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 				end
-				search_results += TvDotComScraper.scrape_results(page_as_string)
+				search_results += TvDotComScraper.scrapeResults(page_as_string)
 				current_page+=1
 				printf('.')
 			end
@@ -353,15 +353,15 @@ The search_results array is in this format
 			
 		end
 
-		puts "search_tvcom(): Done."
+		puts "searchTvcom(): Done."
 		return search_results
 	end
 
-	#This function takes a string, which is the html of a website.  It is used by the search_tvcom() function, and doesn't need to be used directly
+	#This function takes a string, which is the html of a website.  It is used by the searchTvcom() function, and doesn't need to be used directly
 	#It returns an array of info about the results if there are any
 	#It is NOT meant to detect empty result sets, you are meant to work that out first   (It will return an empty array)
-	def self.scrape_results(body)
-	raise "scrape_results(): Only takes a non-empty string as argument" unless body.class==String and !body.empty?
+	def self.scrapeResults(body)
+	raise "scrapeResults(): Only takes a non-empty string as argument" unless body.class==String and !body.empty?
 
 	#body=Regexp.escape(body)
 	top_result_regex=/\<li class="result search_spotlight"\>(.+?)?\<\/li>/im
@@ -399,9 +399,9 @@ The search_results array is in this format
 	return results
 	end
 
-	def self.deal_with_timeout(e)
+	def self.dealWithTimeout(e)
 		puts e
-		printf "deal_with_timeout(): 4 Seconds to respond, default=Retry"
+		printf "dealWithTimeout(): 4 Seconds to respond, default=Retry"
 		r=:Retry
 		begin
 			Timeout::timeout(5) {
@@ -415,10 +415,10 @@ The search_results array is in this format
 
 	end
 
-	#This function runs on the search results returned from search_tvcom()
-	def self.populate_results(search_results)
+	#This function runs on the search results returned from searchTvcom()
+	def self.populateResults(search_results)
 		#Sanity check that search_reults is expected format
-		printf "populate_results(): checking sanity of argument...  "
+		printf "populateResults(): checking sanity of argument...  "
 		bad_args=FALSE
 		if search_results.class==Array
 			search_results.each {|result|
@@ -431,41 +431,41 @@ The search_results array is in this format
 		else
 			bad_args=TRUE
 		end
-		raise "populate_results(): was passed bad arguments" if bad_args
-		printf "Done.\npopulate_results(): Populating #{search_results.length} items...  \n"
+		raise "populateResults(): was passed bad arguments" if bad_args
+		printf "Done.\npopulateResults(): Populating #{search_results.length} items...  \n"
 	
 		search_results.each_index {|results_i|
 			search_results[results_i]['Episodes']=[]
 #			search_results[results_i]['Credits']=[]
 			info=0
-			info=db_has_series?(search_results[results_i]['tvcomID'].to_i)
+			info=dbHasSeries?(search_results[results_i]['tvcomID'].to_i)
 			unless info.empty?
 				search_results[results_i].merge!({ 'Details' => info['Details'] })
 				search_results[results_i].merge!({ 'Credits' => info['Credits'] })
 				unless search_results[results_i]['Credits'].empty?
 					search_results[results_i]['Credits'].each_index {|credits_i|
-						search_results[results_i]['Credits'][credits_i].merge!(TvDotComScraper.db_has_bio?(search_results[results_i]['Credits'][credits_i]['Name'])) unless $Populate_Bios.class==FalseClass
+						search_results[results_i]['Credits'][credits_i].merge!(TvDotComScraper.dbHasBio?(search_results[results_i]['Credits'][credits_i]['Name'])) unless $Populate_Bios.class==FalseClass
 					}
 				end
 			end
 			
-			search_results[results_i]['Episodes']=db_has_episodes?(search_results[results_i]['tvcomID']) unless info.empty?
+			search_results[results_i]['Episodes']=dbHasEpisodes?(search_results[results_i]['tvcomID']) unless info.empty?
 	
 			next unless info.empty?
-			page_as_string=TvDotComScraper.get_page(search_results[results_i]['series_details_url'])
-			episode_page_as_string=TvDotComScraper.get_page(page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/episode.html/i)[0])
-			stars_page_as_string=TvDotComScraper.get_page(cast=page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/cast\.html/i)[0])
-			recurring_page_as_string=TvDotComScraper.get_page(cast+'?flag=2')
-			crew_page_as_string=TvDotComScraper.get_page(cast+'?flag=3')
+			page_as_string=TvDotComScraper.getPage(search_results[results_i]['series_details_url'])
+			episode_page_as_string=TvDotComScraper.getPage(page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/episode.html/i)[0])
+			stars_page_as_string=TvDotComScraper.getPage(cast=page_as_string.match(/http:\/\/www\.tv\.com\/.+?\/show\/\d+?\/cast\.html/i)[0])
+			recurring_page_as_string=TvDotComScraper.getPage(cast+'?flag=2')
+			crew_page_as_string=TvDotComScraper.getPage(cast+'?flag=3')
 
 			#Fill in the 'Details' part
 			search_results[results_i]['Details']={}
 			values=['Originally on', 'Status', 'Premiered', 'Last Aired', 'Show Categories', 'Summary', 'Show score', 'Title']
 			values.each {|attribute|
-				search_results[results_i]['Details'][attribute]= TvDotComScraper.get_value_of(attribute, page_as_string) #unless $Populate_Bios.class==FalseClass
+				search_results[results_i]['Details'][attribute]= TvDotComScraper.getValue(attribute, page_as_string) #unless $Populate_Bios.class==FalseClass
 			}
 
-			puts "\n\npopulate_results(): populating biographies, need to pull additional pages...\n" if $Populate_Bios
+			puts "\n\npopulateResults(): populating biographies, need to pull additional pages...\n" if $Populate_Bios
 			#FIXME Handle multiple pages for stars, and for recurring roles, etc
 			#populate stars, recurring roles, and writers and directors
 			#propriety maps out to ['Stars', 'Recurring Roles', and 'Writers and Directors'] respectively
@@ -488,7 +488,7 @@ The search_results array is in this format
 				while TRUE
 					if !next_page.empty?
 						#Get next_page, put its info in stars_raw for repreocessing
-						stars_raw=(current_page_as_string=TvDotComScraper.get_page(next_page).match(/\<h\d class="module_title"\>stars\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0]).split('<li')
+						stars_raw=(current_page_as_string=TvDotComScraper.getPage(next_page).match(/\<h\d class="module_title"\>stars\<\/h\d\>.+?\<div class="module sponsored_links"\>/im)[0]).split('<li')
 						next_page=''
 					end
 
@@ -525,7 +525,7 @@ The search_results array is in this format
 								actor['recent_role_series']=FALSE
 								actor['summary']=FALSE
 								actor['gender']=FALSE
-								bio=TvDotComScraper.db_has_bio?(actor['Name'])
+								bio=TvDotComScraper.dbHasBio?(actor['Name'])
 								unless bio.empty?
 									#TODO
 									#MERGE BIO INFO
@@ -533,7 +533,7 @@ The search_results array is in this format
 									actor.merge!(bio)
 								else
 									#db_has_bio returned nothing, get bio
-									actor_bio_page_string=TvDotComScraper.get_page(actor_bio_url)
+									actor_bio_page_string=TvDotComScraper.getPage(actor_bio_url)
 									good_parts=actor_bio_page_string.match(/\<h\d class="module_title"\>\<a href=".+?"\>biography(\<.+?\>){2}.+?\<script type=".+?"\>/im)[0]
 									
 									actor['birthplace']=good_parts.match(/\<dt\>birthplace:\<\/dt\>\s+?\<dd\>.+?\<\/dd\>/im)[0].
@@ -636,9 +636,9 @@ The search_results array is in this format
 					match(/\<a\s+?(class="selected"\s+?)?href=".+?"\>all\<\/a\>/i)[0].match(/href=".+?"/i)[0].
 					match(/".+?"/)[0].chop.reverse.chop.reverse).body
 			rescue Timeout::Error => e
-				retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+				retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 			rescue Errno::ETIMEDOUT => e
-				retry if TvDotComScraper.deal_with_timeout(e)==TRUE
+				retry if TvDotComScraper.dealWithTimeout(e)==TRUE
 			end
 			printf "<=   "
 
@@ -676,7 +676,7 @@ The search_results array is in this format
 						elsif no_season
 							episode['Season']='0'
 						else
-							raise "populate_results(): Did not catch 'Season'?"
+							raise "populateResults(): Did not catch 'Season'?"
 						end
 						
 						#Episode Number
@@ -693,7 +693,7 @@ The search_results array is in this format
 						elsif first_bit.match(/special/i)
 							episode['EpNum']=first_bit.gsub(/\<.+?\>/, '').match(/special/i)[0]
 						else
-							puts "populate_results(): Did not catch 'Episode Num'?\nAssuming episode is a 'Special'"
+							puts "populateResults(): Did not catch 'Episode Num'?\nAssuming episode is a 'Special'"
 							episode['EpNum']='Special'
 						end
 
@@ -728,7 +728,7 @@ The search_results array is in this format
 						summary=episode_as_string.match(/\<h\d\>.+?\<\/h\d\>\s+?\<p.+?\>.+?\<ul/im)[0].
 							gsub(/\s+?\<\/p\>\s+?\<ul$/, '').gsub(/^.+?\<p.+?\>\s+/im, '')
 						summary.strip.empty? ? episode['Summary']=FALSE : episode['Summary']=summary
-						puts "populate_results(): Empty episode summary?" if episode['Summary'].class==FalseClass
+						puts "populateResults(): Empty episode summary?" if episode['Summary'].class==FalseClass
 						pp search_results[results_i]['series_details_url'] if episode['Summary'].class==FalseClass
 
 						next if episode['EpName'].match(/to be deleted/i)
@@ -743,11 +743,11 @@ The search_results array is in this format
 			end
 
 			printf "#{search_results[results_i]['Episodes'].length} \n"
-			TvDotComScraper.store_series_in_db search_results[results_i]
+			TvDotComScraper.storeSeriesInDb search_results[results_i]
 			puts "\n"
 		} #end of search_results.each_index 
 
-		puts "populate_results(): Done."
+		puts "populateResults(): Done."
 		return search_results
 	end
 
@@ -756,10 +756,10 @@ The search_results array is in this format
 	#If expired and show_expired==TRUE, return info
 	#If expired and show_expired==FALSE, or does not exist, return []
 	#results are a hash, {['Details']=> X, ['Episodes']=> []}
-	def self.db_has_series?(series_id, show_expired=FALSE)
-		raise "db_has_series?(): series_id must be an integer" unless series_id.class==Fixnum and series_id!=0
+	def self.dbHasSeries?(series_id, show_expired=FALSE)
+		raise "dbHasSeries?(): series_id must be an integer" unless series_id.class==Fixnum and series_id!=0
 		return {} unless $Use_Mysql
-		printf "db_has_series?(): Checking database for tvcomID:'#{series_id}'.     "
+		printf "dbHasSeries?(): Checking database for tvcomID:'#{series_id}'.     "
 		result={}
 		#Setup mysql connection
 		begin
@@ -865,11 +865,11 @@ The search_results array is in this format
 	#Return array of episodes to fit in series_results[result_i]['Episodes'], or empty array
 	#Show expired indicates wether to show episodes that have 'expired', it is intended for use for
 	#pulling episodes from the database when tv.com isn't available for updating.
-	def self.db_has_episodes?(tvcom_id, show_expired=nil)
-		raise "db_has_episodes?(): tvcom_id must be an integer." if !tvcom_id.class==Fixnum
+	def self.dbHasEpisodes?(tvcom_id, show_expired=nil)
+		raise "dbHasEpisodes?(): tvcom_id must be an integer." if !tvcom_id.class==Fixnum
 		episodes=[]
 		return {} unless $Use_Mysql
-		printf "db_has_episodes?(): Getting episodes for tvcom_id:'#{tvcom_id}' \n"
+		printf "dbHasEpisodes?(): Getting episodes for tvcom_id:'#{tvcom_id}' \n"
 		result={}
 		begin
 			$dbh= DBI.connect("DBI:Mysql:#{$Database_name}:#{$Database_host}", $Database_user, $Database_password)
@@ -928,9 +928,9 @@ The search_results array is in this format
 	#This functio does NOT populate the actor database, it will only return results already in the database
 	#The only way actor biographies are populated is when a search is performed
 	#Takes the actor's name, and will check for that in Name, and if no results are found, will also search AKA
-	def self.db_has_bio?(name)
+	def self.dbHasBio?(name)
 		return {} unless $Use_Mysql and $Populate_Bios
-		raise "db_has_bio?(): takes a single string as an argument you idiot, if I have to tell you that do I have to tell you its supposed to be a name too?" unless name.class==String
+		raise "dbHasBio?(): takes a single string as an argument you idiot, if I have to tell you that do I have to tell you its supposed to be a name too?" unless name.class==String
 		actor={}
 		
 		begin
@@ -971,9 +971,9 @@ The search_results array is in this format
 		return actor
 	end
 
-	def self.store_bio_in_db(actor)
+	def self.storeBio(actor)
 		return 0 if !$Populate_Bios or !$Use_Mysql
-		badargs="store_bio_in_db(): BAD ARGUMENTS, OH-EM-GEE YOU FOOL!"
+		badargs="storeBio(): BAD ARGUMENTS, OH-EM-GEE YOU FOOL!"
 		person=actor[1]
 		if !person['Role'].class==String
 			raise badargs
@@ -1026,94 +1026,94 @@ The search_results array is in this format
 		sql_String << "'#{Mysql.escape_string(person['recent_role_series'].to_s)}', "
 		sql_String << "'#{Mysql.escape_string(person['summary'])}', "
 		sql_String << "'#{Mysql.escape_string(person['gender'])}', NOW() )"
-		TvDotComScraper.sql_do(sql_String)
+		TvDotComScraper.sqlDo(sql_String)
 
 		return 0
 	end
 
 	#This function takes a series hash, and stores it in the database after first removing the old entry
-	#It is intended to be run from populate_results()
-	def self.store_series_in_db(series)
+	#It is intended to be run from populateResults()
+	def self.storeSeriesInDb(series)
 		return 0 unless $Use_Mysql
 		#sanity check the series
 		if series.class==Hash
 			if series['Details'].class==Hash
 				if !series['Details']['Status'].class==String || !series['Details']['Status'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Details']['Originally on'].class==String || !series['Details']['Originally on'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Details']['Show score'].class==String || !series['Details']['Show score'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Details']['Premiered'].class==String || !series['Details']['Premiered'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Details']['Title'].class==String || !series['Details']['Title'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Details']['Summary'].class==String || !series['Details']['Summary'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"				
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"				
 				end
 				if !series['Details']['Show Categories'].class==String || !series['Details']['Show Categories'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Details']['Last Aired'].class==FalseClass || !series['Details']['Last Aired'].class==DateTime
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['series_details_url'].class==String || !series['series_details_url'].class==FalseClass
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Episodes'].class==Array
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				if !series['Episodes'][0].class==Hash
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 				unless series['Episodes'].empty?
 					series['Episodes'].each {|episode|
 						if !episode['EpName'].class==String || !episode['EpName'].class==FalseClass
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 						if !episode['EpRating'].class==String || !episode['EpRating'].class==FalseClass
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 						if !episode['Aired'].class==String || !episode['Aired'].class==FalseClass
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 						if !episode['Summary'].class==String || !episode['Summary'].class==FalseClass
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 						if !episode['Season'].class==String || !episode['Season'].class==FalseClass
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 						if !episode['EpNum'].class==String || !episode['EpNum'].class==FalseClass
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 					}
 				end
 				unless series['Credits'].empty?
 					series['Credits'].each {|person|
 						if !person['Role'].class==String
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 						if !person['Name'].class==String
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 						if !person['Propriety'].class==String
-							raise "store_series_in_db(): OMg bad args!!!!!!"
+							raise "storeSeriesInDb(): OMg bad args!!!!!!"
 						end
 					}
 				end
 				if !series['tvcomID'].class==String
-					raise "store_series_in_db(): OMg bad args!!!!!!"
+					raise "storeSeriesInDb(): OMg bad args!!!!!!"
 				end
 			else
-				raise "store_series_in_db(): OMg bad args!!!!!!"
+				raise "storeSeriesInDb(): OMg bad args!!!!!!"
 			end
 		else
-			raise "store_series_in_db(): OMg bad args!!!!!!"
+			raise "storeSeriesInDb(): OMg bad args!!!!!!"
 		end
 		
 		begin
@@ -1128,7 +1128,7 @@ The search_results array is in this format
 			raise $! unless e.to_s.match(/invalid date/i)
 			series['Details']['Last Aired']=FALSE
 		end
-		printf "store_series_in_db(): Storing ..."	
+		printf "storeSeriesInDb(): Storing ..."	
 		sql_String='INSERT INTO Series_Details (Title, Status, Originally_On, Show_Score, Premiered, Last_Aired, Summary, Show_Categories, tvcomID, DateAdded, series_details_url) '
 		sql_String << 'VALUES ('
 		pp series['Details']['Title'] unless series['Details']['Title'].class==String
@@ -1144,8 +1144,8 @@ The search_results array is in this format
 		sql_String << "NOW(), "
 		sql_String << "'#{Mysql.escape_string(series['series_details_url'])}')"
 
-		TvDotComScraper.sql_do("DELETE FROM Series_Details WHERE tvcomID='#{Mysql.escape_string(series['tvcomID'])}'")
-		effected= TvDotComScraper.sql_do(sql_String)
+		TvDotComScraper.sqlDo("DELETE FROM Series_Details WHERE tvcomID='#{Mysql.escape_string(series['tvcomID'])}'")
+		effected= TvDotComScraper.sqlDo(sql_String)
 
 		series['Episodes'].each {|episode|
 			sql_String="INSERT INTO Episodes (tvcomID, EpName, EpRating, Aired, Season, Summary, EpNum, DateAdded) VALUES ("
@@ -1157,7 +1157,7 @@ The search_results array is in this format
 			episode['Summary'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(episode['Summary'])}', "
 			episode['EpNum'].class==FalseClass ? sql_String << "NULL, " : sql_String << "'#{Mysql.escape_string(episode['EpNum'])}', "
 			sql_String << "NOW())"
-			TvDotComScraper.sql_do sql_String
+			TvDotComScraper.sqlDo sql_String
 		}
 
 		#duplicate credits entries have been found in the past
@@ -1165,7 +1165,7 @@ The search_results array is in this format
 		#Note this was written with 1.8.6, .uniq would work if this was 1.8.7
 		series['Credits'].each_index {|credits_index|
 			series['Credits'][credits_index]['sha1']=''
-			series['Credits'][credits_index]['sha1']=hash_filename(series['Credits'][credits_index]['Name'] + series['Credits'][credits_index]['Role'] + series['tvcomID'])
+			series['Credits'][credits_index]['sha1']=hashFilename(series['Credits'][credits_index]['Name'] + series['Credits'][credits_index]['Role'] + series['tvcomID'])
 		}
 		cast={}
 		series['Credits']=series['Credits'].delete_if {|person|
@@ -1174,14 +1174,14 @@ The search_results array is in this format
 		}
 		
 		cast.each {|person|
-			TvDotComScraper.store_bio_in_db(person)
+			TvDotComScraper.storeBio(person)
 			sql_String="INSERT INTO Cast_and_Crew (tvcomID, Name, Role, Propriety, DateAdded) VALUES ("
 			sql_String << " '#{series['tvcomID']}', "
 			sql_String << " '#{Mysql.escape_string(person[1]['Name'])}', "
 			sql_String << " '#{Mysql.escape_string(person[1]['Role'])}', "
 			sql_String << " #{person[1]['Propriety']}, "
 			sql_String << " NOW() )"
-			TvDotComScraper.sql_do sql_String
+			TvDotComScraper.sqlDo sql_String
 		}
 
 		printf " Done\n"

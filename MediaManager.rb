@@ -25,7 +25,7 @@ load 'movieInfo_Specification.rb'
 module MediaManager
   extend MMCommon
 
-	#scan_media scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
+	#scanMedia scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
 	#verbose speaks for itself
 	#scan_directory is an optional argument, if a directory is given that dir will be scanned instead of the directory[ies]
 	#	specified in the config file.
@@ -36,9 +36,9 @@ module MediaManager
 	#	indicates that the file has been processed before and may be a duplicate.  If this happens, the program looks at the location
 	#	the file was thought to be in previously, if it is not there for any reason the database is silently updated.  If it does exist
 	#	then this option specifies what to do, update the database with the new location or use the old location.
-	def self.scan_media( verbose=FALSE, scan_directory=nil, scan_item_limit=0, update_duplicates= :yes )
+	def self.scanMedia( verbose=FALSE, scan_directory=nil, scan_item_limit=0, update_duplicates= :yes )
 		catch :quit do
-			raise "Sanity check failed!" unless sanity_check==:sane
+			raise "Sanity check failed!" unless sanityCheck==:sane
 
 			scan_dirs=$MEDIA_SOURCES_DIR
 			scan_dirs=[scan_directory] if scan_directory
@@ -142,5 +142,5 @@ module MediaManager
 
 end
 
-MediaManager.sanity_check
+MediaManager.sanityCheck
 

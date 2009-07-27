@@ -36,7 +36,7 @@ module MediaManager
 			return default if symbolize(answer)==:empty
       answer
     end
-    def ask_symbol question, default
+    def askSymbol question, default
       answer = symbolize ask(question)
       throw :quit if :quit == answer
       return default if :empty == answer
@@ -60,7 +60,7 @@ module MediaManager
 			option_string = options.collect {|x| x.to_s.capitalize}.join('/')
 			answer = nil
 			loop {
-				answer = MediaManager.ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
+				answer = MediaManager.askSymbol "#{question} (#{option_string.gsub('//', '/')}):", default
 			 	(answer=default if answer==:nil) unless default.nil?
 				break if options.member? answer
 			}
@@ -75,7 +75,7 @@ module MediaManager
 			rescue LoadError => e
 				puts "Could not find config file...? Cannot continue without it!\n #{e.inspect}"
 				if ask_if_failed? == :yes
-					if ask_symbol("Retry loading config file? (Have you corrected the problem?)",:no) == :yes
+					if askSymbol("Retry loading config file? (Have you corrected the problem?)",:no) == :yes
 						return reloadConfig(:no)
 					else #Dont want to retry reading config
 						exit
@@ -95,7 +95,7 @@ module MediaManager
       FileUtils.cd($MEDIA_CONFIG_DIR.chomp)
     end
 
-		#This is to be run during sanity_check to populate the blacklist
+		#This is to be run during sanityCheck to populate the blacklist
 		#It is required by the MM_IMDB file to operate properly
 		def loadBlacklist
 			if File.exist?($MMCONF_MOVIEDB_BLACKLIST)
@@ -105,7 +105,7 @@ module MediaManager
 			end
 		end
 
-    def sanity_check
+    def sanityCheck
       MediaManager::reloadConfig :yes			#reloadConfig will exit unless successful
 			sanity=:sane
       require "find"
@@ -268,7 +268,7 @@ module MediaManager
 				values << "'" << "#{Mysql.escape_string(movieInfo[key].to_s)}" << "', "
 			}
 			sqlString << 'PathSHA, DateAdded '
-			values << "'#{hash_filename movieInfo['Path']}', NOW()  "
+			values << "'#{hashFilename movieInfo['Path']}', NOW()  "
 			
 			sqlString = (sqlString.chomp(', ')) << ") VALUES (" << (values.chomp(', ')) << ');'
 			sqlAddUpdate(sqlString)
@@ -281,7 +281,7 @@ module MediaManager
 
 			movieInfo.each_key {|key|
 				if key=='PathSHA'
-					sqlString << key << '=' << "'#{hash_filename movieInfo['Path']}', " 
+					sqlString << key << '=' << "'#{hashFilename movieInfo['Path']}', " 
 					next
 				elsif key=='DateModified'   #FIXME  Check MySQL database to see if it actually changed, and only then update DataModified
 					sqlString << key << '=' << "NOW(),"
@@ -371,16 +371,16 @@ module MediaManager
 			pp peopleFriendly
 		end
 
-		#name_match?(name, epName) searches for epName in name and returns true if found
+		#nameMatch?(name, epName) searches for epName in name and returns true if found
 		#Return true if they match, return false if they do not
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
-		def name_match?(name, ep_name, verbose=:yes)
+		def nameMatch?(name, ep_name, verbose=:yes)
 			if ep_name.nil? or ep_name.length==0
-				puts "name_match?(): arg2 is empty??" unless verbose==:no
+				puts "nameMatch?(): arg2 is empty??" unless verbose==:no
 				return FALSE
 			elsif name.nil? or name.length==0
-				puts "name_match?(): arg1 is empty??" unless verbose==:no
+				puts "nameMatch?(): arg1 is empty??" unless verbose==:no
 				return FALSE
 			end
 			
