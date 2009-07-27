@@ -1,6 +1,3 @@
 TODO file for Jeff's MediaManager program
 
-
-- When run as a new instance, program appears to not consult the MySQL cache for episodes and instead pull from the web, and then skips
-the caching process because they are already in the database; evidenced by the '_______' that appears instead of '-----' when it is
-caching the episodes.
+-(July 27 09) Alter search_tvdb() so that it uses MySQL to cache search results by the searchword for a short period of time
