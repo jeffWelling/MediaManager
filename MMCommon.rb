@@ -78,10 +78,21 @@ module MediaManager
 			raise "arrayToHash(): You fucking idiot" unless array.class==Array
 			hash={}
 			array.each {|hash_element|
+				p1=hash_element[0]
+				p2=hash_element[1]
 				raise "arrayToHash(): If I could, I would reach out of this monitor and beat you with your keyboard.  RTFM" unless hash_element.class==Array and hash_element.length==2
 				raise "arrayToHash(): Your just hopeless.  Go pitch a tent in your backyard. Go on, go." unless hash_element[0].class==String
-				hash.merge!({ hash_element[0].match(/^\d+$/).nil? ? (hash_element[0]) : (hash_element[0].to_i) =>
-									hash_element[1].match(/^\d+$/).nil? ? (hash_element[1]) : (hash_element[1].to_i) })
+				if hash_element[0].match(/^\d+$/)
+					p1=hash_element[0].to_i
+				end
+
+				if hash_element[1].match(/^\d+$/)
+					p2=hash_element[1].to_i
+				elsif hash_element[1].match(/^false$/i)
+					p2=false
+				end
+
+				hash.merge!(p1=>p2)
 			}
 			return hash
 		end
