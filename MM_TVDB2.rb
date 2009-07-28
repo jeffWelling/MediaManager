@@ -317,10 +317,32 @@ module MediaManager
 			sqlAddUpdate "TRUNCATE TABLE Tvdb_lastupdated"
 		end
 
-		def self.searchTVDB(name)
+		def self.searchTVDB(name, use_cache=TRUE)
 			$TVDB_search_cache||={}
 			raise "searchTVDB(): Only takes a string as an argument, and I hope I don't have to also tell you its the name your looking for..." unless name.class==String
 			puts "searchTVDB(): Searching for '#{name}'"
+
+			if use_cache==TRUE
+				#Expire old (>5 Min ago) searches, but lets not be excessive, only garbage collect (if you will) every 2 minutes
+				$searchTVDB_cache_deleted||=Time.now.to_i
+				if $searchTVDB_cache_deleted < (Time.now.to_i.-120)
+					sqlAddUpdate("DELETE FROM Tvdb_Search_Cache WHERE DateAdded < #{Time.now.to_i.-600}")
+					$searchTVDB_cache_deleted=Time.now.to_i
+				end
+
+				cached_results=sqlSearch( "SELECT Results FROM Tvdb_Search_Cache WHERE SearchTerm = '#{Mysql.escape_string(name)}'" )
+				unless cached_results.empty?
+					cached_results=cached_results[0]['Results']
+					cached_results=cached_results.split('|0|')
+					cached_results.each_index {|index|
+						cached_results[index]=cached_results[index].split('|1|')
+						cached_results[index].each_index {|index2| cached_results[index][index2]=cached_results[index][index2].split('|2|') }
+						cached_results[index]=MediaManager::MMCommon.arrayToHash(cached_results[index])
+					}
+					puts "searchTVDB(): BAM! And the wait-time's gone! (cached)"
+					return cached_results
+				end
+			end
 			
 			name_hash = Digest::SHA1.hexdigest(name.downcase)
 			
@@ -364,7 +386,30 @@ module MediaManager
 				series['Title']=search_result['SeriesName'][0]
 				search_results << series
 			}
-			
+		
+			if use_cache==TRUE	
+				#Cache results
+				into_cache=[]
+				search_results.each_index {|index| into_cache << MediaManager::MMCommon.hashToArray(search_results[index]) }
+				#is now nested array, three layers deep max
+				layer=0
+				into_cache.each_index {|layer1_index|
+					layer+=1
+					into_cache[layer1_index].each_index {|layer2_index|
+						layer+=1
+						into_cache[layer1_index][layer2_index]= into_cache[layer1_index][layer2_index].join("|#{layer}|")
+						layer-=1
+					}
+					into_cache[layer1_index]=into_cache[layer1_index].join("|#{layer}|")
+					layer-=1
+
+				}
+				into_cache=into_cache.join("|0|")
+				clean_search_term=Mysql.escape_string(name)
+				clean_results=Mysql.escape_string(into_cache)
+				sqlAddUpdate( "INSERT INTO Tvdb_Search_Cache (SearchTerm, Results, DateAdded) VALUES ( '#{clean_search_term}', '#{clean_results}', '#{Time.now.to_i}')" )
+			end #of caching
+
 			puts "searchTVDB('#{name}'): Done."
 			return search_results
 
