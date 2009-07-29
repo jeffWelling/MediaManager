@@ -320,19 +320,25 @@ module MediaManager
 		def self.searchTVDB(name, use_cache=TRUE)
 			$TVDB_search_cache||={}
 			raise "searchTVDB(): Only takes a string as an argument, and I hope I don't have to also tell you its the name your looking for..." unless name.class==String
+			return [] if name.match(/^season\s*\d+$/i)
 			puts "searchTVDB(): Searching for '#{name}'"
 
 			if use_cache==TRUE
 				#Expire old (>5 Min ago) searches, but lets not be excessive, only garbage collect (if you will) every 2 minutes
 				$searchTVDB_cache_deleted||=Time.now.to_i
 				if $searchTVDB_cache_deleted < (Time.now.to_i.-120)
-					sqlAddUpdate("DELETE FROM Tvdb_Search_Cache WHERE DateAdded < #{Time.now.to_i.-600}")
+					deleted=sqlAddUpdate("DELETE FROM Tvdb_Search_Cache WHERE DateAdded<'#{Time.now.to_i.-600}'")
+					puts "searchTVDB(): #{deleted} items expired from search cache." unless deleted==0
 					$searchTVDB_cache_deleted=Time.now.to_i
 				end
 
 				cached_results=sqlSearch( "SELECT Results FROM Tvdb_Search_Cache WHERE SearchTerm = '#{Mysql.escape_string(name)}'" )
 				unless cached_results.empty?
 					cached_results=cached_results[0]['Results']
+					if cached_results.nil?
+						puts "searchTVDB(): BAM! And the wait-time's gone! (cached)"
+						return []
+					end
 					cached_results=cached_results.split('|0|')
 					cached_results.each_index {|index|
 						cached_results[index]=cached_results[index].split('|1|')
@@ -373,6 +379,7 @@ module MediaManager
 
 			search_results=[]
 			if page['Series'].nil?
+				sqlAddUpdate("INSERT INTO Tvdb_Search_Cache (SearchTerm, Results, DateAdded) VALUES ('#{Mysql.escape_string name}', NULL, '#{Time.now.to_i}')")
 				puts "searchTVDB('#{name}'): Done."
 				return []
 			end
