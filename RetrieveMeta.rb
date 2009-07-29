@@ -41,14 +41,15 @@ module MediaManager
 	    puts "\nWorking on #{filename}"
 			movieData=$movieInfoSpec.clone
 			movieData['Path']=filename
-
+			need_to_add_filesha=FALSE
 			sqlresult=sqlSearch( "SELECT * FROM mediaFiles WHERE PathSHA = '#{hash_filename movieData['Path']}'" )
 			unless sqlresult.empty?
 				movieData=sqlresult[0]
+				need_to_add_filesha=TRUE if movieData['FileSHA'].empty?
 				puts "Metainformation is available based on a hash of the filename."
 				puts "Checking that file has not changed..."
 			end			
-
+			
 			if movieData['FileSHA'].empty?
 				movieData['FileSHA']=hash_file(filename) if $MM_MAINT_FILE_INTEGRITY==TRUE
 			end
@@ -74,7 +75,7 @@ module MediaManager
 				#Because this sqlresult is produced based on the file's hash, the filename may not match
 				#FIXME When comparing paths, some filesystems are case senesetive and others are not.  
 				if movieData['Path'] != sqlresult2[0]['Path'] and $MM_MAINT_FILE_INTEGRITY==TRUE
-					puts "Looking up the file's hash produces a different path!"
+					puts "filenameToInfo():  Looking up the file's hash produces a different path!"
 					if File.exist?(sqlresult2[0]['Path'])
 						if File.exist?(movieData['Path'])
 							#By not doing anything here, the movieData is overwritten with the 'old' path which
@@ -91,6 +92,10 @@ module MediaManager
 					end
 				end
 				movieData=sqlresult2[0]
+			end
+			if !movieData['id'].nil? and need_to_add_filesha==TRUE and $MM_MAINT_FILE_INTEGRITY==TRUE
+				puts "filenameToInfo():  This file was just hashed for the first time, adding hash to file's db entry."
+				raise "filenameToInfo(): Failed updating sql?" unless sqlAddUpdate("UPDATE mediaFiles SET FileSHA='#{movieData['FileSHA']}' WHERE PathSHA='#{movieData['PathSHA']}'")==1
 			end
 			puts "File already in database, using info..." unless movieData['id'].nil?
 			return movieData unless movieData['id'].nil?
