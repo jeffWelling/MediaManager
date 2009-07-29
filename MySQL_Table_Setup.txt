@@ -9,7 +9,7 @@ to contribute, I an a total NOOB when it comes to MySQL database design.
 -- http://www.phpmyadmin.net
 -- 
 -- Host: localhost
--- Generation Time: Jul 15, 2009 at 04:36 AM
+-- Generation Time: Jul 28, 2009 at 04:37 AM
 -- Server version: 5.0.32
 -- PHP Version: 5.2.0-8+etch13
 -- 
@@ -88,7 +88,22 @@ CREATE TABLE `Tvdb_Episodes` (
   `DateAdded` datetime NOT NULL,
   PRIMARY KEY  (`uid`),
   UNIQUE KEY `id` (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1324 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=456 ;
+
+-- --------------------------------------------------------
+
+-- 
+-- Table structure for table `Tvdb_Search_Cache`
+-- 
+
+DROP TABLE IF EXISTS `Tvdb_Search_Cache`;
+CREATE TABLE `Tvdb_Search_Cache` (
+  `SearchTerm` varchar(700) NOT NULL,
+  `Results` varchar(10000) default NULL COMMENT 'results of search, compressed as string',
+  `DateAdded` bigint(20) NOT NULL,
+  PRIMARY KEY  (`SearchTerm`),
+  KEY `DateAdded` (`DateAdded`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -114,7 +129,7 @@ CREATE TABLE `Tvdb_Series` (
   `thetvdb_id` bigint(12) NOT NULL,
   `DateAdded` datetime NOT NULL,
   PRIMARY KEY  (`uid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=128 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=17 ;
 
 -- --------------------------------------------------------
 
@@ -149,14 +164,13 @@ CREATE TABLE `mediaFiles` (
   `PlayCommand` varchar(512) NOT NULL default 'vlc',
   `DateAdded` datetime NOT NULL,
   `DateModified` datetime NOT NULL,
-  `FileSHA` varchar(40) NOT NULL,
+  `FileSHA` varchar(40) default NULL,
   `Categorization` varchar(255) NOT NULL default 'Library:' COMMENT 'Categorization in the form of ''Library:TVShows:HarveyBirdman:Season2:X where X is ''epNum - epName''',
   `PathSHA` varchar(40) NOT NULL,
   `tvdbSeriesID` varchar(32) NOT NULL,
   `imdbID` varchar(32) NOT NULL,
   UNIQUE KEY `Index` (`id`),
-  UNIQUE KEY `sha1` (`FileSHA`),
   KEY `Title` (`Title`),
   FULLTEXT KEY `Title_2` (`Title`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=63 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
 
