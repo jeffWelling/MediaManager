@@ -81,33 +81,10 @@ module MediaManager
 		catch :quit do
 			raise "Sanity check failed!" unless sanity_check==:sane
 
-			sourcesArray=$MEDIA_SOURCES_DIR
-			sourcesArray=[scanDirectory] if scanDirectory
-
 			puts "Scanning source directories:"
 			puts "This may take a moment..."
-			puts "{ skipped = '.', mediafile = '+' }\n" if verbose
 			files=[]
-			scannedItems=0
-			sourcesArray.each { |sourceDir|
-				Find.find(sourceDir) { |filePath|
-					break if scannedItems >= scanItemLimit unless scanItemLimit==0
-					acceptable=FALSE
-					$MEDIA_RECOGNIZED_FORMATS.each { |goodExtention|
-						#If the last 4 chars from filePath are a recognized good extention,,,
-						if filePath.reverse.slice(0,4).reverse.match(Regexp.new(goodExtention))
-							acceptable=TRUE
-						end
-					}
-					if acceptable
-						files << filePath
-						printf('+') if verbose
-						scannedItems=scannedItems+1
-					else
-						printf('.') if verbose
-					end
-				}
-			} 
+			files=MediaManager.scan_dirs( (scanDirectory.nil? ? nil : scanDirectory), :yes, scanItemLimit, :no) 
 			
 			files.each_index { |filesP|
 				ignore=FALSE
