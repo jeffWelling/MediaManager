@@ -23,6 +23,12 @@ load 'movieInfo_Specification.rb'
 
 module MediaManager
   extend MMCommon
+	#scan_dirs(source_dirs=nil, new_only=:no, scan_limit=0, commit_to_sql=:no)
+	#source_dirs can be a string or an array to scan instead of $MEDIA_SOURCES_DIR,
+	#new_only controls if scan_dirs() will include already-scanned items in it's results
+	#scan_limit is zero by default which means unlimited.  Set this to the number of items you want to scan.
+	#commit_to_sql is set to no by default, which if set to :yes, will insert the files into the mediaFiles database
+	#  for later processing.
 	def self.scan_dirs(source_dirs=nil, new_only=:no, scan_limit=0, commit_to_sql=:no)
 		raise "scan_dirs(): Cannot use hashes" if source_dirs.class==Hash
 		number_scanned=0
