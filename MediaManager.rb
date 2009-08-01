@@ -23,7 +23,43 @@ load 'movieInfo_Specification.rb'
 
 module MediaManager
   extend MMCommon
+	def self.scan_dirs(source_dirs=nil, new_only=:no, scan_limit=0, commit_to_sql=:no)
+		raise "scan_dirs(): Cannot use hashes" if source_dirs.class==Hash
+		number_scanned=0
+		media_files=[]
 
+		source_dirs=$MEDIA_SOURCES_DIR if source_dirs.nil?
+		source_dirs=[source_dirs] if source_dirs.class==String
+
+		source_dirs.each {|dir_to_scan|
+			Find.find(dir_to_scan) {|file_path|
+				break if number_scanned >= scan_limit unless scan_limit==0
+				if $MEDIA_RECOGNIZED_FORMATS.include?((extention=file_path.match(/\.[^\.]+$/)) ? extention[0] : '') #If the file extention is a recognized format
+					media_files << file_path
+					number_scanned+=1
+				end
+			}
+		}
+
+		if new_only!=:no
+			media_files.delete_if {|path| !sqlSearch("SELECT id FROM mediaFiles WHERE Path='#{Mysql.escape_string path}'").empty? }
+		end
+
+		if commit_to_sql==:yes
+			sql_string="INSERT INTO mediaFiles (Path, PathSHA, Size, DateAdded) VALUES "
+			media_files.each {|path|
+				data_set={}
+				if sqlSearch("SELECT id FROM mediaFiles WHERE Path='#{Mysql.escape_string path}'").empty? or new_only!=:no
+					sql_string << "('#{Mysql.escape_string path}', '#{hash_filename path}', '#{File.size path}', '#{DateTime.now.to_s}'),"
+				end
+			}
+			
+			puts "scan_dirs():  Sql'd #{sqlAddUpdate($it=sql_string.chop)} filepaths." unless 
+				sql_string.gsub("INSERT INTO mediaFiles (Path, PathSHA, Size, DateAdded) VALUES ", '').empty?
+		end
+			
+		return media_files
+	end
 	#scan_media scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
 	#verbose speaks for itself
 	#scanDirectory is an optional argument, if a directory is given that dir will be scanned instead of the directory[ies]
