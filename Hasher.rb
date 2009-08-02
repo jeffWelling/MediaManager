@@ -6,9 +6,9 @@ def hash_file(file_path_and_name, bypassCache=nil) #Was generate_hash
 	cache=''
 
 	#Only delete files that are being processed so that the database may be consulted manually for information if thetvdb ever has problems or goes down	
-	n=sqlAddUpdate("DELETE FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}' AND DateAdded < '#{DateTime.now.-(3).strftime("%Y-%m-%d %H:%M:%S")}'")
+	n=MediaManager.sqlAddUpdate("DELETE FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}' AND DateAdded < '#{DateTime.now.-(3).strftime("%Y-%m-%d %H:%M:%S")}'")
 	puts "Deleted expired cache record of file's hash." if n==1
-	cache=sqlSearch("SELECT * FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}'")
+	cache=MediaManager.sqlSearch("SELECT * FROM FileHashCache WHERE PathSHA = '#{hash_filename file_path_and_name}'")
 	unless cache.empty? or bypassCache
 		puts "This file was hashed less than 3 days ago, using cached hash."
 		return cache[0]['FileSHA']
@@ -31,7 +31,7 @@ def hash_file(file_path_and_name, bypassCache=nil) #Was generate_hash
 	
   digest=hash_func.hexdigest
 	puts "100%  =>  #{digest}"
-	sqlAddUpdate("INSERT INTO FileHashCache (PathSHA, FileSHA, DateAdded) VALUES ('#{hash_filename file_path_and_name}', '#{digest}', NOW())") if cache.empty?
+	MediaManager.sqlAddUpdate("INSERT INTO FileHashCache (PathSHA, FileSHA, DateAdded) VALUES ('#{hash_filename file_path_and_name}', '#{digest}', NOW())") if cache.empty?
 	return digest
 end
 
