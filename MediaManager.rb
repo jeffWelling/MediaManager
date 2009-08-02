@@ -20,7 +20,6 @@ load 'MM_TVDB2.rb'
 load 'MM_IMDB.rb'
 load 'RetrieveMeta.rb'
 load 'movieInfo_Specification.rb'
-require 'ftools'
 
 module MediaManager
   extend MMCommon
@@ -146,7 +145,84 @@ module MediaManager
 		}
 		return duplicates
 	end
+	
+	def duplicate_prompt(sha1, array_of_duplicates)
+		puts "\n\nduplicate_prompt():  These files have the identical hash of #{sha1}: "
+		added_options=[]
+		array_of_duplicates.each_index {|array_index|
+			puts "#{array_index})  #{array_of_duplicates[array_index]}"
+			added_options << :"#{array_index}"
+		}
+		answer=prompt( "Which would you like to keep?" , nil, added_options + [:multi_delete, :keep_both], [:yes, :no])
+		added_options.each_index {|i|
+			added_options[i]=added_options[i].to_s
+		}
+		if answer.to_s.match(/^!/)
+			#Delete everything except the selection, return an inverted match
+			answer=answer.to_s.reverse.chop.reverse
+			added_options.each_index {|i|
+				added_options[i]=added_options[i].to_s
+			}
+			return added_options.delete_if {|option| option.to_s.to_i==answer.to_i }
+		elsif answer==:multi_delete
+			#Ask which ones to delete
+			deletion_candidates=ask_symbol( "Enter the ones you want to delete, comma and/or space seperated:  ", nil)
+			return MediaManager.duplicate_prompt(sha1, array_of_duplicates) if deletion_candidates.nil? #Recurse if the user is an idiot
+			return deletion_candidates.to_s.gsub(',', ' ').split(' ') #return the match
+		elsif answer==:keep_both
+			return []
+		elsif answer==:delete_both
+			return added_options
+		else
+			return [answer.to_s]
+			#return the selection
+		end
+	end
+	
+	def duplicates_by_hash(directory, duplicates)
+		raise "duplicates_by_hash(): second argument must be formatted like the hash returned from collect_duplicates()" if duplicates.class==Hash
+		File.makedirs(directory) unless File.exist?(directory)
+		directory= directory.match(/\/$/) ? directory.strip : directory.strip + '/'
+		duplicates.each {|sha1, array_of_dupes|
+			File.makedirs(sha1) unless File.exist?(sha1)
+			array_of_dupes.each {|path_of_dupe|
+				File.symlink(path_of_dupe, directory + File.basename(path_of_dupe))
+			}
+		}
+	end
+	def self.duplicates_by_hash(directory, duplicates)
+		duplicates_by_hash directory, duplicates
+	end
 
+	def self.trash_duplicates(trash_directory, dupes)
+		duplicates=dupes.clone
+		bad_args="trash_duplicates(): Second argument must be formatted such as the hash returned by collect_duplicates()."
+		raise bad_args if duplicates.class!=Hash
+		File.makedirs(trash_directory )unless File.exist?(trash_directory)
+		trash_directory= trash_directory.strip.match(/\/$/) ? trash_directory.strip : (trash_directory.strip + '/')
+#		by_sha1="#{trash_directory.match(/\/^/) ? trash_directory : trash_directory << '/'}.by_sha1/"
+#		File.makedirs( by_sha1 ) unless File.exist?( by_sha1 )
+		
+		puts "trash_duplicates():  For each set presented, please enter the single digit that represents the file,\n      or you can invert the sense of the match using '!'.  So '!1' would mean delete everything except 1."
+		duplicates.each {|sha1, array_of_duplicates|
+			to_delete=duplicate_prompt(sha1, array_of_duplicates)
+			file_indexes_to_keep=[]
+
+			array_of_duplicates.each_index {|array_index|
+				if to_delete.include? array_index
+					File.move(array_of_duplicates[array_index], trash_directory + File.basename(array_of_duplicates[array_index]))
+					array_of_duplicates[array_index]=trash_directory + File.basename(array_of_duplicates[array_index])
+				else
+					file_indexes_to_keep << array_index
+				end
+			}
+			
+			file_indexes_to_keep.each {|index|
+				array_of_duplicates.delete_at index
+			}
+		}
+		duplicates_by_hash(trash_directory + '.by_hash/', duplicates)
+	end
 	#scan_media scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
 	#verbose speaks for itself
 	#scanDirectory is an optional argument, if a directory is given that dir will be scanned instead of the directory[ies]

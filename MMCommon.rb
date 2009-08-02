@@ -8,6 +8,7 @@ module MediaManager
 			require 'dbi'
 #			require 'amatch'    #For checking for spelling errors
 	 		require 'find'
+			require 'ftools'
 		rescue LoadError => e
 			puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module installed?"
 			puts "Error is fatal, terminating."
