@@ -15,7 +15,8 @@ $IMDB_BLACKLIST=[]
 #This is so that we can require files in the same directory without the .rb extention.
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__))
 
-load 'MM_TVDB.rb'
+#load 'MM_TVDB.rb'
+load 'MMCommon.rb'
 load 'MM_TVDB2.rb'
 load 'MM_IMDB.rb'
 load 'RetrieveMeta.rb'
