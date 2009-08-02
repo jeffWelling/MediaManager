@@ -15,7 +15,8 @@ $IMDB_BLACKLIST=[]
 #This is so that we can require files in the same directory without the .rb extention.
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__))
 
-load 'MM_TVDB.rb'
+#load 'MM_TVDB.rb'
+load 'MMCommon.rb'
 load 'MM_TVDB2.rb'
 load 'MM_IMDB.rb'
 load 'RetrieveMeta.rb'
@@ -127,7 +128,7 @@ module MediaManager
 				(second_index+=1 and next) if array_of_files[second_index] == array_of_files[first_index]
 				so_far+=1
 				if so_far > progress_update_due
-					printf '-'
+					printf '-' if verbose!=:no
 					progress_update_due+=total/50
 				end
 				pp second_index if array_of_files[second_index].nil?
