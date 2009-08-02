@@ -73,11 +73,16 @@ module MediaManager
 	#It returns an array, whose first element is TRUE or FALSE indicating a match or not.
 	#The second element of the array will be nil unless both files are the same and their full
 	#hash was calculated, otherwise it will contain the hash of the full file.
+	#Its extremely important to note that if you change the bytes_to_hash argument to something
+	#other than zero, the hash returned when a match is found will NOT be of the whole file,
+	#but instead will only be up to the number of bytes you told it to hash.
 	#What's different between this method and File.compare from ftools?
-	#		This method will return the hash of the file if it the files match.  It calculates
-	#		this value anyway, it may as well be returned to the user anyway.  Better than 
-	#		re-hashing.
-	def self.same_file?(file1, file2)
+	#		This method will return the hash of the file if the files match.  This is useful in finding
+	#		duplicate files, and is more efficient than comparing files and then calculating the hash.
+	#		Also, its extremely important to take note that if you change the bytes_to_hash argument
+	#		away from 0, the hash will NOT be of the whole file, but only of the bytes you instructed
+	#		it to hash, and no more.
+	def self.same_file?(file1, file2, bytes_to_hash=0)
 		puts "wtf? 1#{file1}   2#{file2}" if file1.nil? or file2.nil?
 		
 		raise "same_file?():  Pass me two files, I shall tell you if they are the same file by comparing a hash" unless File.exist?(file1) and File.exist?(file2)
@@ -87,18 +92,20 @@ module MediaManager
 		file1_size=File.size(file1)
 		file2_size=File.size(file2)
 		return [FALSE, nil] if File.size(file1)!=File.size(file2)
+		read_so_far=0
 		open(file1, 'rb') do |file1_io|
 		open(file2, 'rb') do |file2_io|
-			while(!file1_io.eof and !file2_io.eof and file1_hasher.hexdigest==file2_hasher.hexdigest)
+			while(!file1_io.eof and !file2_io.eof and file1_hasher.hexdigest==file2_hasher.hexdigest and bytes_to_hash!=0 and read_so_far<=bytes_to_hash)
 				file1_hasher.update(file1_io.readpartial(1024))
 				file2_hasher.update(file2_io.readpartial(1024))
+				read_so_far+=1024
 			end
 		end end
 		
 		file1_hasher.hexdigest==file2_hasher.hexdigest ? [TRUE,file1_hasher.hexdigest] : [FALSE,nil]
 	end
 
-	def self.collect_duplicates(array_of_files, verbose=:no)
+	def self.collect_duplicates(array_of_files, verbose=:no, bytes_to_hash=0)
 		raise "collect_duplicates():  Your supposed to pass me an array of files you silly christian." unless array_of_files.class==Array
 		return {} if array_of_files.empty?
 		size_of_array=array_of_files.length
@@ -125,7 +132,7 @@ module MediaManager
 					progress_update_due+=total/50
 				end
 				pp second_index if array_of_files[second_index].nil?
-				result=MediaManager.same_file?(array_of_files[first_index], array_of_files[second_index])
+				result=MediaManager.same_file?(array_of_files[first_index], array_of_files[second_index], bytes_to_hash)
 				if result[0].class==TrueClass
 					if duplicates.has_key? result[1]
 						duplicates[result[1]] << array_of_files[first_index] unless duplicates[result[1]].include?(array_of_files[first_index])
