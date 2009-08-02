@@ -20,6 +20,7 @@ load 'MM_TVDB2.rb'
 load 'MM_IMDB.rb'
 load 'RetrieveMeta.rb'
 load 'movieInfo_Specification.rb'
+require 'ftools'
 
 module MediaManager
   extend MMCommon
@@ -66,6 +67,79 @@ module MediaManager
 			
 		return media_files
 	end
+
+	#same_file?() is meant to check if two files are identical, by first comparing the filesizes
+	#and if those are the same, by progressively hashing the file until the hashes do not match.
+	#It returns an array, whose first element is TRUE or FALSE indicating a match or not.
+	#The second element of the array will be nil unless both files are the same and their full
+	#hash was calculated, otherwise it will contain the hash of the full file.
+	#What's different between this method and File.compare from ftools?
+	#		This method will return the hash of the file if it the files match.  It calculates
+	#		this value anyway, it may as well be returned to the user anyway.  Better than 
+	#		re-hashing.
+	def self.same_file?(file1, file2)
+		puts "wtf? 1#{file1}   2#{file2}" if file1.nil? or file2.nil?
+		
+		raise "same_file?():  Pass me two files, I shall tell you if they are the same file by comparing a hash" unless File.exist?(file1) and File.exist?(file2)
+		file1_hasher= Digest::SHA1.new
+		file2_hasher= Digest::SHA1.new
+	
+		file1_size=File.size(file1)
+		file2_size=File.size(file2)
+		return [FALSE, nil] if File.size(file1)!=File.size(file2)
+		open(file1, 'rb') do |file1_io|
+		open(file2, 'rb') do |file2_io|
+			while(!file1_io.eof and !file2_io.eof and file1_hasher.hexdigest==file2_hasher.hexdigest)
+				file1_hasher.update(file1_io.readpartial(1024))
+				file2_hasher.update(file2_io.readpartial(1024))
+			end
+		end end
+		
+		file1_hasher.hexdigest==file2_hasher.hexdigest ? [TRUE,file1_hasher.hexdigest] : [FALSE,nil]
+	end
+
+	def self.collect_duplicates(array_of_files, verbose=:no)
+		raise "collect_duplicates():  Your supposed to pass me an array of files you silly christian." unless array_of_files.class==Array
+		return {} if array_of_files.empty?
+		size_of_array=array_of_files.length
+		total=0
+		puts "collect_duplicates():  Calculating total number of comparisons..." if verbose!=:no
+		array_of_files.each_index {|index|
+			total+=index
+		}
+		if verbose!=:no
+			puts "collect_duplicates():  Processing #{total} comparisons (This is NOT the total number of files)...\n"
+			puts    "0--------------------------------------------------100%"
+			printf  ">"
+		end
+		so_far=0
+		progress_update_due=total/50
+		duplicates={}
+		array_of_files.each_index {|first_index|
+			second_index=first_index
+			while (second_index<size_of_array)
+				(second_index+=1 and next) if array_of_files[second_index] == array_of_files[first_index]
+				so_far+=1
+				if so_far > progress_update_due
+					printf '-'
+					progress_update_due+=total/50
+				end
+				pp second_index if array_of_files[second_index].nil?
+				result=MediaManager.same_file?(array_of_files[first_index], array_of_files[second_index])
+				if result[0].class==TrueClass
+					if duplicates.has_key? result[1]
+						duplicates[result[1]] << array_of_files[first_index] unless duplicates[result[1]].include?(array_of_files[first_index])
+						duplicates[result[1]] << array_of_files[second_index] unless duplicates[result[1]].include?(array_of_files[second_index])
+					else
+						duplicates.merge!( {result[1]=>[array_of_files[first_index], array_of_files[second_index]]} )
+					end
+				end
+				second_index+=1
+			end
+		}
+		return duplicates
+	end
+
 	#scan_media scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
 	#verbose speaks for itself
 	#scanDirectory is an optional argument, if a directory is given that dir will be scanned instead of the directory[ies]
