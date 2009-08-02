@@ -61,7 +61,7 @@ module MediaManager
 				end
 			}
 			
-			puts "scan_dirs():  Sql'd #{sqlAddUpdate($it=sql_string.chop)} filepaths." unless 
+			puts "scan_dirs():  Sql'd #{sqlAddUpdate(sql_string.chop)} filepaths." unless 
 				sql_string.gsub("INSERT INTO mediaFiles (Path, PathSHA, Size, DateAdded) VALUES ", '').empty?
 		end
 			
@@ -144,17 +144,18 @@ module MediaManager
 				second_index+=1
 			end
 		}
+		puts "100%\ncollect_duplicates():  Done."
 		return duplicates
 	end
 	
-	def duplicate_prompt(sha1, array_of_duplicates)
+	def self.duplicate_prompt(sha1, array_of_duplicates)
 		puts "\n\nduplicate_prompt():  These files have the identical hash of #{sha1}: "
 		added_options=[]
 		array_of_duplicates.each_index {|array_index|
 			puts "#{array_index})  #{array_of_duplicates[array_index]}"
 			added_options << :"#{array_index}"
 		}
-		answer=prompt( "Which would you like to keep?" , nil, added_options + [:multi_delete, :keep_both], [:yes, :no])
+		answer=prompt( "Which would you like to keep?" , nil, added_options + [:multi_delete, :keep_both, :delete_both], [:yes, :no])
 		added_options.each_index {|i|
 			added_options[i]=added_options[i].to_s
 		}
@@ -180,19 +181,17 @@ module MediaManager
 		end
 	end
 	
-	def duplicates_by_hash(directory, duplicates)
-		raise "duplicates_by_hash(): second argument must be formatted like the hash returned from collect_duplicates()" if duplicates.class==Hash
+	def self.duplicates_by_hash(directory, duplicates, special_thing=:no)
+		raise "duplicates_by_hash(): second argument must be formatted like the hash returned from collect_duplicates()" unless duplicates.class==Hash
 		File.makedirs(directory) unless File.exist?(directory)
 		directory= directory.match(/\/$/) ? directory.strip : directory.strip + '/'
 		duplicates.each {|sha1, array_of_dupes|
-			File.makedirs(sha1) unless File.exist?(sha1)
+			File.makedirs(directory + sha1) unless File.exist?(directory + sha1)
 			array_of_dupes.each {|path_of_dupe|
-				File.symlink(path_of_dupe, directory + File.basename(path_of_dupe))
+				File.symlink(path_of_dupe, directory + sha1 + '/' + File.basename(path_of_dupe)) unless File.exist?(directory + sha1 + '/' + File.basename(path_of_dupe))
+				File.symlink(path_of_dupe, directory.gsub(/\/[^\/]+\/[^\/]+$/,'') + File.basename(path_of_dupe)) if special_thing!=:no unless File.exist?(directory.gsub(/\/[^\/]+\/[^\/]+$/,'') + File.basename(path_of_dupe))
 			}
 		}
-	end
-	def self.duplicates_by_hash(directory, duplicates)
-		duplicates_by_hash directory, duplicates
 	end
 
 	def self.trash_duplicates(trash_directory, dupes)
@@ -211,7 +210,7 @@ module MediaManager
 
 			array_of_duplicates.each_index {|array_index|
 				if to_delete.include? array_index
-					File.move(array_of_duplicates[array_index], trash_directory + File.basename(array_of_duplicates[array_index]))
+#					File.move(array_of_duplicates[array_index], trash_directory + File.basename(array_of_duplicates[array_index]))
 					array_of_duplicates[array_index]=trash_directory + File.basename(array_of_duplicates[array_index])
 				else
 					file_indexes_to_keep << array_index
@@ -222,7 +221,8 @@ module MediaManager
 				array_of_duplicates.delete_at index
 			}
 		}
-		duplicates_by_hash(trash_directory + '.by_hash/', duplicates)
+		$it=duplicates
+		duplicates_by_hash(trash_directory + '.by_hash', duplicates, :yes)
 	end
 	#scan_media scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
 	#verbose speaks for itself
