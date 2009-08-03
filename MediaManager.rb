@@ -187,9 +187,11 @@ module MediaManager
 		directory= directory.match(/\/$/) ? directory.strip : directory.strip + '/'
 		duplicates.each {|sha1, array_of_dupes|
 			File.makedirs(directory + sha1) unless File.exist?(directory + sha1)
+			symlink_path=''
 			array_of_dupes.each {|path_of_dupe|
 				File.symlink(path_of_dupe, directory + sha1 + '/' + File.basename(path_of_dupe)) unless File.exist?(directory + sha1 + '/' + File.basename(path_of_dupe))
-				File.symlink(path_of_dupe, directory.gsub(/\/[^\/]+\/[^\/]+$/,'') + File.basename(path_of_dupe)) if special_thing!=:no unless File.exist?(directory.gsub(/\/[^\/]+\/[^\/]+$/,'') + File.basename(path_of_dupe))
+#				symlink_path=directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe)
+				File.symlink(path_of_dupe, directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe)) if special_thing!=:no unless File.exist?(directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe))
 			}
 		}
 	end
