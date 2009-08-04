@@ -14,7 +14,6 @@ module MediaManager
 			require 'erb'
 			require 'open-uri'
 			require 'linguistics'
-			require 'ftools'
 		rescue LoadError => e
 			case
 				when e.to_s.match(/mysql/i)
