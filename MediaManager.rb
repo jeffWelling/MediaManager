@@ -61,7 +61,7 @@ module MediaManager
 				end
 			}
 			
-			puts "scan_dirs():  Sql'd #{sqlAddUpdate($it=sql_string.chop)} filepaths." unless 
+			puts "scan_dirs():  Sql'd #{sqlAddUpdate(sql_string.chop)} filepaths." unless 
 				sql_string.gsub("INSERT INTO mediaFiles (Path, PathSHA, Size, DateAdded) VALUES ", '').empty?
 		end
 			

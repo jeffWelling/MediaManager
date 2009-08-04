@@ -181,7 +181,6 @@ module MediaManager
 					raise "fail"
 				end
 				puts e.to_s
-				$it=e
 				sanity=nil
 			ensure
 				($dbh.disconnect if $dbh.connected?) unless $dbh.nil?
