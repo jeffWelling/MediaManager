@@ -2,9 +2,6 @@ load 'MMCommon.rb'
 load 'Hasher.rb'
 load 'romanNumerals.rb'
 
-require 'rubygems'
-require 'linguistics'
-
 module MediaManager
 	module RetrieveMeta
 		extend MMCommon
