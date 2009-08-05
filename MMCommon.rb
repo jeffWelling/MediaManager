@@ -9,6 +9,7 @@ module MediaManager
 #			require 'amatch'    #For checking for spelling errors
 	 		require 'find'
 			require 'fileutils'
+			require 'ftools'
 			require 'pp'
 			require 'xmlsimple'
 			require 'erb'
