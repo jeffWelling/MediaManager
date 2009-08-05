@@ -151,6 +151,7 @@ module MediaManager
 	def self.duplicate_prompt(sha1, array_of_duplicates)
 		puts "\n\nduplicate_prompt():  These files have the identical hash of #{sha1}: "
 		added_options=[]
+		array_of_duplicates=array_of_duplicates.sort {|a, b| a.length <=> b.length }
 		array_of_duplicates.each_index {|array_index|
 			puts "#{array_index})  #{array_of_duplicates[array_index]}"
 			added_options << :"#{array_index}"
@@ -159,14 +160,15 @@ module MediaManager
 		added_options.each_index {|i|
 			added_options[i]=added_options[i].to_s
 		}
-		if answer.to_s.match(/^!/)
-			#Delete everything except the selection, return an inverted match
-			answer=answer.to_s.reverse.chop.reverse
-			added_options.each_index {|i|
-				added_options[i]=added_options[i].to_s
-			}
-			return added_options.delete_if {|option| option.to_s.to_i==answer.to_i }
-		elsif answer==:multi_delete
+#		if answer.to_s.match(/^!/)
+#			#Delete everything except the selection, return an inverted match
+#			answer=answer.to_s.reverse.chop.reverse
+#			added_options.each_index {|i|
+#				added_options[i]=added_options[i].to_s
+#			}
+#			return added_options.delete_if {|option| option.to_s.to_i==answer.to_i }
+#		elsif answer==:multi_delete
+		if answer==:multi_delete
 			#Ask which ones to delete
 			deletion_candidates=ask_symbol( "Enter the ones you want to delete, comma and/or space seperated:  ", nil)
 			return MediaManager.duplicate_prompt(sha1, array_of_duplicates) if deletion_candidates.nil? #Recurse if the user is an idiot
@@ -176,12 +178,15 @@ module MediaManager
 		elsif answer==:delete_both
 			return added_options
 		else
-			return [answer.to_s]
+			#Invert the answer
+			to_delete=[]
+			added_options.each {|index_ofa_dupe| to_delete << index_ofa_dupe unless index_ofa_dupe==answer.to_s }
+			return to_delete
 			#return the selection
 		end
 	end
 	
-	def self.duplicates_by_hash(directory, duplicates, special_thing=:no)
+	def self.duplicates_by_hash(directory, duplicates)
 		raise "duplicates_by_hash(): second argument must be formatted like the hash returned from collect_duplicates()" unless duplicates.class==Hash
 		File.makedirs(directory) unless File.exist?(directory)
 		directory= directory.match(/\/$/) ? directory.strip : directory.strip + '/'
@@ -189,42 +194,46 @@ module MediaManager
 			File.makedirs(directory + sha1) unless File.exist?(directory + sha1)
 			symlink_path=''
 			array_of_dupes.each {|path_of_dupe|
-				File.symlink(path_of_dupe, directory + sha1 + '/' + File.basename(path_of_dupe)) unless File.exist?(directory + sha1 + '/' + File.basename(path_of_dupe))
-#				symlink_path=directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe)
-				File.symlink(path_of_dupe, directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe)) if special_thing!=:no unless File.exist?(directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe))
+				trashdir_with_sha=directory + sha1 + '/' + File.basename(path_of_dupe)
+				trashdir_sans_toplevel=directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe)
+				File.symlink(path_of_dupe, trashdir_with_sha) unless (File.exist?(trashdir_with_sha) or File.symlink?(trashdir_with_sha))
 			}
 		}
 	end
 
-	def self.trash_duplicates(trash_directory, dupes)
+	def self.trash_duplicates(trash_directory, dupes, move_to_trash=:no)
 		duplicates=dupes.clone
 		bad_args="trash_duplicates(): Second argument must be formatted such as the hash returned by collect_duplicates()."
 		raise bad_args if duplicates.class!=Hash
 		File.makedirs(trash_directory )unless File.exist?(trash_directory)
 		trash_directory= trash_directory.strip.match(/\/$/) ? trash_directory.strip : (trash_directory.strip + '/')
-#		by_sha1="#{trash_directory.match(/\/^/) ? trash_directory : trash_directory << '/'}.by_sha1/"
-#		File.makedirs( by_sha1 ) unless File.exist?( by_sha1 )
 		
-		puts "trash_duplicates():  For each set presented, please enter the single digit that represents the file,\n      or you can invert the sense of the match using '!'.  So '!1' would mean delete everything except 1."
+		puts "\n\n\n\ntrash_duplicates():  For each set presented, please enter the single digit that represents the file."
 		duplicates.each {|sha1, array_of_duplicates|
 			to_delete=duplicate_prompt(sha1, array_of_duplicates)
 			file_indexes_to_keep=[]
 
+			#Move the duplicates that were selected to our desired trash directory
 			array_of_duplicates.each_index {|array_index|
-				if to_delete.include? array_index
-#					File.move(array_of_duplicates[array_index], trash_directory + File.basename(array_of_duplicates[array_index]))
-					array_of_duplicates[array_index]=trash_directory + File.basename(array_of_duplicates[array_index])
+				if to_delete.include? array_index.to_s
+					if move_to_trash==:yes
+						File.move(array_of_duplicates[array_index], trash_directory + File.basename(array_of_duplicates[array_index]))
+						array_of_duplicates[array_index]=trash_directory + File.basename(array_of_duplicates[array_index])
+					else
+						File.symlink(array_of_duplicates[array_index], trash_directory + File.basename(array_of_duplicates[array_index])) unless (File.exist?(trash_directory + File.basename(array_of_duplicates[array_index])) or File.symlink?(trash_directory + File.basename(array_of_duplicates[array_index])))
+					end
 				else
 					file_indexes_to_keep << array_index
 				end
 			}
-			
+			#Remove the 'good' dupe, the one we want to keep, so that we can pass the whole array to duplicates_by_hash()
 			file_indexes_to_keep.each {|index|
 				array_of_duplicates.delete_at index
 			}
 		}
-		$it=duplicates
-		duplicates_by_hash(trash_directory + '.by_hash', duplicates, :yes)
+		#This function only creates a directory called .by_hash, under which directories are created with the hashes of the duplicates (or however much of the file was processed)
+		#and in those directories symlinks are created which point to the original file.
+		duplicates_by_hash(trash_directory + '.by_hash', duplicates)
 	end
 	#scan_media scans for recognizable formats, attempts get metadata for each result, and stores the results in mediaFiles SQL Table
 	#verbose speaks for itself
