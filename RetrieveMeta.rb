@@ -118,7 +118,7 @@ module MediaManager
 
 		#This function does its  best to extract information from the filename
 		def self.extractData(movieData, isRar=:no)
-			puts "Reaching up my /dev/null and pulling out some meta-data...."
+			puts "extractData():  Reaching up my /dev/null and pulling out some meta-data...."
 			raise "OMG CANT HANDLE RARS YET!!FIXMEYOUIDIOT!!" if isRar!=:no
 			#Return False unless is movie, then
 
@@ -563,7 +563,7 @@ module MediaManager
 						#Next before here if already matched
 						#
 					}
-				end
+				end #of unless seriesHash[1]['EpisodeList'].empty?
 			}
 
 			return matches if matches.length==1
