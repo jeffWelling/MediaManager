@@ -20,6 +20,7 @@ load 'MMCommon.rb'
 load 'MM_TVDB2.rb'
 load 'MM_IMDB.rb'
 load 'RetrieveMeta.rb'
+load 'FindDuplicates.rb'
 load 'movieInfo_Specification.rb'
 
 module MediaManager
