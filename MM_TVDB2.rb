@@ -1,10 +1,5 @@
 $cacheLifetime=30
 
-require 'xmlsimple'
-require 'erb'
-require 'digest/sha1'
-require 'open-uri'
-
 module MediaManager
 	module MM_TVDB2
 		extend MMCommon

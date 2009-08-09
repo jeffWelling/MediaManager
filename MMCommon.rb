@@ -8,8 +8,30 @@ module MediaManager
 			require 'dbi'
 #			require 'amatch'    #For checking for spelling errors
 	 		require 'find'
+			require 'fileutils'
+			require 'ftools'
+			require 'pp'
+			require 'xmlsimple'
+			require 'erb'
+			require 'open-uri'
+			require 'linguistics'
 		rescue LoadError => e
-			puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module installed?"
+			case
+				when e.to_s.match(/mysql/i)
+					puts "Check that you have libmysql-ruby installed."
+				when e.to_s.match(/rubygems/i)
+					puts "Check that you have rubygems installed."
+				when e.to_s.match(/mechanize/i)
+					puts "Check that you have libwww-mechanize-ruby installed."
+				when e.to_s.match(/dbi/i)
+					puts "Check that you have libdbi-ruby installed."
+				when e.to_s.match(/xmlsimple/i)
+					puts "Check that you have the xml-simple rubygem or the libxml-simple-ruby package installed."
+				when e.to_s.match(/linguistics/i)
+					puts "Check that you have the Linguistics rubygem installed."
+				else
+					puts "#{e.to_s.capitalize}.\nDo you have the appropriate ruby module installed?"
+			end
 			puts "Error is fatal, terminating."
 			exit
 		end
@@ -136,18 +158,6 @@ module MediaManager
     def sanity_check
       MediaManager::reloadConfig :yes			#reloadConfig will exit unless successful
 			sanity=:sane
-      require "find"
-      require "fileutils"
-      require 'pp'
-			
-
-			#seperately installed component
-			begin
-				require 'dbi'
-			rescue LoadError
-				puts "Cannot load DBI database interconnect. Need to install 'libdbi-ruby'?"
-				sanity=:iNsAnE!
-			end
 
 			#Instantiate MySQL Connection
 			begin
@@ -158,7 +168,18 @@ module MediaManager
 				puts "Error message: #{e.error}"
 				puts "Error SQLSTATE: #{e.sqlstate}" if e.respond_to?("sqlstate")
 				sanity=:InSaNe!
+			rescue DBI::InterfaceError => e
+				if e.to_s.match(/could not load driver/i)
+					puts "sanity_check(): Check that you have libdbd-mysql-ruby installed."
+					puts "Error if fatal, terminating."
+					exit
+				end
 			rescue DBI::DatabaseError => e
+				if e.to_s.match(/can't connect to mysql/i)
+					pp e
+					puts "sanity_check(): Cannot connect to mysql, check configurations. (Install ruby1.8-dev and )\n#{e.to_s}"
+					raise "fail"
+				end
 				puts e.to_s
 				sanity=nil
 			ensure
@@ -168,7 +189,10 @@ module MediaManager
       #PHP is installed and useable
       #FIXME  Check for curl
       php=`php -r "print('sane');"`
-			raise "ERROR: Couldn't find that 'php' thing, you sure you gots it?" if php.empty?
+			if php.empty?
+				puts "sanity_check(): Omg, you need to install php4-cli or equivilent package."
+				raise
+			end
       sanity=php.to_sym if sanity==:sane
 
 			#load the blacklist
