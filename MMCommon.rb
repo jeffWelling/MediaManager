@@ -505,17 +505,5 @@ module MediaManager
 			clearEpisodeCache
 		end
 		
-		class MovieInfo
-			def initialize(file_path)
-				@file_path=file_path
-				@size=File.size file_path
-				@path_sha=hash_filename file_path
-				@date_added=DateTime.now.to_s
-			end
-			def file_path
-				@file_path
-			end
-		end
-
 	end #MMCommon
 end
