@@ -1,5 +1,6 @@
 module MediaManager
 	module FindDuplicates
+		extend MMCommon
 		#scan_dirs(source_dirs=nil, new_only=:no, scan_limit=0, commit_to_sql=:no)
 		#source_dirs can be a string or an array to scan instead of $MEDIA_SOURCES_DIR,
 		#new_only controls if scan_dirs() will include already-scanned items in it's results
