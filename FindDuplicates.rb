@@ -109,7 +109,7 @@ module MediaManager
 						progress_update_due+=total/50
 					end
 					pp second_index if array_of_files[second_index].nil?
-					result=MediaManager.same_file?(array_of_files[first_index], array_of_files[second_index], bytes_to_hash)
+					result=MediaManager::FindDuplicates.same_file?(array_of_files[first_index], array_of_files[second_index], bytes_to_hash)
 					if result[0].class==TrueClass
 						if duplicates.has_key? result[1]
 							duplicates[result[1]] << array_of_files[first_index] unless duplicates[result[1]].include?(array_of_files[first_index])
