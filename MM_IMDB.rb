@@ -9,7 +9,7 @@ module MediaManager
 		#This function is called directly by a helper function,       db_include?( source, dbname)
 		#which takes the name, and continues searching until a
 		#result is found, or the source is exhausted.
-
+		#FIXME TODO the moviedb's title program does not properly handle searches for names that match 1 to 1
 		def self.searchIMDB name, aka=nil
 			#THIS WOULD BE SO MUCH FUCKING EASIER IF THE IMDB SEARCH PROGRAM 
 			#WAS AT THE VERY LEAST, GIVING CONSISTENT OUTPUT!!!!!!!!!!!!!!1112
@@ -72,12 +72,12 @@ module MediaManager
 		end
 
 		#This function takes the result of the IMDB moviedb 'title' operation
-		#and returns the titles that match in an array
+		#and returns the titles and related information in a pretty formatted array
 		#Or FALSE
 		def self.mdb2info outputBlob
 			return FALSE if outputBlob.empty?
 			outputBlob = outputBlob.split("\n").reject {|line| line==""}
-			result=[]
+			result={}
 
 			#Need to know where all the 'page breaks' are for parsing
 			pageBreaks=[]   #Populate pageBreaks with a list of all the line numbers which contain page breaks
@@ -85,36 +85,58 @@ module MediaManager
 				pageBreaks << index if outputBlob[index].match( /^[-]*$/ )
 			}	
 
-			if pageBreaks.length == 1  #One result
-				result[0]={ 'Titles' => outputBlob[2].strip} #This array can be used as a reference for a list of
-				result[1]={ 'Title' => outputBlob[2].strip}        #all available titles.  It just makes processing
-				#get url from output
-				urlLine=0
-				pp outputBlob
+			if pageBreaks.length == 1  #Output was cutoff  FIXME!
 				outputBlob.each_index {|index|
-					urlLine=index
-					break if outputBlob[index].match( /URL:/ )
-				}
-				result[1].merge!({'Url' => "#{outputBlob[urlLine+1].strip}"})												#the return value more streamline
-				outputBlob.each_index {|index|
-					result[1].merge!({'URL' => outputBlob[index+1].strip}) if outputBlob[index].match( /URL:/ )
-					break if result[1]['URL']
-				}
+					next if index <= 1  #First two lines are garbage in this case, "-----.." and "Titles Matched:"
+					result.merge!( { "#{outputBlob[index].strip}" => [] } )
+				}	
 				return result
 			end
 
 			#pageBreaks should never be less than 2 {unless 1 item returned}
 			raise "Unparsable output from 'title'; Insufficient delimiters for parsing <--->." if pageBreaks.length < 2
-			numItemsReturned = pageBreaks[1] - 2
 			
-			result[0]={ 'Titles'=>[] }
-			numItemsReturned.times do
-				#Don't process TV show episodes that are returned in results
-				#TV show episodes can be identified as having '{' and '}' in the
-				#name, enclosing the episode title.
-				result[0]['Titles'] << outputBlob[numItemsReturned+1] unless outputBlob[numItemsReturned+1].match( /[{].*[}]/ )
-				numItemsReturned=numItemsReturned-1
-			end
+			second_area=false
+			movieblob_cache=[]
+			title=''   #used to keep track of the movie title while processing the movieblob_cache's
+			outputBlob.each_index {|index|
+				next if index > (outputBlob.length-2)  #Don't process the bottom two lines (copyright information)
+				next if index <= 1 #Don't process the first two lines, '---...' and 'Titles Matched:'
+				second_area=true if outputBlob[index].match(/^-*$/)
+				result.merge!({ "#{outputBlob[index].strip}" => [] }) unless second_area.class==TrueClass
+				next unless second_area.class==TrueClass
+
+				if outputBlob[index].match(/^-*$/)
+					next if movieblob_cache.empty?
+					
+					key=''
+					value=''
+					movieblob_cache.each_index {|current_line_index|
+						next if (current_line_index > movieblob_cache.length-2) or movieblob_cache[current_line_index].match(/^-*$/)
+						if movieblob_cache[current_line_index].gsub(/:$/, '')=='Title'
+							title=movieblob_cache[current_line_index+1].strip
+						end
+	
+						if movieblob_cache[current_line_index].match(/^[a-zA-Z\s]+:/).nil?
+							#not a new key/value pair, add this line to the value
+							value << "#{movieblob_cache[current_line_index].strip}, "
+						else
+							#new pair
+							unless value=='' or key==''
+								result[title] << {key => value}
+							end
+							value=''
+							key=movieblob_cache[current_line_index].match(/^.*?:/)[0].chop
+						end
+
+					}
+					movieblob_cache=[]
+					title=''
+				end
+
+				#fill up the movieblob untill we reach the '---' mark, at which point we process the blob, zero it out, and start over
+				movieblob_cache << outputBlob[index]
+			}
 
 			return result
 		end
