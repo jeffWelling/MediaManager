@@ -291,7 +291,7 @@ module MediaManager
 					temp=searchResults[i]
 					temp=MediaManager::MM_TVDB2.populate_results(temp)
 
-					#reformat it to what was expected from MM_TVDB
+					#reformat it to what is expected from MM_TVDB by the code below
 					temp.each {|series|
 						series.each_key {|attribute|
 							if series[attribute].class==Array
@@ -322,7 +322,6 @@ module MediaManager
 			#pp results
 			occurance={}
 			#Try and pick a few top results
-			#Present results to user, have user pick
 			results.each_key {|searchWord|
 				#For each result returned for each search, increase the popularity counter for that series
 				results[searchWord].each {|result|
