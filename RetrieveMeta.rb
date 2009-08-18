@@ -325,8 +325,8 @@ module MediaManager
 			results.each_key {|searchWord|
 				#For each result returned for each search, increase the popularity counter for that series
 				results[searchWord].each {|result|
-					occurance[result['thetvdb_id']] ||=0
-					occurance[result['thetvdb_id']]=occurance[result['thetvdb_id']]+1
+					occurance[hash_filename result.to_s] ||=0
+					occurance[hash_filename result.to_s]=occurance[hash_filename result.to_s]+1
 				}
 			}
 			series={}

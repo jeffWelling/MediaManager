@@ -117,7 +117,7 @@ module MediaManager
 							title=movieblob_cache[current_line_index+1].strip
 						end
 	
-						if movieblob_cache[current_line_index].match(/^[a-zA-Z\s]+:/).nil?
+						if movieblob_cache[current_line_index].match(/^\s/) or movieblob_cache[current_line_index].match(/^[a-zA-Z\s]*:/).nil?
 							#not a new key/value pair, add this line to the value
 							value << "#{movieblob_cache[current_line_index].strip}, "
 						else
