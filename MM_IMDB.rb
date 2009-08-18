@@ -19,6 +19,7 @@ module MediaManager
 				puts "blacklisted"
 				return []
 			end
+			puts "searchIMDB():  Searching for '#{name}'"
 
 			#check the proxy
 			#FIXME This function can be called with an optional argument, aka. If
@@ -26,7 +27,7 @@ module MediaManager
 			#previously invoked with the same name, but the
 			#proxy does not recognize this and may return old/invalid data.
 			nameHash = Digest::SHA1.hexdigest(name.downcase)
-			puts "retrieved from cache." if $IMDB_CACHE.include?(nameHash)
+			puts "searchIMDB():  Retrieved '#{$IMDB_CACHE[nameHash].length}' from cache." if $IMDB_CACHE.include?(nameHash)
 			return $IMDB_CACHE[nameHash] if $IMDB_CACHE.include?(nameHash)
 
 			
@@ -51,11 +52,15 @@ module MediaManager
 				#We could return 'result' here, which should be a very large
 				#array of information, but it is clear that this is an ambiguous
 				#term so there is a greater chance of accuracy by using other terms
+				puts "searchIMDB():  No results for '#{name}'"
 				return ""
 			elsif ret!=0
 				raise "Error:  WTF, unexpected error value from moviedb? #{ret.inspect}"
 			end	
-			return $IMDB_CACHE[nameHash] = mdb2info(result)
+			formatted_result=mdb2info(result)
+			$IMDB_CACHE[nameHash] = formatted_result
+			puts "searchIMDB():  '#{$IMDB_CACHE[nameHash].length}' titles found for '#{name}'"
+			return formatted_result
 		end
 
 		#Check the blacklist for an item
@@ -86,11 +91,42 @@ module MediaManager
 			}	
 
 			if pageBreaks.length == 1  #Output was cutoff  FIXME!
-				outputBlob.each_index {|index|
-					next if index <= 1  #First two lines are garbage in this case, "-----.." and "Titles Matched:"
-					result.merge!( { "#{outputBlob[index].strip}" => [] } )
-				}	
-				return result
+				if outputBlob[1]=='Titles Matched:'
+					#list of movies
+					outputBlob.each_index {|index|
+						next if index <= 1  #First two lines are garbage in this case, "-----.." and "Titles Matched:"
+						result.merge!( { "#{outputBlob[index].strip}" => [] } )
+					}	
+					return result
+				else
+					#single instance returned with no list
+					title=''
+					key=''
+					value=''
+					movieblob_cache=outputBlob
+					movieblob_cache.each_index {|current_line_index|
+						next if (current_line_index > movieblob_cache.length-2) or movieblob_cache[current_line_index].match(/^-*$/)
+						if movieblob_cache[current_line_index].gsub(/:$/, '')=='Title'
+							title=movieblob_cache[current_line_index+1].strip
+							result.merge!({ title => [] })
+						end
+	
+						if movieblob_cache[current_line_index].match(/^\s/) or movieblob_cache[current_line_index].match(/^[a-zA-Z\s]*:/).nil?
+							#not a new key/value pair, add this line to the value
+							value << "#{movieblob_cache[current_line_index].strip}, "
+						else
+							#new pair
+							unless value=='' or key==''
+								result[title] << {key => value}
+							end
+							value=''
+							key=movieblob_cache[current_line_index].match(/^.*?:/)[0].chop
+						end
+
+					}
+					return result
+				end
+				
 			end
 
 			#pageBreaks should never be less than 2 {unless 1 item returned}

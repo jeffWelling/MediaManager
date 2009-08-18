@@ -43,7 +43,7 @@ module MediaManager
 			puts "Scanning source directories:"
 			puts "This may take a moment..."
 			files=[]
-			files=MediaManager.scan_dirs( (scanDirectory.nil? ? nil : scanDirectory), :yes, scanItemLimit, :no) 
+			files=MediaManager::FindDuplicates.scan_dirs( (scanDirectory.nil? ? nil : scanDirectory), :yes, scanItemLimit, :no) 
 			
 			files.each_index { |filesP|
 				ignore=FALSE

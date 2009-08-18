@@ -18,7 +18,7 @@ $movieInfoSpec={
 	'PlayCommand'=>'',
 
 	#from the database
-	'id'=>'',
+#	'id'=>'',
 	'DateAdded'=>'',
 	'DateModified'=>'',
 	

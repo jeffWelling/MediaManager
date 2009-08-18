@@ -94,6 +94,7 @@ module MediaManager
 				puts "filenameToInfo():  This file was just hashed for the first time, adding hash to file's db entry."
 				raise "filenameToInfo(): Failed updating sql?" unless sqlAddUpdate("UPDATE mediaFiles SET FileSHA='#{movieData['FileSHA']}' WHERE PathSHA='#{movieData['PathSHA']}'")==1
 			end
+			pp movieData
 			puts "File already in database, using info..." unless movieData['id'].nil?
 			return movieData unless movieData['id'].nil?
 
@@ -181,6 +182,7 @@ module MediaManager
 			#Is it in IMDB/TVDB?
 			result=''
 			result= db_include?( :tvdb, movieData)
+			imdb_results= db_include?( :imdb, movieData)
 			return result if result==:ignore
 #			puts "extractData(): db_include?() returned this match..."
 #			pp result
@@ -240,7 +242,7 @@ module MediaManager
 					fpath=fpath.gsub(sourceDir, '')
 				end
 			}
-			filename=pathToArray fpath
+			filename=pathToArray(fpath)
 
 			#Extract 'words' from filename, one at a time, and search for them.
 			queue=filename[1].gsub('.', ' ').gsub('_', ' ')
@@ -310,11 +312,11 @@ module MediaManager
 					results[searchTerm[i]]= temp
 				}
 			else
-				searchTerm.each_index{|i|
+				searchTerm.each_index {|i|
 					temp=[]
 					results[searchTerm[i]]||=[]
 					temp= MediaManager::MM_IMDB.searchIMDB( searchTerm[i] )
-					break if temp.length == 0
+					next if temp.length == 0 or temp.class==FalseClass
 					results[searchTerm[i]]= temp
 				}
 			end
@@ -331,23 +333,32 @@ module MediaManager
 			}
 			series={}
 			results.each {|listOfSeries|
-				listOfSeries[1].each {|seriesHash|
-					unless series.has_key? seriesHash['thetvdb_id']
-						series.merge!({ seriesHash['thetvdb_id'] => seriesHash })
-					end
-				}
+				if listOfSeries.class!=Hash #if its from the tvshows
+					listOfSeries[1].each {|seriesHash|
+						unless series.has_key? seriesHash['thetvdb_id']
+							series.merge!({ seriesHash['thetvdb_id'] => seriesHash })
+						end
+					}
+				else #if its from the movies
+					listOfSeries.each {|title, attributes_hash|
+						unless series.has_key? title
+							series.merge!( { title => attributes_hash } )
+						end
+					}
+				end
 			}
 			occurance=occurance.sort {|a,b| a[1]<=>b[1]}.reverse
 			#No longer have to use results array, can use series.
 			matches=[]
 			if (seasonNum=movieData['EpisodeID'].match(/s[\d]+/i)) and (epNum=movieData['EpisodeID'].match(/[\d]+$/))
-				seasonNum=seasonNum[0].reverse.chop.reverse.to_i
-				epNum=epNum[0]
+				seasonNum=seasonNum[0].reverse.chop.reverse.to_i unless seasonNum.nil?
+				epNum=epNum[0] unless epNum.nil?
 			end
 			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
 			name=name.gsub(MediaManager::RetrieveMeta.get_episode_id(name)[0], '').squeeze(' ') if MediaManager::RetrieveMeta.get_episode_id(name)
 			cleaned_path=movieData['Path'].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
 			series.each {|seriesHash|
+				pp seriesHash
 				unless seriesHash[1]['EpisodeList'].empty?
 					seriesHash[1]['EpisodeList'].each {|episode|
 						episode.merge!({ 
@@ -376,65 +387,67 @@ module MediaManager
 						end
 						
 						if epName.index(/\([\d]+\)/)
-							next unless name.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
-							epName=episode['EpisodeName'].gsub(/[:;]/, '')
-#							puts epName.slice( 0,epName.index(/\([\d]+\)/) )
-#							puts epName.slice( (epName.index(/\([\d]+\)/) + epName.match(/\([\d]+\)/)[0].length),epName.length )
-							part2= epName.slice( epName.index(/\([\d]+\)/)+epName.match(/\([\d]+\)/)[0].length,epName.length ).downcase
-							regex1= Regexp.new( Regexp.escape(epName.slice( 0,epName.index(/\([\d]+\)/) ).downcase))
-							regex2= Regexp.new( Regexp.escape(part2) )
-							unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
-								if name.downcase.match(regex1) and name.downcase.match(regex2)
-									puts "db_include?(): Matched based on both sides of a digit thingy"
-									matches << episode.merge('Matched'=>:digits)
-									next
+							unless name.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
+								temp_epName=episode['EpisodeName'].gsub(/[:;]/, '')
+#								puts epName.slice( 0,epName.index(/\([\d]+\)/) )
+#								puts epName.slice( (epName.index(/\([\d]+\)/) + epName.match(/\([\d]+\)/)[0].length),epName.length )
+								part2= temp_epName.slice( temp_epName.index(/\([\d]+\)/)+temp_epName.match(/\([\d]+\)/)[0].length,temp_epName.length ).downcase
+								regex1= Regexp.new( Regexp.escape(temp_epName.slice( 0,temp_epName.index(/\([\d]+\)/) ).downcase))
+								regex2= Regexp.new( Regexp.escape(part2) )
+								unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
+									if name.downcase.match(regex1) and name.downcase.match(regex2)
+										puts "db_include?(): Matched based on both sides of a digit thingy"
+										matches << episode.merge('Matched'=>:digits)
+										next
+									end
+								end 
+							
+								#Should only get here if the string following ([\d]) is empty or the match above wasn't successful
+								#Use the first digit in the ( ) as the part number if it matches.
+								regex2= Regexp.new( Regexp.escape(epName.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
+								if part=name.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
+									part=part[0].match(/[\d]+/)[0]
+									if part.match(regex2)  #Match
+										puts "db_include()?: Matched based on part number  (alternative digit thingy match)"
+										matches << episode.merge('Matched'=>:digits)
+										next
+									end
 								end
-							end
-							#Should only get here if the string following ([\d]) is empty or the match above wasn't successful
-							#Use the first digit in the ( ) as the part number if it matches.
-							regex2= Regexp.new( Regexp.escape(epName.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
-							if part=name.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
-								part=part[0].match(/[\d]+/)[0]
-								if part.match(regex2)  #Match
-									puts "db_include()?: Matched based on part number  (alternative digit thingy match)"
-									matches << episode.merge('Matched'=>:digits)
-									next
-								end
-							end
+							end #of unless name.match(...)
 						end
 						
 						#Attempt to deal with Roman Numerals
 						#The following regex was adapted from Example 7.8 of http://thehazeltree.org/diveintopython/7.html
 						numeralMatch=/\s[M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})]+\s/
-						romMatch= (((name.reverse) + ' ').reverse) + ' ' # This allows us to use whitespace as delimiters for either side of a RN (Roman Numeral)
-						epName= ((epName + ' ').reverse + ' ').reverse
-						if epName.match(numeralMatch) or romMatch.match(numeralMatch)
+						romName= (((name.reverse) + ' ').reverse) + ' ' # This allows us to use whitespace as delimiters for either side of a RN (Roman Numeral)
+						romEpName= ((epName + ' ').reverse + ' ').reverse
+						if romEpName.match(numeralMatch) or romName.match(numeralMatch)
 							#NOTE To the reader
 							#This is my attempt at identifying a roman numeral in the filename
 							#and converting it to an integer for comparison with the digit
 							#in the episode name.  I whole heartedly believe there ^is^ a 
 							#better way to do this that I haven't found yet.
 							#NOTE We do not anticipate more than one Roman Numeral in the filename.
-							#printf "Episode name: "; puts epName
-							#printf "Filename: "; puts romMatch
-							if romMatch.match( numeralMatch )
+							#printf "Episode name: "; puts romEpName
+							#printf "Filename: "; puts romName
+							if romName.match( numeralMatch )
 								#puts "Roman numeral found in filename, it is printed on the following line."
-								#pp romMatch.match(numeralMatch)[0].strip
-								romMatch=romMatch.gsub(Regexp.new(Regexp.escape(romMatch.match(numeralMatch)[0])), 
-									"#{toArabic( romMatch.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romMatch.match(numeralMatch)[0].strip)==0
-								if epName.match(Regexp.new(Regexp.escape(romMatch), TRUE))
+								#pp romName.match(numeralMatch)[0].strip
+								romName=romName.gsub(Regexp.new(Regexp.escape(romName.match(numeralMatch)[0])), 
+									"#{toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romName.match(numeralMatch)[0].strip)==0
+								if romEpName.match(Regexp.new(Regexp.escape(romName), TRUE))
 									puts "db_include()?:  Matched based on roman numeral in filename and converted"
 									matches << episode.merge('Matched'=>:romanNumerals)
 									next
 								end
-							elsif epName.match(numeralMatch)
+							elsif romEpName.match(numeralMatch)
 								#puts "Roman numeral found in episode name, it is printed on the following line."
-								#printf "Matching: "; pp epName.match(numeralMatch)[0].strip
-								#printf "Replacing with: "; pp toArabic(epName.match(numeralMatch)[0].strip).to_s
-								epName=epName.gsub(Regexp.new(Regexp.escape(epName.match(numeralMatch)[0])), 
-									" #{toArabic(epName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(epName.match(numeralMatch)[0].strip)==0
-								#puts romMatch
-								if romMatch.match(Regexp.new(Regexp.escape(epName), TRUE))
+								#printf "Matching: "; pp romEpName.match(numeralMatch)[0].strip
+								#printf "Replacing with: "; pp toArabic(romEpName.match(numeralMatch)[0].strip).to_s
+								romEpName=romEpName.gsub(Regexp.new(Regexp.escape(romEpName.match(numeralMatch)[0])), 
+									" #{toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(romEpName.match(numeralMatch)[0].strip)==0
+								#puts romName
+								if romName.match(Regexp.new(Regexp.escape(romEpName), TRUE))
 									puts "db_include()?: Matched based on roman numeral found in episodename and converted"
 									matches << episode.merge('Matched'=>:romanNumerals)
 									next
@@ -557,12 +570,16 @@ module MediaManager
 						end
 						
 						#Try joining words together to see if that helps matching
-
+						
 
 						#Next before here if already matched
 						#
 					}
 				end #of unless seriesHash[1]['EpisodeList'].empty?
+
+				#Now try to match movies
+				#Remember to only work with the key that points TO series, not series['Title'] itself because it may not exist (*/me shakes fist at moveidb*)
+				pp seriesHash unless seriesHash[1]['EpisodeList']
 			}
 
 			return matches if matches.length==1

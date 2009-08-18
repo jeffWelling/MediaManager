@@ -272,6 +272,7 @@ module MediaManager
 
 		#take a full file path and turn it into an array, including turning the extention into the first element.
 		def pathToArray fPath
+			return( [ fPath.match(/\..{3,4}$/)[0] , fPath.gsub(/\..{3,4}$/, '') ] ) unless fPath.include?('/')
 			first=TRUE
 			fPath = fPath.split('/').reverse.collect {|pathSeg|
 				unless first==FALSE then
