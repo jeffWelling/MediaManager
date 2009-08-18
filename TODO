@@ -2,3 +2,7 @@ TODO file for Jeff's MediaManager program
 
 -(July 28 09) Change the way that searchTVDB() caches results, its bulky and can be cleaned up by only referencing
 							thetvdb_id which is returned with every result and can be looked up in our local cache.
+
+-(August 18 09) Some of the cache's are implemented using an array, if that
+							array grows too big, it could manifest as a memory leak and
+							also exponentially increasing processing times
