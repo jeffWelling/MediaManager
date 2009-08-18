@@ -504,6 +504,6 @@ module MediaManager
 			clearTvdbSeriesEpisodeCache
 			clearEpisodeCache
 		end
-
+		
 	end #MMCommon
 end
