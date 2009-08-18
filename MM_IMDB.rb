@@ -15,7 +15,10 @@ module MediaManager
 			#WAS AT THE VERY LEAST, GIVING CONSISTENT OUTPUT!!!!!!!!!!!!!!1112
 	
 			#Don't process small words, or blacklisted words
-			return [] if inBlacklist? name || name.length < 4
+			if (inBlacklist?(name) || name.length < 4)
+				puts "blacklisted"
+				return []
+			end
 
 			#check the proxy
 			#FIXME This function can be called with an optional argument, aka. If
@@ -27,7 +30,7 @@ module MediaManager
 			return $IMDB_CACHE[nameHash] if $IMDB_CACHE.include?(nameHash)
 
 			
-			command=$MMCONF_MOVIEDB_LOC+"title -t '#{name.downcase}' -s"
+			command=$MMCONF_MOVIEDB_LOC+"title -t '#{name.downcase}' -s -i"
 			command << ' -aka' if aka
 
 			#FIXME Cannot yet handle single quotes, 'sh' gets confused and throws syntax errori
@@ -40,12 +43,11 @@ module MediaManager
 			#   11  =  Segmentation Fault, output produced.  Term too ambiguous.
 			#    137,9  =  Killed, DO NOT RUN AGAIN!! No output.  Term too ambiguous.
 			#    0  =  Output produced, cache results.  Success.
-				
-			if ret==9 or ret==137
+			if ret==9 or ret==137 or ret.to_i==35072
 				add2Blacklist name
-				puts "Blacklisted #{name}, won't search for that term again.  Sorry!"
+				puts "Blacklisted '#{name}', won't search for that term again.  Sorry!"
 				return ""
-			elsif ret==11 || result.empty? || ret==35072
+			elsif ret==11 || result.empty?
 				#We could return 'result' here, which should be a very large
 				#array of information, but it is clear that this is an ambiguous
 				#term so there is a greater chance of accuracy by using other terms
@@ -65,7 +67,7 @@ module MediaManager
 		#Add an item to the blacklist
 		def self.add2Blacklist badItem
 			#Add an item to the blacklist, and write to file.
-			raise "Cannot add item to blacklist.txt #{badItem.downcase}" unless `echo #{badItem.downcase} >> #{$MMCONF_MOVIEDB_BLACKLIST}`
+			raise "Cannot add item to blacklist.txt #{badItem.downcase}" unless `echo '#{badItem.downcase}' >> #{$MMCONF_MOVIEDB_BLACKLIST}`
 			$IMDB_BLACKLIST << badItem.downcase
 		end
 
