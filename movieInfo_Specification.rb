@@ -25,8 +25,9 @@ $movieInfoSpec={
 }
 
 class MovieInfo
-	#Become is a function to help with legacy support, it 
-	def Become movieInfo
+	#Become_movieInfo is a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
+	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.
+	def Become_movieInfo movieInfo
 		raise "Are you fuck-tarded?" unless movieInfo.class==Hash
 		movieInfo.each_key {|key|
 			case key
@@ -67,6 +68,10 @@ class MovieInfo
 			end
 		}
 	end
+	def Become_movieObject movie_object
+		
+	end	
+
 	def initialize(file_path)
 		@title=nil
 		@episodeID=nil
