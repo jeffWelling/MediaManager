@@ -339,7 +339,6 @@ module MediaManager
 					listOfSeries[1].each {|seriesHash|
 						if seriesHash.class==Array and seriesHash.length==2
 							unless series.has_key? seriesHash[0]
-								
 								series.merge!({ seriesHash[0] => seriesHash[1]})
 							end
 						else
