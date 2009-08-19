@@ -250,35 +250,38 @@ module MediaManager
 			i=0
 			searchTerm=[]
 			filename.each_index {|partOfilename|
-				queue=filename[partOfilename].gsub('.', ' ').gsub('_', ' ')
-				ignore=FALSE
-				loop do  #FIXME Can't this be optimized any further?
-					searchTerm[i] ||= ''
+				window=filename[partOfilename].gsub('.', ' ').gsub('_', ' ')
+				until window.strip.empty?
+					queue=window
 					ignore=FALSE
-					break if queue.empty?
-					#break if searchTerm[i-1].nil?
-					break if queue.match(/[\w']*\b/i).nil?
-					searchTerm[i]=match= queue.match(/[\w']*\b/i)
-					match=match[0]
-					if MediaManager::RetrieveMeta.get_episode_id(searchTerm[i][0]).nil?    #If it's NOT an episodeID tag
-						searchTerm[i]=searchTerm[i][0]
-						searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
-					else
-						#searchTerm[i] is a MatchData type of match
-						searchTerm[i]=''
+					loop do  #FIXME Can't this be optimized any further?
+						searchTerm[i] ||= ''
+						ignore=FALSE
+						break if queue.empty?
+						#break if searchTerm[i-1].nil?
+						break if queue.match(/[\w']*\b/i).nil?
+						searchTerm[i]=match= queue.match(/[\w']*\b/i)
+						match=match[0]
+						if MediaManager::RetrieveMeta.get_episode_id(searchTerm[i][0]).nil?    #If it's NOT an episodeID tag
+							searchTerm[i]=searchTerm[i][0]
+							searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
+						else
+							#searchTerm[i] is a MatchData type of match
+							searchTerm[i]=''
+						end
+						queue= queue.slice( queue.index(match)+match.length, queue.length ).strip 
+						i=i+1
 					end
-					queue= queue.slice( queue.index(match)+match.length, queue.length ).strip 
-#Using 'ignore's in this area is less effective and more problematic than just running a delete_if loop later.
-#					ignore=TRUE if searchTerm[i].length < 3 or searchTerm[i].strip.downcase=='the' or searchTerm[i].strip.downcase=='and'
-
-					i=i+1# unless ignore
+					i=i+1
+					break if window.match(/^[\w']*\b/i).nil?
+					window=window.gsub(/^[\w']*\b/i, '').strip
 				end
-				i=i+1# unless ignore
 			}
 			#searchTerm is now an array of search terms
 			#search for each, and store the results.
 			searchTerm=searchTerm.delete_if {|it| TRUE if it.nil? or it.empty? or name_match?(it, filename[0].reverse.chop.reverse, :no)}.each_index {|lineN| searchTerm[lineN]=searchTerm[lineN].strip }
-			searchTerm=searchTerm.delete_if {|word| TRUE if ['the','and'].include?(word) or word.length <= 3 }
+			searchTerm=searchTerm.delete_if {|word| TRUE if ['the','and', 'xvid'].include?(word) or word.length <= 3 }
+			pp searchTerm
 			results={}
 			searchResults=[]
 			if source==:tvdb
@@ -313,10 +316,10 @@ module MediaManager
 				}
 			else
 				searchTerm.each_index {|i|
-					temp=[]
-					results[searchTerm[i]]||=[]
+					temp=false
 					temp= MediaManager::MM_IMDB.searchIMDB( searchTerm[i] )
-					next if temp.length == 0 or temp.class==FalseClass
+					next if temp.empty? or temp.class==FalseClass
+					results[searchTerm[i]]||=[]
 					results[searchTerm[i]]= temp
 				}
 			end
@@ -333,19 +336,19 @@ module MediaManager
 			}
 			series={}
 			results.each {|listOfSeries|
-				if listOfSeries.class!=Hash #if its from the tvshows
 					listOfSeries[1].each {|seriesHash|
-						unless series.has_key? seriesHash['thetvdb_id']
-							series.merge!({ seriesHash['thetvdb_id'] => seriesHash })
+						if seriesHash.class==Array and seriesHash.length==2
+							unless series.has_key? seriesHash[0]
+								
+								series.merge!({ seriesHash[0] => seriesHash[1]})
+							end
+						else
+							unless series.has_key? seriesHash['thetvdb_id']
+								series.merge!({ seriesHash['thetvdb_id'] => seriesHash })
+							end
 						end
+						
 					}
-				else #if its from the movies
-					listOfSeries.each {|title, attributes_hash|
-						unless series.has_key? title
-							series.merge!( { title => attributes_hash } )
-						end
-					}
-				end
 			}
 			occurance=occurance.sort {|a,b| a[1]<=>b[1]}.reverse
 			#No longer have to use results array, can use series.
@@ -357,9 +360,78 @@ module MediaManager
 			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
 			name=name.gsub(MediaManager::RetrieveMeta.get_episode_id(name)[0], '').squeeze(' ') if MediaManager::RetrieveMeta.get_episode_id(name)
 			cleaned_path=movieData['Path'].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
+			$it1=series
 			series.each {|seriesHash|
-				pp seriesHash
-				unless seriesHash[1]['EpisodeList'].empty?
+				movie_object=nil
+				$it2=seriesHash
+
+				#seriesHash[1] may sometimes be an empty array, in cases where the title program returned it's title but did not present full information on said title
+				#Extrapolate some information from the title if we can
+				if source!=:tvdb
+					movie_object=[seriesHash[0], []]
+					clean_title=seriesHash[0].match(/^.*?\((\d){4}\)/)
+					episode_info=seriesHash[0].match(/\{.+?\}$/)
+					is_tv_show=false
+					year=clean_title[0].match(/\([\d]{4}\)$/)
+					clean_title=clean_title[0].gsub(/\((\d){4}\)$/, '').strip
+					unless year.nil?
+						year=year[0].chop.reverse.chop.reverse
+					end
+					movie_object[1] << {'Year'=>year} 
+				
+
+					#only sure way to tell if it's a tv show or not is to look for '"'
+					is_tv_show=true if clean_title.match(/^".+?"$/)
+
+					if (episode_info.nil? or is_tv_show.class==FalseClass)
+						#isn't tvshow
+						movie_object[1] << {'Title'=>clean_title} 
+					else
+						#Is tvshow
+						clean_title=clean_title.gsub(/^"/, '').gsub(/"$/, '')
+						movie_object[1] << {'Title'=>clean_title}
+						date_aired=episode_info[0].match(/\([\d]{4}-[\d]{2}-[\d]{2}\)/)
+						unless date_aired.nil?
+							movie_object[1] << {'EpisodeAired'=>DateTime.parse(date_aired[0].chop.reverse.chop.reverse)}
+						end
+						episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
+						movie_object[1] << {'EpisodeID'=>''}
+						movie_object[1] << {'EpisodeName'=>''}
+						movie_object[1] << {'EpisodeNumber'=>''}
+						movie_object[1] << {'Season'=>''}
+						unless episode_id.nil?
+							episode_id=episode_id[0]	
+							movie_object[1]['Season']=episode_id.reverse.chop.chop.reverse.match(/\d+?\./)[0].chop
+							movie_object[1]['EpisodeNumber']=episode_id.chop.match(/\.\d+?$/)[0].reverse.chop.reverse
+							movie_object[1]['EpisodeName']=episode_info.gsub(episode_id, '').chop.reverse.chop.reverse.strip
+							movie_object[1]['EpisodeID']="S#{movie_object[1]['Season']}E#{movie_object[1]['EpisodeNumber']}"
+						end
+					end
+					raise "Panic! This one has no year!" unless !clean_title.nil?
+					
+				end
+
+				if !seriesHash[1].nil? and seriesHash[1].class==Array
+					#reformat
+					values={}
+					seriesHash[1].each {|h|
+						h.each {|key, value| values.merge!({key => value}) }
+					}
+					seriesHash[1]=values
+				end
+				if !movie_object.nil?
+					#reformat
+					values={}
+					movie_object[1].each {|h|
+						h.each {|key, value|
+							values.merge!({ key =>value}) 
+						}
+					}
+					movie_object[1]=values
+				end
+
+				$it3=movie_object
+				unless !seriesHash[1].has_key?('EpisodeList') or seriesHash[1]['EpisodeList'].empty?   #This part will only be processed if source==:tvdb
 					seriesHash[1]['EpisodeList'].each {|episode|
 						episode.merge!({ 
 							'Title' => seriesHash[1]['Title'][0],
@@ -579,7 +651,9 @@ module MediaManager
 
 				#Now try to match movies
 				#Remember to only work with the key that points TO series, not series['Title'] itself because it may not exist (*/me shakes fist at moveidb*)
-				pp seriesHash unless seriesHash[1]['EpisodeList']
+				pp seriesHash unless source==:tvdb
+				pp movie_object unless source==:tvdb
+				raise 'XL' unless source==:tvdb
 			}
 
 			return matches if matches.length==1

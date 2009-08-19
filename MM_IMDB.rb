@@ -27,7 +27,7 @@ module MediaManager
 			#previously invoked with the same name, but the
 			#proxy does not recognize this and may return old/invalid data.
 			nameHash = Digest::SHA1.hexdigest(name.downcase)
-			puts "searchIMDB():  Retrieved '#{$IMDB_CACHE[nameHash].length}' from cache." if $IMDB_CACHE.include?(nameHash)
+			puts "searchIMDB():  '#{$IMDB_CACHE[nameHash].length}' results for '#{name}' from cache." if $IMDB_CACHE.include?(nameHash)
 			return $IMDB_CACHE[nameHash] if $IMDB_CACHE.include?(nameHash)
 
 			
@@ -52,7 +52,7 @@ module MediaManager
 				#We could return 'result' here, which should be a very large
 				#array of information, but it is clear that this is an ambiguous
 				#term so there is a greater chance of accuracy by using other terms
-				puts "searchIMDB():  No results for '#{name}'"
+				puts "searchIMDB():  '0' results for '#{name}'"
 				return ""
 			elsif ret!=0
 				raise "Error:  WTF, unexpected error value from moviedb? #{ret.inspect}"
