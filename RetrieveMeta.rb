@@ -323,8 +323,6 @@ module MediaManager
 					results[searchTerm[i]]= temp
 				}
 			end
-			$results = results
-			#pp results
 			occurance={}
 			#Try and pick a few top results
 			results.each_key {|searchWord|
@@ -385,25 +383,33 @@ module MediaManager
 					if (episode_info.nil? or is_tv_show.class==FalseClass)
 						#isn't tvshow
 						movie_object[1] << {'Title'=>clean_title} 
+						movie_object[1] << {'tv/movie'=>:movie}
 					else
 						#Is tvshow
 						clean_title=clean_title.gsub(/^"/, '').gsub(/"$/, '')
 						movie_object[1] << {'Title'=>clean_title}
+						movie_object[1] << {'tv/movie'=>:tv}
 						date_aired=episode_info[0].match(/\([\d]{4}-[\d]{2}-[\d]{2}\)/)
 						unless date_aired.nil?
 							movie_object[1] << {'EpisodeAired'=>DateTime.parse(date_aired[0].chop.reverse.chop.reverse)}
 						end
 						episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
-						movie_object[1] << {'EpisodeID'=>''}
-						movie_object[1] << {'EpisodeName'=>''}
-						movie_object[1] << {'EpisodeNumber'=>''}
-						movie_object[1] << {'Season'=>''}
-						unless episode_id.nil?
-							episode_id=episode_id[0]	
-							movie_object[1]['Season']=episode_id.reverse.chop.chop.reverse.match(/\d+?\./)[0].chop
-							movie_object[1]['EpisodeNumber']=episode_id.chop.match(/\.\d+?$/)[0].reverse.chop.reverse
-							movie_object[1]['EpisodeName']=episode_info.gsub(episode_id, '').chop.reverse.chop.reverse.strip
-							movie_object[1]['EpisodeID']="S#{movie_object[1]['Season']}E#{movie_object[1]['EpisodeNumber']}"
+						season=''
+						episodeNumber=''
+						if !episode_id.nil?
+							episode_id=episode_id[0]
+							movie_object[1] <<  {'Season' => (season=episode_id.reverse.chop.chop.reverse.match(/\d+?\./)[0].chop)}
+							movie_object[1] <<  {'EpisodeNumber' => (episodeNumber=episode_id.chop.match(/\.\d+?$/)[0].reverse.chop.reverse)}
+							movie_object[1] <<  {'EpisodeName' => episode_info[0].gsub(episode_id, '').gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse.strip}
+
+							unless season.empty? or episodeNumber.empty?
+								movie_object[1] << {'EpisodeID' => "S#{season}E#{episodeNumber}"}
+							end
+						else
+							movie_object[1] << {'Season' => ''}
+							movie_object[1] << {'EpisodeNumber' => ''}
+							movie_object[1] << {'EpisodeName' => episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse }
+							movie_object[1] << {'EpisodeID'=>''}
 						end
 					end
 					raise "Panic! This one has no year!" unless !clean_title.nil?
@@ -649,10 +655,17 @@ module MediaManager
 				end #of unless seriesHash[1]['EpisodeList'].empty?
 
 				#Now try to match movies
-				#Remember to only work with the key that points TO series, not series['Title'] itself because it may not exist (*/me shakes fist at moveidb*)
-				pp seriesHash unless source==:tvdb
-				pp movie_object unless source==:tvdb
-				raise 'XL' unless source==:tvdb
+				unless movie_object.nil?
+					#Remember to only work with the key that points TO series, not series['Title'] itself because it may not exist (*/me shakes fist at moveidb*)
+	#				pp seriesHash unless source==:tvdb
+					pp movie_object unless source==:tvdb
+	#				raise 'XL' unless source==:tvdb
+					if MediaManager.name_match?(name, movie_object[1]['Title'])
+						puts "db_include?():  Matched name_match?()"
+						matches << movie_object[1].merge({ 'Matched'=>:name_match? })
+						next
+					end
+				end
 			}
 
 			return matches if matches.length==1
