@@ -378,9 +378,10 @@ module MediaManager
 				
 
 					#only sure way to tell if it's a tv show or not is to look for '"'
-					is_tv_show=true if clean_title.match(/^".+?"$/)
+					is_tv_show=true if clean_title.match(/^\s?".+?"\s?(\([\d]{4}\))?$/)
 
 					if (episode_info.nil? or is_tv_show.class==FalseClass)
+						pp seriesHash if clean_title.match(/"/)
 						#isn't tvshow
 						movie_object[1] << {'Title'=>clean_title} 
 						movie_object[1] << {'tv/movie'=>:movie}
@@ -658,8 +659,9 @@ module MediaManager
 				unless movie_object.nil?
 					#Remember to only work with the key that points TO series, not series['Title'] itself because it may not exist (*/me shakes fist at moveidb*)
 	#				pp seriesHash unless source==:tvdb
-					pp movie_object unless source==:tvdb
+#					pp movie_object unless source==:tvdb
 	#				raise 'XL' unless source==:tvdb
+					puts "name: '#{name}', title: '#{movie_object[1]['Title']}' is: '#{movie_object[1]['tv/movie']}'"
 					if MediaManager.name_match?(name, movie_object[1]['Title'])
 						puts "db_include?():  Matched name_match?()"
 						matches << movie_object[1].merge({ 'Matched'=>:name_match? })
