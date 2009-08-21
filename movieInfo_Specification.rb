@@ -25,43 +25,87 @@ $movieInfoSpec={
 }
 
 class MovieInfo
+	@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
+		'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified']
+
+	#This is meant to help integration.  By allowing the object to be treated as an array/hash, it should
+	#be much easier to migrate to it from the simple movieInfo and movieData objects.
+	def [] key
+		return nil unless @@movieInfo_attributes.include? key
+		case key
+			when @@movieInfo_attributes[0]
+				@title
+			when @@movieInfo_attributes[1]
+				@episodeID
+			when @@movieInfo_attributes[2]
+				@episodeName
+			when @@movieInfo_attributes[3]
+				@season
+			when @@movieInfo_attributes[4]
+				@url
+			when @@movieInfo_attributes[5]
+				@year
+			when @@movieInfo_attributes[6]
+				@tvdbSeriesID
+			when @@movieInfo_attributes[7]
+				@imdbID
+			when @@movieInfo_attributes[8]
+				@categorization
+			when @@movieInfo_attributes[9]
+				@path
+			when @@movieInfo_attributes[10]
+				@path_sha
+			when @@movieInfo_attributes[11]
+				@size
+			when @@movieInfo_attributes[12]
+				@path_sha
+			when @@movieInfo_attributes[13]
+				@id
+			when @@movieInfo_attributes[14]
+				@date_added
+			when @@movieInfo_attributes[15]
+				@date_modified
+		end
+	end
 	#Become_movieInfo is a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
 	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.
 	def Become_movieInfo movieInfo
+		@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
+			'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified']
 		raise "Are you fuck-tarded?" unless movieInfo.class==Hash
 		movieInfo.each_key {|key|
 			case key
-				when 'Title'
+				when @@movieInfo_attributes[0]
 					@title=movieInfo[key]
-				when 'EpisodeID'
+				when @@movieInfo_attributes[1]
 					@episodeID=movieInfo[key]
-				when 'EpisodeName'
+				when @@movieInfo_attributes[2]
 					@episodeName=movieInfo[key]
-				when 'Season'
+				when @@movieInfo_attributes[3]
 					@season=movieInfo[key]
-				when 'URL'
+				when @@movieInfo_attributes[4]
 					@url=movieInfo[key]
-				when 'Year'
+				when @@movieInfo_attributes[5]
 					@year=movieInfo[key]
-				when 'tvdbSeriesID'
+				when @@movieInfo_attributes[6]
 					@tvdbSeriesID=movieInfo[key]
-				when 'imdbID'
+				when @@movieInfo_attributes[7]
 					@imdbID=movieInfo[key]
-				when 'Categorization'
+				when @@movieInfo_attributes[8]
 					@categorization=movieInfo[key]
-				when 'Path'
+				when @@movieInfo_attributes[9]
 					@path=movieInfo[key]
-				when 'PathSHA'
+				when @@movieInfo_attributes[10]
 					@path_sha=movieInfo[key]
-				when 'Size'
+				when @@movieInfo_attributes[11]
 					@size=movieInfo[key]
-				when 'FileSHA'
-					@path_sha
-				when 'id'
+				when @@movieInfo_attributes[12]
+					@path_sha=movieInfo[key]
+				when @@movieInfo_attributes[13]
 					@id=movieInfo[key]
-				when 'DateAdded'
+				when @@movieInfo_attributes[14]
 					@date_added=movieInfo[key]
-				when 'DateModified'
+				when @@movieInfo_attributes[15]
 					@date_modified=movieInfo[key]
 				else
 					puts "What the fuck?  #{key} : #{movieInfo[key]} "
