@@ -31,7 +31,7 @@ module MediaManager
 			return $IMDB_CACHE[nameHash] if $IMDB_CACHE.include?(nameHash)
 
 			
-			command=$MMCONF_MOVIEDB_LOC+"title -t '#{name.downcase}' -s -i"
+			command=$MMCONF_MOVIEDB_LOC+"title -t '#{name.downcase}' -s"
 			command << ' -aka' if aka
 
 			#FIXME Cannot yet handle single quotes, 'sh' gets confused and throws syntax errori

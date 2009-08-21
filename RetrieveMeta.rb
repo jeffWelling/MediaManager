@@ -378,23 +378,26 @@ module MediaManager
 				
 
 					#only sure way to tell if it's a tv show or not is to look for '"'
-					is_tv_show=true if clean_title.match(/^\s?".+?"\s?(\([\d]{4}\))?$/)
+					is_tv_show=true if clean_title.match(/^\s?".+?"/)
 
-					if (episode_info.nil? or is_tv_show.class==FalseClass)
-						pp seriesHash if clean_title.match(/"/)
+					if (episode_info.nil? and is_tv_show.class==FalseClass)
+						if clean_title.match(/"/)
+							pp seriesHash
+							pp clean_title
+						end
 						#isn't tvshow
 						movie_object[1] << {'Title'=>clean_title} 
 						movie_object[1] << {'tv/movie'=>:movie}
 					else
 						#Is tvshow
-						clean_title=clean_title.gsub(/^"/, '').gsub(/"$/, '')
+						clean_title=clean_title.gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/,'').strip.gsub(/^"/, '').gsub(/"$/, '')
 						movie_object[1] << {'Title'=>clean_title}
 						movie_object[1] << {'tv/movie'=>:tv}
-						date_aired=episode_info[0].match(/\([\d]{4}-[\d]{2}-[\d]{2}\)/)
+						episode_info.nil? ? date_aired=nil : date_aired=episode_info[0].match(/\([\d]{4}-[\d]{2}-[\d]{2}\)/)
 						unless date_aired.nil?
 							movie_object[1] << {'EpisodeAired'=>DateTime.parse(date_aired[0].chop.reverse.chop.reverse)}
 						end
-						episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
+						episode_info.nil? ? episode_id=nil : episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
 						season=''
 						episodeNumber=''
 						if !episode_id.nil?
@@ -409,7 +412,7 @@ module MediaManager
 						else
 							movie_object[1] << {'Season' => ''}
 							movie_object[1] << {'EpisodeNumber' => ''}
-							movie_object[1] << {'EpisodeName' => episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse }
+							movie_object[1] << {'EpisodeName' => (episode_info.nil? ? ('') : episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse) }
 							movie_object[1] << {'EpisodeID'=>''}
 						end
 					end
