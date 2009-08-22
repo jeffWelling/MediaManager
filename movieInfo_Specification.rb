@@ -70,7 +70,7 @@ class MovieInfo
 	#Become_movieInfo is a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
 	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.  It can be used
 	#for any Hash that has corresponding keys.
-	def Become_movieInfo movieInfo
+	def Become movieInfo
 		@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
 			'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie']
 		raise "Are you fuck-tarded?" unless movieInfo.class==Hash
@@ -116,9 +116,6 @@ class MovieInfo
 		}
 		movieInfo.length
 	end
-	def Become_movieObject movie_object
-		
-	end	
 
 	def initialize(file_path=nil)
 		@title=nil
