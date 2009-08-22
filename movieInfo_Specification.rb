@@ -18,7 +18,7 @@ $movieInfoSpec={
 	'PlayCommand'=>'',
 
 	#from the database
-	'id'=>'',
+#	'id'=>'',
 	'DateAdded'=>'',
 	'DateModified'=>'',
 	
@@ -68,10 +68,11 @@ class MovieInfo
 		end
 	end
 	#Become_movieInfo is a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
-	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.
+	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.  It can be used
+	#for any Hash that has corresponding keys.
 	def Become_movieInfo movieInfo
 		@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
-			'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified']
+			'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie']
 		raise "Are you fuck-tarded?" unless movieInfo.class==Hash
 		movieInfo.each_key {|key|
 			case key
@@ -107,10 +108,13 @@ class MovieInfo
 					@date_added=movieInfo[key]
 				when @@movieInfo_attributes[15]
 					@date_modified=movieInfo[key]
+				when @@movieInfo_attributes[16]
+					@tv_movie=movieInfo[key]
 				else
 					puts "What the fuck?  #{key} : #{movieInfo[key]} "
 			end
 		}
+		movieInfo.length
 	end
 	def Become_movieObject movie_object
 		
@@ -126,6 +130,7 @@ class MovieInfo
 		@year=nil
 		@tvdbSeriesID=nil
 		@imdbID=nil
+		@tv_movie=nil
 
 		@categorization=nil
 
