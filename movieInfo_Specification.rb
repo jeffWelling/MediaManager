@@ -116,7 +116,7 @@ class MovieInfo
 		
 	end	
 
-	def initialize(file_path)
+	def initialize(file_path=nil)
 		@title=nil
 		@episodeID=nil
 		@episodeName=nil
@@ -129,10 +129,17 @@ class MovieInfo
 
 		@categorization=nil
 
-		@path=file_path
-		@size=File.size file_path
-		@path_sha=hash_filename file_path
-		@file_sha=nil
+		if file_path.nil?
+			@path=nil
+			@size=nil
+			@path_sha=nil
+			@file_sha=nil
+		else
+			@path=file_path
+			@size=File.size file_path
+			@path_sha=hash_filename file_path
+			@file_sha=nil
+		end
 
 		#these are populated when something is pulled from the database (save date_added)
 		@id=nil
