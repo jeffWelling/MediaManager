@@ -25,7 +25,7 @@ $movieInfoSpec={
 }
 
 class MovieInfo
-	@@movieInfo_attributes||=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
+	@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
 		'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie', 'EpisodeAired', 'EpisodeNumber']
 
 	#This is meant to help integration.  By allowing the object to be treated as an array/hash, it should
