@@ -28,12 +28,27 @@ class MovieInfo
 	@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
 		'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie', 'EpisodeAired', 'EpisodeNumber']
 
+	def to_s
+		string_to_print=''
+		@@movieInfo_attributes.each {|attribute|
+			string_to_print << "#{attribute}:  '#{@movieInfo_values[attribute]}', "
+		}
+		return string_to_print.chop.chop
+	end
+	def print
+		@@movieInfo_attributes.each {|atr|
+			puts "#{atr}:\t\t'#{@movieInfo_values[atr]}'"
+		}
+		return true
+	end
+
 	def empty?
 		@@movieInfo_attributes.each {|atr|
 			return false if !self[atr].nil? and !self[atr].empty? unless atr=='DateAdded'
 		}
 		return true
 	end
+
 	def merge hash_to_merge
 		@merges||=[]
 		@merge_index||=0
@@ -52,259 +67,163 @@ class MovieInfo
 	#This is meant to help integration.  By allowing the object to be treated as an array/hash, it should
 	#be much easier to migrate to it from the simple movieInfo and movieData objects.
 	def [] key
-#		return nil unless @@movieInfo_attributes.include? key
-		case key
-			when @@movieInfo_attributes[0]
-				@title
-			when @@movieInfo_attributes[1]
-				@episodeID
-			when @@movieInfo_attributes[2]
-				@episodeName
-			when @@movieInfo_attributes[3]
-				@season
-			when @@movieInfo_attributes[4]
-				@url
-			when @@movieInfo_attributes[5]
-				@year
-			when @@movieInfo_attributes[6]
-				@tvdbSeriesID
-			when @@movieInfo_attributes[7]
-				@imdbID
-			when @@movieInfo_attributes[8]
-				@categorization
-			when @@movieInfo_attributes[9]
-				@path
-			when @@movieInfo_attributes[10]
-				@path_sha
-			when @@movieInfo_attributes[11]
-				@size
-			when @@movieInfo_attributes[12]
-				@path_sha
-			when @@movieInfo_attributes[13]
-				@id
-			when @@movieInfo_attributes[14]
-				@date_added
-			when @@movieInfo_attributes[15]
-				@date_modified
-			when @@movieInfo_attributes[16]
-				@tv_movie
-			when @@movieInfo_attributes[17]
-				@episodeAired
-			when @@movieInfo_attributes[18]
-				@episodeNumber
-			else
-				@merges.each {|merged_thing|
-					if merged_thing.class==Hash and merged_thing.has_key? key
-						return merged_thing[key]
-					elsif (merged_thing.class==Fixnum or merged_thing.class==String) and merged_thing==key
-						return merged_thing
-					elsif merged_thing==key
-						return merged_thing
-					end
-				}
-				return nil
-		end
+		return @movieInfo_values[key] if @movieInfo_values.has_key? key
+		@merges.each {|merged_thing|
+			if merged_thing.class==Hash and merged_thing.has_key? key
+				return merged_thing[key]
+			elsif (merged_thing.class==Fixnum or merged_thing.class==String) and merged_thing==key
+				return merged_thing
+			elsif merged_thing==key
+				return merged_thing
+			end
+		}
+		return nil
 	end
 	#Become_movieInfo iis a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
 	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.  It can be used
 	#for any Hash that has corresponding keys.
 	def Become movieInfo
 		raise "Are you fuck-tarded?" unless movieInfo.class==Hash
+		absorbed=0
 		movieInfo.each_key {|key|
-			case key
-				when @@movieInfo_attributes[0]
-					@title=movieInfo[key]
-				when @@movieInfo_attributes[1]
-					@episodeID=movieInfo[key]
-				when @@movieInfo_attributes[2]
-					@episodeName=movieInfo[key]
-				when @@movieInfo_attributes[3]
-					@season=movieInfo[key]
-				when @@movieInfo_attributes[4]
-					@url=movieInfo[key]
-				when @@movieInfo_attributes[5]
-					@year=movieInfo[key]
-				when @@movieInfo_attributes[6]
-					@tvdbSeriesID=movieInfo[key]
-				when @@movieInfo_attributes[7]
-					@imdbID=movieInfo[key]
-				when @@movieInfo_attributes[8]
-					@categorization=movieInfo[key]
-				when @@movieInfo_attributes[9]
-					@path=movieInfo[key]
-				when @@movieInfo_attributes[10]
-					@path_sha=movieInfo[key]
-				when @@movieInfo_attributes[11]
-					@size=movieInfo[key]
-				when @@movieInfo_attributes[12]
-					@path_sha=movieInfo[key]
-				when @@movieInfo_attributes[13]
-					@id=movieInfo[key]
-				when @@movieInfo_attributes[14]
-					@date_added=movieInfo[key]
-				when @@movieInfo_attributes[15]
-					@date_modified=movieInfo[key]
-				when @@movieInfo_attributes[16]
-					@tv_movie=movieInfo[key]
-				when @@movieInfo_attributes[17]
-					@episodeAired=movieInfo[key]
-				when @@movieInfo_attributes[18]
-					@episodeNumber=movieInfo[key]
-				else
-					puts "MovieInfo.Become():  What the fuck?  #{key} : #{movieInfo[key]} "
+			if @@movieInfo_attributes.include? key
+				@movieInfo_values[key]=movieInfo[key]
+				absorbed+=1
+			else
+				puts "MovieInfo.Become():  What the fuck?  #{key} : #{movieInfo[key]} "
 			end
-		}
-		movieInfo.length
+		}	
+		absorbed
 	end
 
 	def initialize(file_path=nil)
-		@title=nil
-		@episodeID=nil
-		@episodeName=nil
-		@episodeNumber=nil
-		@episodeAired=nil
-		@season=nil
-		@url=nil
-		@year=nil
-		@tvdbSeriesID=nil
-		@imdbID=nil
-		@tv_movie=nil
-
-		@categorization=nil
-
-		if file_path.nil?
-			@path=nil
-			@size=nil
-			@path_sha=nil
-			@file_sha=nil
-		else
-			@path=file_path
-			@size=File.size file_path
-			@path_sha=hash_filename file_path
-			@file_sha=nil
+		@movieInfo_values={}
+		@@movieInfo_attributes.each {|atr|
+			@movieInfo_values.merge!( {atr=>nil} )
+		}
+		@movieInfo_values['Path']=file_path 
+		unless file_path.nil?
+			@movieInfo_values['Path']=file_path
+			@movieInfo_values['Size']=File.size file_path
+			@movieInfo_values['PathSHA']=hash_filename file_path
 		end
-
-		#these are populated when something is pulled from the database (save date_added)
-		@id=nil
-		@date_added=DateTime.now.to_s
-		@date_modified=nil
 	end
 
 	def Path
-		@path
+		@movieInfo_values['Path']
 	end
 	def Size
-		@size
+		@movieInfo_values['Size']
 	end
 	def PathSha
-		@path_sha
+		@movieInfo_values['PathSHA']
 	end
 	def setPath path
-		@size=File.size path
-		@path_sha=hash_filename(path)
-		@path=path
+		@movieInfo_values['Size']=File.size path
+		@movieInfo_values['PathSHA']=hash_filename(path)
+		@movieInfo_values['Path']=path
 	end
 
 	def Title
-		@title
+		@movieInfo_values['Title']
 	end
 	def setTitle title
-		@title=title
+		@movieInfo_values['Title']=title
 	end
 	
 	def EpisodeID
-		@episodeID
+		@movieInfo_values['EpisodeID']
 	end
 	def setEpisodeID episodeID
 		if (m=episodeID.match(/(s\d+e\d+|\d+x\d+)/i))
-			@season=m[0].match(/\d+/)[0]  #will match the first set of digits found
-			@episodeNumber=m[0].match(/\d+$/)[0]
+			@movieInfo_values['Season']=m[0].match(/\d+/)[0]  #will match the first set of digits found
+			@movieInfo_values['EpisodeNumber']=m[0].match(/\d+$/)[0]
 		else
 			puts "MovieInfo Object:  WARNING! You've passed an episodeID that does not parse as a season and episode number pair."
 		end
-		@episodeID=episodeID
+		@movieInfo_values['EpisodeID']=episodeID
 	end
 
 	def EpisodeName
-		@episodeName
+		@movieInfo_values['EpisodeName']
 	end
 	def setEpisodeName name
-		@episodeName=name
+		@movieInfo_values['EpisodeName']=name
 	end
 	
 	def EpisodeNumber
-		@episodeNumber
+		@movieInfo_values['EpisodeNumber']
 	end
 	def setEpisodeNumber number
 		puts "MovieInfo Object:  STUPIDITY ALERT! Your not supposed to directly enter the episodeNumber yourself, please set it using setEpisodeID!"
 		sleep 1
 		raise "setEpisodeNumber takes Fixnum class only" unless number.class==Fixnum
-		@episodeNumber=number
+		@movieInfo_values['EpisodeNumber']=number
 	end
 	
 	def Season
-		@season
+		@movieInfo_values['Season']
 	end
 	def setSeason seasonNumber
 		puts "MovieInfo Object:  STUPIDITY ALERT! Your not supposed to directly set seasonNumber yourself, please use setEpisodeID"
 		sleep 1
 		raise "setSeason takes Fixum class only" unless seasonNumber.class==Fixnum
-		@season=seasonNumber
+		@movieInfo_values['Season']=seasonNumber
 	end
 
 	def URL
-		@url
+		@movieInfo_values['URL']
 	end
 	def setURL url
-		@url=url
+		@movieInfo_values['URL']=url
 	end
 	
 	def Year
-		@year
+		@movieInfo_values['Year']
 	end
 	def setYear year
-		@year=year
+		@movieInfo_values['Year']=year
 	end
 
 	def TvdbSeriesID
-		@tvdbSeriesID
+		@movieInfo_values['tvdbSeriesID']
 	end
 	def setTvdbSeriesID id
-		@tvdbSeriesID=id
+		@movieInfo_values['tvdbSeriesID']=id
 	end
 
 	def IMDB_ID
-		@imdb_id
+		@movieInfo_values['imdbID']
 	end
 	def setIMDB_ID id
-		@imdb_id=id
+		@movieInfo_values['imdbID']=id
 	end
 
 	def Categorization
-		@categorization
+		@movieInfo_values['Categorization']
 	end
 	def setCategorization category
 		raise "setCategorization only takes a string, you blowjob" unless category.class==String
-		@categorization=category
+		@movieInfo_values['Categorization']=category
 	end
 
 	def Id
-		@id
+		@movieInfo_values['id']
 	end
 	def DateAdded
-		@date_added
+		@movieInfo_values['DateAdded']
 	end
 	def DateModified
-		@date_modified
+		@movieInfo_values['DateModified']
 	end
 	def setId id
-		@id=id
+		@movieInfo_values['id']=id
 	end
 	def setDateAdded date
-		@date_added=date
+		@movieInfo_values['DateAdded']=date
 	end
 	def setDateModified date
-		@date_modified=date
+		@movieInfo_values['DateModified']=date
 	end
 			
 end
