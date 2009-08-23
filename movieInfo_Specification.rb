@@ -25,8 +25,8 @@ $movieInfoSpec={
 }
 
 class MovieInfo
-	@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
-		'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified']
+	@@movieInfo_attributes||=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
+		'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie', 'EpisodeAired', 'EpisodeNumber']
 
 	#This is meant to help integration.  By allowing the object to be treated as an array/hash, it should
 	#be much easier to migrate to it from the simple movieInfo and movieData objects.
@@ -71,8 +71,6 @@ class MovieInfo
 	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.  It can be used
 	#for any Hash that has corresponding keys.
 	def Become movieInfo
-		@@movieInfo_attributes||=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
-			'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie', 'EpisodeAired', 'EpisodeNumber']
 		raise "Are you fuck-tarded?" unless movieInfo.class==Hash
 		movieInfo.each_key {|key|
 			case key
