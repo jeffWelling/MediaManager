@@ -281,7 +281,6 @@ module MediaManager
 			#search for each, and store the results.
 			searchTerm=searchTerm.delete_if {|it| TRUE if it.nil? or it.empty? or name_match?(it, filename[0].reverse.chop.reverse, :no)}.each_index {|lineN| searchTerm[lineN]=searchTerm[lineN].strip }
 			searchTerm=searchTerm.delete_if {|word| TRUE if ['the','and', 'xvid'].include?(word) or word.length <= 3 }
-			pp searchTerm
 			results={}
 			searchResults=[]
 			if source==:tvdb
@@ -365,6 +364,7 @@ module MediaManager
 				#seriesHash[1] may sometimes be an empty array, in cases where the title program returned it's title but did not present full information on said title
 				#Extrapolate some information from the title if we can
 				if source!=:tvdb
+					movieInfo=MovieInfo.new
 					movie_object=[seriesHash[0], []]
 					clean_title=seriesHash[0].match(/^.*?\((\d){4}\)/)
 					episode_info=seriesHash[0].match(/\{.+?\}$/)
@@ -374,7 +374,8 @@ module MediaManager
 					unless year.nil?
 						year=year[0].chop.reverse.chop.reverse
 					end
-					movie_object[1] << {'Year'=>year} 
+					movieInfo.setYear year
+#					movie_object[1] << {'Year'=>year} 
 				
 
 					#only sure way to tell if it's a tv show or not is to look for '"'
@@ -386,35 +387,58 @@ module MediaManager
 							pp clean_title
 						end
 						#isn't tvshow
-						movie_object[1] << {'Title'=>clean_title} 
-						movie_object[1] << {'tv/movie'=>:movie}
+						movieInfo.Become({'Title'=>clean_title, 'tv/movie'=>:movie})
+#						movie_object[1] << {'Title'=>clean_title} 
+#						movie_object[1] << {'tv/movie'=>:movie}
 					else
 						#Is tvshow
 						clean_title=clean_title.gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/,'').strip.gsub(/^"/, '').gsub(/"$/, '')
-						movie_object[1] << {'Title'=>clean_title}
-						movie_object[1] << {'tv/movie'=>:tv}
-						episode_info.nil? ? date_aired=nil : date_aired=episode_info[0].match(/\([\d]{4}-[\d]{2}-[\d]{2}\)/)
-						unless date_aired.nil?
-							movie_object[1] << {'EpisodeAired'=>DateTime.parse(date_aired[0].chop.reverse.chop.reverse)}
+						if episode_info.nil?
+							date_aired=nil
+							episode_id=nil
+						else
+							date_aired=episode_info[0].match(/\([\d]{4}-[\d]{2}-[\d]{2}\)/)
+							episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
 						end
-						episode_info.nil? ? episode_id=nil : episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
-						season=''
-						episodeNumber=''
+
+						movieInfo.Become({'Title'=>clean_title, 'tv/movie'=>:tv})
+						movieInfo.Become({'EpisodeAired'=>DateTime.parse(date_aired[0].chop.reverse.chop.reverse)}) unless date_aired.nil?
+						season=nil
+						episodeNumber=nil
 						if !episode_id.nil?
 							episode_id=episode_id[0]
-							movie_object[1] <<  {'Season' => (season=episode_id.reverse.chop.chop.reverse.match(/\d+?\./)[0].chop)}
-							movie_object[1] <<  {'EpisodeNumber' => (episodeNumber=episode_id.chop.match(/\.\d+?$/)[0].reverse.chop.reverse)}
-							movie_object[1] <<  {'EpisodeName' => episode_info[0].gsub(episode_id, '').gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse.strip}
-
-							unless season.empty? or episodeNumber.empty?
-								movie_object[1] << {'EpisodeID' => "S#{season}E#{episodeNumber}"}
-							end
+							movieInfo.Become({'Season' => (season=episode_id.reverse.chop.chop.reverse.match(/\d+?\./)[0].chop),
+													 'EpisodeNumber' => (episodeNumber=episode_id.chop.match(/\.\d+?$/)[0].reverse.chop.reverse),
+						 								'EpisodeName' => episode_info[0].gsub(episode_id, '').gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse.strip})
+							movieInfo.Become({'EpisodeID' => "S#{season}E#{episodeNumber}"}) unless (season.empty? or episodeNumber.empty?)
 						else
-							movie_object[1] << {'Season' => ''}
-							movie_object[1] << {'EpisodeNumber' => ''}
-							movie_object[1] << {'EpisodeName' => (episode_info.nil? ? ('') : episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse) }
-							movie_object[1] << {'EpisodeID'=>''}
+							movieInfo.Become({'Season'=>'', 'EpisodeNumber'=>'', 'EpisodeID'=>''})
+							movieInfo.Become({'EpisodeName'=>episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse}) unless episode_info.nil?
 						end
+
+#						movie_object[1] << {'Title'=>clean_title}
+#						movie_object[1] << {'tv/movie'=>:tv}
+#						unless date_aired.nil?
+#							movie_object[1] << {'EpisodeAired'=>DateTime.parse(date_aired[0].chop.reverse.chop.reverse)}
+#						end
+#						episode_info.nil? ? episode_id=nil : episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
+#						season=''
+#						episodeNumber=''
+#						if !episode_id.nil?
+#							episode_id=episode_id[0]
+#							movie_object[1] <<  {'Season' => (season=episode_id.reverse.chop.chop.reverse.match(/\d+?\./)[0].chop)}
+#							movie_object[1] <<  {'EpisodeNumber' => (episodeNumber=episode_id.chop.match(/\.\d+?$/)[0].reverse.chop.reverse)}
+#							movie_object[1] <<  {'EpisodeName' => episode_info[0].gsub(episode_id, '').gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse.strip}
+#
+#							unless season.empty? or episodeNumber.empty?
+#								movie_object[1] << {'EpisodeID' => "S#{season}E#{episodeNumber}"}
+#							end
+#						else
+#							movie_object[1] << {'Season' => ''}
+#							movie_object[1] << {'EpisodeNumber' => ''}
+#							movie_object[1] << {'EpisodeName' => (episode_info.nil? ? ('') : episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse) }
+#							movie_object[1] << {'EpisodeID'=>''}
+#						end
 					end
 					raise "Panic! This one has no year!" unless !clean_title.nil?
 					
