@@ -41,6 +41,9 @@ class MovieInfo
 		@merge_index >= 4 ? @merge_index=0 : @merge_index+=1
 		self
 	end
+	def merge! thing
+		self.merge thing
+	end
 	def clearMerges
 		@merges=[]
 		@merge_index=0
