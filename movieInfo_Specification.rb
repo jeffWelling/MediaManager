@@ -34,11 +34,22 @@ class MovieInfo
 		}
 		return true
 	end
+	def merge hash_to_merge
+		@merges||=[]
+		@merge_index||=0
+		@merges[@merge_index]=hash_to_merge
+		@merge_index >= 4 ? @merge_index=0 : @merge_index+=1
+		self
+	end
+	def clearMerges
+		@merges=[]
+		@merge_index=0
+	end
 
 	#This is meant to help integration.  By allowing the object to be treated as an array/hash, it should
 	#be much easier to migrate to it from the simple movieInfo and movieData objects.
 	def [] key
-		return nil unless @@movieInfo_attributes.include? key
+#		return nil unless @@movieInfo_attributes.include? key
 		case key
 			when @@movieInfo_attributes[0]
 				@title
@@ -78,6 +89,17 @@ class MovieInfo
 				@episodeAired
 			when @@movieInfo_attributes[18]
 				@episodeNumber
+			else
+				@merges.each {|merged_thing|
+					if merged_thing.class==Hash and merged_thing.has_key? key
+						return merged_thing[key]
+					elsif (merged_thing.class==Fixnum or merged_thing.class==String) and merged_thing==key
+						return merged_thing
+					elsif merged_thing==key
+						return merged_thing
+					end
+				}
+				return nil
 		end
 	end
 	#Become_movieInfo iis a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
