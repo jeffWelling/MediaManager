@@ -495,6 +495,10 @@ module MediaManager
 			puts "Clearing EpisodeCache"
 			sqlAddUpdate( "TRUNCATE TABLE EpisodeCache" )
 		end
+		def clearTvdbSearchCache
+			puts "Clearing Tvdb_Search_Cache"
+			sqlAddUpdate( "DELETE FROM Tvdb_Search_Cache" )
+		end
 		def clearAll
 			puts "Your a fucking retard.  If you used this function, you ^have^ done something wrong.  Go read the documentation before doing this again you R-Tard."
 			clearFileHashCache
@@ -504,6 +508,11 @@ module MediaManager
 			clearTvdb_lastupdated
 			clearTvdbSeriesEpisodeCache
 			clearEpisodeCache
+		end
+		def clearTvdbCache
+			clearTvdb_Series
+			clearTvdb_Episodes
+			clearTvdb_lastupdated
 		end
 		
 	end #MMCommon
