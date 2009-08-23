@@ -67,12 +67,12 @@ class MovieInfo
 				@date_modified
 		end
 	end
-	#Become_movieInfo is a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
+	#Become_movieInfo iis a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
 	#properties of the movieInfo hash it is passed.  Emphasis on the way it takes on the properties blindly.  It can be used
 	#for any Hash that has corresponding keys.
 	def Become movieInfo
-		@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
-			'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie']
+		@@movieInfo_attributes||=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
+			'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie', 'EpisodeAired', 'EpisodeNumber']
 		raise "Are you fuck-tarded?" unless movieInfo.class==Hash
 		movieInfo.each_key {|key|
 			case key
@@ -110,8 +110,12 @@ class MovieInfo
 					@date_modified=movieInfo[key]
 				when @@movieInfo_attributes[16]
 					@tv_movie=movieInfo[key]
+				when @@movieInfo_attributed[17]
+					@episodeAired=movieInfo[key]
+				when @@movieInfo_attributes[18]
+					@episodeNumber=movieInfo[key]
 				else
-					puts "What the fuck?  #{key} : #{movieInfo[key]} "
+					puts "MovieInfo.Become():  What the fuck?  #{key} : #{movieInfo[key]} "
 			end
 		}
 		movieInfo.length
@@ -122,6 +126,7 @@ class MovieInfo
 		@episodeID=nil
 		@episodeName=nil
 		@episodeNumber=nil
+		@episodeAired=nil
 		@season=nil
 		@url=nil
 		@year=nil
