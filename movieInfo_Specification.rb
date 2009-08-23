@@ -28,6 +28,13 @@ class MovieInfo
 	@@movieInfo_attributes=['Title', 'EpisodeID', 'EpisodeName', 'Season', 'URL', 'Year', 'tvdbSeriesID', 'imdbID', 'Categorization', 'Path',
 		'PathSHA', 'Size', 'FileSHA', 'id', 'DateAdded', 'DateModified', 'tv/movie', 'EpisodeAired', 'EpisodeNumber']
 
+	def empty?
+		@@movieInfo_attributes.each {|atr|
+			return false if !self[atr].nil? and !self[atr].empty? unless atr=='DateAdded'
+		}
+		return true
+	end
+
 	#This is meant to help integration.  By allowing the object to be treated as an array/hash, it should
 	#be much easier to migrate to it from the simple movieInfo and movieData objects.
 	def [] key
@@ -65,6 +72,12 @@ class MovieInfo
 				@date_added
 			when @@movieInfo_attributes[15]
 				@date_modified
+			when @@movieInfo_attributes[16]
+				@tv_movie
+			when @@movieInfo_attributes[17]
+				@episodeAired
+			when @@movieInfo_attributes[18]
+				@episodeNumber
 		end
 	end
 	#Become_movieInfo iis a function to help with legacy support, it makes the MovieInfo instance [blindly] take on the
