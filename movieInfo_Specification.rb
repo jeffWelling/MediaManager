@@ -110,7 +110,7 @@ class MovieInfo
 					@date_modified=movieInfo[key]
 				when @@movieInfo_attributes[16]
 					@tv_movie=movieInfo[key]
-				when @@movieInfo_attributed[17]
+				when @@movieInfo_attributes[17]
 					@episodeAired=movieInfo[key]
 				when @@movieInfo_attributes[18]
 					@episodeNumber=movieInfo[key]
