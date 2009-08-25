@@ -313,8 +313,8 @@ module MediaManager
 			values=''
 			sqlString="INSERT INTO mediaFiles ("
 			movieInfo.each_key {|key|
-				sqlString << key << ', ' unless key=='DateAdded'
-				if key=='DateAdded'
+				sqlString << key << ', ' unless (key=='DateAdded' or key=='PathSHA')
+				if key=='DateAdded' or key=='PathSHA'
 					#values << "NOW(),"
 					next
 				end
@@ -429,6 +429,8 @@ module MediaManager
 		#If they do not match as is, try stripping various special characters
 		#such as "'", ",", and ".". 
 		def name_match?(name, epName, verbose=:yes)
+			name=name.downcase
+			epName=epName.downcase
 			if epName.nil? or epName.length==0
 				puts "name_match?(): arg2 is empty??" unless verbose==:no
 				return FALSE
@@ -513,6 +515,52 @@ module MediaManager
 			clearTvdb_Series
 			clearTvdb_Episodes
 			clearTvdb_lastupdated
+		end
+		def getSearchTerms string, excludes=nil
+			raise "getSearchTerms():  Only takes strings" unless string.class==String
+			raise "getSearchTerms():  second argument must be nil or an array of strings to exclude from the search terms" unless excludes.nil? or excludes.class==Array
+			return [] if string.strip.empty?
+
+			i=0
+			searchTerms=[]
+			filename=string.split('/')
+			file_extention=string.match(/\..{3,4}$/)[0]
+			filename.each_index {|filename_index|
+
+				#This implements the sliding window
+				window=filename[filename_index].gsub(/(\.|_)/, ' ')
+				until window.strip.empty?
+
+					queue=window
+					ignore=FALSE
+					loop do
+						searchTerms[i]||=''
+						ignore=FALSE
+						break if queue.empty? or queue.match(/[\w']*\b/i).nil?
+						
+						searchTerms[i]=match=queue.match(/[\w']*\b/i)
+						match=match[0]
+						if MediaManager::RetrieveMeta.get_episode_id(searchTerms[i][0]).nil?
+							searchTerms[i]=searchTerms[i][0]
+							searchTerms[i]= "#{searchTerms[i-1]} " << searchTerms[i] unless i==0
+						else
+							searchTerms[i]=''
+						end
+						queue=queue.slice( queue.index(match)+match.length, queue.length ).strip
+						i+=1 #unless searchTerms[i].strip.empty?
+					end
+					i+=1 #unless searchTerms[i].strip.empty?
+					break if window.match(/^[\w']*\b/i).nil?
+					window=window.gsub(/^[\w']*\b/i, '').strip
+				end
+			}
+
+			searchTerms=searchTerms.delete_if {|search_term| TRUE if (search_term.nil? or name_match?( search_term,file_extention,:no ) or search_term.strip.length <= 3)}.each_index {|line_number| searchTerms[line_number]=searchTerms[line_number].strip}
+
+			unless excludes.nil?
+				searchTerms=searchTerms.delete_if {|search_term| TRUE if excludes.include?(search_term)}
+			end
+			searchTerms
 		end
 		
 	end #MMCommon

@@ -16,7 +16,7 @@ module MediaManager
 	
 			#Don't process small words, or blacklisted words
 			if (inBlacklist?(name) || name.length < 4)
-				puts "blacklisted"
+				puts "searchIMDB():  Searchterm '#{name}' is blacklisted, skipping."
 				return []
 			end
 			puts "searchIMDB():  Searching for '#{name}'"

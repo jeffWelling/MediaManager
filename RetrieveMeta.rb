@@ -183,7 +183,7 @@ module MediaManager
 			result=''
 			result= db_include?( :tvdb, movieData)
 			imdb_results= db_include?( :imdb, movieData)
-			return result if result==:ignore
+			return :ignore if result==:ignore or imdb_results==:ignore
 #			puts "extractData(): db_include?() returned this match..."
 #			pp result
 			answers[5]=TRUE unless result.empty?
@@ -195,8 +195,21 @@ module MediaManager
 				movieData['imdbID']= result[0]['IMDB_ID']
 				movieData['EpisodeName']= result[0]['EpisodeName']
 			end
-			#db_include?( :imdb, movieData)
-			
+			unless imdb_results.empty?
+				imdb_results=imdb_results[0]
+				movieData['Title']=imdb_results['Title']
+				movieData['Year']=imdb_results['Year']
+				movieData['EpisodeName']=imdb_results['EpisodeName']
+				movieData['EpisodeID']=imdb_results['EpisodeID']
+				movieData['Season']=imdb_results['Season']
+#				if (!imdb_results['EpisodeName'].nil? and imdb_results['EpisodeName'].empty?) and (!imdb_results['EpisodeID'].nil? and imdb_results['EpisodeID'].empty?) and (!imdb_results['Season'].nil? and imdb_results['Season'].empty?)
+				if imdb_results['tv/movie']==:movie
+					movieData['Categorization']='Library/Movies'
+				else
+					movieData['Categorization']='Library/TVShows'
+				end
+			end
+	
 			#TODO Calculate results from answers obtained in above operations
 			if answers[0]==TRUE
 				cat='movie'
@@ -239,48 +252,12 @@ module MediaManager
 			#remove any sourceDirs from fpath
 			$MEDIA_SOURCES_DIR.each {|sourceDir|
 				if fpath.match(Regexp.new(sourceDir))
-					fpath=fpath.gsub(sourceDir, '')
+					fpath=fpath.gsub(Regexp.new(sourceDir), '')
 				end
 			}
 			filename=pathToArray(fpath)
 
-			#Extract 'words' from filename, one at a time, and search for them.
-			queue=filename[1].gsub('.', ' ').gsub('_', ' ')
-			done=FALSE;
-			i=0
-			searchTerm=[]
-			filename.each_index {|partOfilename|
-				window=filename[partOfilename].gsub('.', ' ').gsub('_', ' ')
-				until window.strip.empty?
-					queue=window
-					ignore=FALSE
-					loop do  #FIXME Can't this be optimized any further?
-						searchTerm[i] ||= ''
-						ignore=FALSE
-						break if queue.empty?
-						#break if searchTerm[i-1].nil?
-						break if queue.match(/[\w']*\b/i).nil?
-						searchTerm[i]=match= queue.match(/[\w']*\b/i)
-						match=match[0]
-						if MediaManager::RetrieveMeta.get_episode_id(searchTerm[i][0]).nil?    #If it's NOT an episodeID tag
-							searchTerm[i]=searchTerm[i][0]
-							searchTerm[i] = "#{searchTerm[i-1]} " << searchTerm[i] unless i==0
-						else
-							#searchTerm[i] is a MatchData type of match
-							searchTerm[i]=''
-						end
-						queue= queue.slice( queue.index(match)+match.length, queue.length ).strip 
-						i=i+1
-					end
-					i=i+1
-					break if window.match(/^[\w']*\b/i).nil?
-					window=window.gsub(/^[\w']*\b/i, '').strip
-				end
-			}
-			#searchTerm is now an array of search terms
-			#search for each, and store the results.
-			searchTerm=searchTerm.delete_if {|it| TRUE if it.nil? or it.empty? or name_match?(it, filename[0].reverse.chop.reverse, :no)}.each_index {|lineN| searchTerm[lineN]=searchTerm[lineN].strip }
-			searchTerm=searchTerm.delete_if {|word| TRUE if ['the','and', 'xvid'].include?(word) or word.length <= 3 }
+			searchTerm=getSearchTerms( fpath, ['xvid'] )
 			results={}
 			searchResults=[]
 			if source==:tvdb
@@ -353,33 +330,34 @@ module MediaManager
 				seasonNum=seasonNum[0].reverse.chop.reverse.to_i unless seasonNum.nil?
 				epNum=epNum[0] unless epNum.nil?
 			end
-			name=filename[1].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
+			name=filename[1].gsub($change_to_whitespace, ' ').squeeze(' ')
 			name=name.gsub(MediaManager::RetrieveMeta.get_episode_id(name)[0], '').squeeze(' ') if MediaManager::RetrieveMeta.get_episode_id(name)
-			cleaned_path=movieData['Path'].gsub('.', ' ').gsub('_', ' ').gsub('-', ' ').squeeze(' ')
-			$it1=series
+			cleaned_path=movieData['Path'].gsub($change_to_whitespace, ' ').squeeze(' ')
 			series.each {|seriesHash|
-				movie_object=nil
-				$it2=seriesHash
+				#movie_object=nil
 
 				#seriesHash[1] may sometimes be an empty array, in cases where the title program returned it's title but did not present full information on said title
 				#Extrapolate some information from the title if we can
 				if source!=:tvdb
 					movieInfo=MovieInfo.new
-					movie_object=[seriesHash[0], []]
-					clean_title=seriesHash[0].match(/^.*?\((\d){4}\)/)
+					#movie_object=[seriesHash[0], []]
+					pp seriesHash[0] unless seriesHash[0].match(/^.+?[\d]{4}.*?\)/)
+
+					clean_title=seriesHash[0].match(/^.+?[\d]{4}.*?\)/)
 					episode_info=seriesHash[0].match(/\{.+?\}$/)
 					is_tv_show=false
-					year=clean_title[0].match(/\([\d]{4}\)$/)
-					clean_title=clean_title[0].gsub(/\((\d){4}\)$/, '').strip
+					year=clean_title[0].match(/[\d]{4}.*?\).*?$/)[0]
+					year=year.match(/[\d]{4}/)[0]
+					clean_title=clean_title[0].gsub(/\((([.]{1,4})?(\d){4}|(\d){4}([.]{1,4})?)\)$/, '').strip
 					unless year.nil?
-						year=year[0].chop.reverse.chop.reverse
+#						year=year.chop.reverse.chop.reverse
 					end
 					movieInfo.setYear year
 #					movie_object[1] << {'Year'=>year} 
 				
 
 					#only sure way to tell if it's a tv show or not is to look for '"'
-					is_tv_show=true if clean_title.match(/^\s?".+?"/)
+					is_tv_show=true if clean_title.strip.match(/^".+?"/)
 
 					if (episode_info.nil? and is_tv_show.class==FalseClass)
 						if clean_title.match(/"/)
@@ -416,55 +394,12 @@ module MediaManager
 							movieInfo.Become({'EpisodeName'=>episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse}) unless episode_info.nil?
 						end
 
-#						movie_object[1] << {'Title'=>clean_title}
-#						movie_object[1] << {'tv/movie'=>:tv}
-#						unless date_aired.nil?
-#							movie_object[1] << {'EpisodeAired'=>DateTime.parse(date_aired[0].chop.reverse.chop.reverse)}
-#						end
-#						episode_info.nil? ? episode_id=nil : episode_id=episode_info[0].match(/\(#[\d]+?\.[\d]+?\)/)
-#						season=''
-#						episodeNumber=''
-#						if !episode_id.nil?
-#							episode_id=episode_id[0]
-#							movie_object[1] <<  {'Season' => (season=episode_id.reverse.chop.chop.reverse.match(/\d+?\./)[0].chop)}
-#							movie_object[1] <<  {'EpisodeNumber' => (episodeNumber=episode_id.chop.match(/\.\d+?$/)[0].reverse.chop.reverse)}
-#							movie_object[1] <<  {'EpisodeName' => episode_info[0].gsub(episode_id, '').gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse.strip}
-#
-#							unless season.empty? or episodeNumber.empty?
-#								movie_object[1] << {'EpisodeID' => "S#{season}E#{episodeNumber}"}
-#							end
-#						else
-#							movie_object[1] << {'Season' => ''}
-#							movie_object[1] << {'EpisodeNumber' => ''}
-#							movie_object[1] << {'EpisodeName' => (episode_info.nil? ? ('') : episode_info[0].gsub(/\([\d]{4}-[\d]{2}-[\d]{2}\)/, '').chop.reverse.chop.reverse) }
-#							movie_object[1] << {'EpisodeID'=>''}
-#						end
 					end
 					raise "Panic! This one has no year!" unless !clean_title.nil?
 					
 				end
 
-				if !seriesHash[1].nil? and seriesHash[1].class==Array
-					#reformat
-					values={}
-					seriesHash[1].each {|h|
-						h.each {|key, value| values.merge!({key => value}) }
-					}
-					seriesHash[1]=values
-				end
-				if !movie_object.nil?
-					#reformat
-					values={}
-					movie_object[1].each {|h|
-						h.each {|key, value|
-							values.merge!({ key =>value}) 
-						}
-					}
-					movie_object[1]=values
-				end
-
-				$it3=movie_object
-				unless !seriesHash[1].has_key?('EpisodeList') or seriesHash[1]['EpisodeList'].empty?   #This part will only be processed if source==:tvdb
+				unless seriesHash[1].class==Array or !seriesHash[1].has_key?('EpisodeList') or seriesHash[1]['EpisodeList'].empty?   #This part will only be processed if source==:tvdb
 					seriesHash[1]['EpisodeList'].each {|episode|
 						episode.merge!({ 
 							'Title' => seriesHash[1]['Title'][0],
@@ -682,16 +617,22 @@ module MediaManager
 					}
 				end #of unless seriesHash[1]['EpisodeList'].empty?
 
-				#Now try to match movies
-				unless movie_object.nil?
+				#Now try to match imdb results
+				if !movieInfo.nil? and !movieInfo.empty?
 					#Remember to only work with the key that points TO series, not series['Title'] itself because it may not exist (*/me shakes fist at moveidb*)
 	#				pp seriesHash unless source==:tvdb
 #					pp movie_object unless source==:tvdb
 	#				raise 'XL' unless source==:tvdb
-					puts "name: '#{name}', title: '#{movie_object[1]['Title']}' is: '#{movie_object[1]['tv/movie']}'"
-					if MediaManager.name_match?(name, movie_object[1]['Title'])
-						puts "db_include?():  Matched name_match?()"
-						matches << movie_object[1].merge({ 'Matched'=>:name_match? })
+#					puts "name: '#{name}',  is it this?    title: '#{movieInfo.Title}' is: '#{movieInfo['tv/movie']}'"
+					if MediaManager.name_match?(name, movieInfo['Title'])
+#						puts "db_include?():  Matched name_match?()"
+						matches << movieInfo.merge({ 'Matched'=>:name_match? })
+						next
+					end
+					#This one matches the movie title to the name of the parent directory, to match if say the movie has the name sa.avi, the parent dir is Smokin' Aces, and the title is Smokin' Aces
+					if MediaManager.name_match?(File.basename(File.dirname(fpath)).gsub($change_to_whitespace, ' '), movieInfo['Title'])
+						puts "db_include?():  Matched name_match?() to parent directory"
+						matches << movieInfo.merge({ 'Matched'=>:name_match? })
 						next
 					end
 				end
@@ -713,14 +654,25 @@ module MediaManager
 			scores={}
 			_scores=[]
 			matches.each_index {|ind|
-				name=hash_filename(matches[ind].to_s)
-				matches[ind].merge!( { 'Hash' => hash_filename(matches[ind].to_s) })
+				hash_of_match=hash_filename(matches[ind].to_s)
+				matches[ind].merge!( { 'Hash' => hash_of_match })
 				match=matches[ind]
-				scores[name]||=0
+				scores[hash_of_match]||=0
 				#If the title is found in the filename, add the length of the title to the score
-				if name_match?(pathToArray(movieData['Path'])[1], match['Title'], :no )==TRUE
-					scores[name]=scores[name]+1
-					scores[name]+= match['Title'].length
+				if name_match?(name, match['Title'], :no )==TRUE
+					scores[hash_of_match]=scores[hash_of_match]+1
+					scores[hash_of_match]+= match['Title'].length
+
+				elsif name_match?(File.basename(File.dirname(fpath)).gsub($change_to_whitespace, ' '),match['Title'], :no)==TRUE
+					scores[hash_of_match]=scores[hash_of_match]+1
+					scores[hash_of_match]+= match['Title'].length
+				end
+
+				#If the match has a year, and that year is found somewhere in the filepath, add a couple points to that match's score
+				if !match['Year'].nil? and fpath.match(Regexp.new(match['Year']))
+					puts "Match's year is found in filepath, incrementing score"
+					pp imdb_results
+					scores[hash_of_match]+=4
 				end
 			}
 
@@ -780,21 +732,25 @@ module MediaManager
 			if _scores.length != 1
 				#For each match, search through all other matches for an episode name that fits inside the first
 				#match's episodename.  If there are matches, they should be removed.
+				$it=matches
 				matches.each {|match|
 					matches.each {|othermatch|
 						next if match==othermatch
-						if match['EpisodeName'].index(othermatch['EpisodeName']) and match['EpisodeName']!=othermatch['EpisodeName']
-							duplicates<<othermatch
-							scores[match['Hash']]+=1
-							puts "One match fits inside one of the others, it has been removed."
-						elsif othermatch['EpisodeName'].index(match['EpisodeName']) and othermatch['EpisodeName']!=match['EpisodeName']
-							duplicates<<match
-							scores[othermatch['Hash']]+=1
-							puts "One match fits inside one of the others, it has been removed."
-						elsif match['EpisodeName'].downcase.index(othermatch['EpisodeName'].downcase) and match['EpisodeName'].downcase!=othermatch['EpisodeName'].downcase
-							duplicates<<othermatch
-							scores[match['Hash']]+=1
-							puts "One match fits inside one of the others after downcasing both, it has been removed."
+						unless match['EpisodeName'].nil? or othermatch['EpisodeName'].nil? or match['EpisodeName'].empty? or othermatch['EpisodeName'].empty? or match['Title']!=othermatch['Title'] 
+#							puts "Comparing:  1(#{match['Title']}, #{match['EpisodeName']}, #{match['EpisodeNumber']}, #{match['Season']})   2(#{othermatch['Title']}, #{othermatch['EpisodeName']}, #{othermatch['EpisodeNumber']}, #{othermatch['Season']})"
+							if match['EpisodeName'].index(othermatch['EpisodeName']) and match['EpisodeName']!=othermatch['EpisodeName']
+								duplicates<<othermatch
+#								scores[match['Hash']]+=1
+								puts "One match fits inside one of the others, it has been removed."
+							elsif othermatch['EpisodeName'].index(match['EpisodeName']) and othermatch['EpisodeName']!=match['EpisodeName']
+								duplicates<<match
+#								scores[othermatch['Hash']]+=1
+								puts "One match fits inside one of the others, it has been removed."
+							elsif match['EpisodeName'].downcase.index(othermatch['EpisodeName'].downcase) and match['EpisodeName'].downcase!=othermatch['EpisodeName'].downcase
+								duplicates<<othermatch
+#								scores[match['Hash']]+=1
+								puts "One match fits inside one of the others after downcasing both, it has been removed."
+							end
 						end
 					}
 					
@@ -809,8 +765,34 @@ module MediaManager
 			#Scores will either be of length 1, and you can return that, or
 			#it will have a list of matches with the highest-rated sorted to the top, and return that one.
 			if _scores.length > 1 and matches.length != 1
-				pp _scores
-				raise "false positive detected, sort matches and reduce!" 
+				pp _scores.reverse
+				$it3=matches
+#				raise "false positive detected, sort matches and reduce!" 
+				question= "db_include?():  Could not reduce false positives further.\n"
+				question<<"User input required to select correct match for '#{fpath}'.\n"
+				question<<"choose, ignore, or quit?"
+				response=MediaManager::prompt( question, :ignore, [:choose, :ignore], [:yes, :no] )
+				return :ignore if response==:ignore
+				#response should be :choose from here on
+				raise "wtF?" if response!=:choose
+
+
+				_scores.reverse.each {|hash_to_score|
+					the_match=nil
+					matches.each {|match|
+						the_match=match if match['Hash']==hash_to_score[0]
+					}
+					raise 'wtf' if the_match.nil?
+					pp the_match
+					question="Is this the one?\n############\nFile is:'#{name}',\nTitle: '#{the_match['Title']}',\nTv/Movie: '#{the_match['tv/movie'].to_s.capitalize}'\nEpisode Name:  '#{the_match['EpisodeName']}',\nEpisode Number: '#{the_match['EpisodeNumber']}',\nSeason: '#{the_match['Season']}'\nEpisodeID: '#{the_match['EpisodeID']}',\nYear: '#{the_match['Year']}'\n"
+					response=MediaManager.prompt( question, :no )
+					next if response!=:yes
+					return [the_match]
+				}
+				#Should only get here if the user selected 'no' to all of the above?
+				puts "\n\n\nYou have selected no to every result that was returned for '#{fpath}'.\nThis file will be ignored this time around, maybe there will be different/more matches next time.\n"
+				sleep 3
+				return :ignore
 			elsif _scores.length > 1
 				#One match, remove all others and return this one match
 				oneMatch=[]
@@ -831,11 +813,12 @@ module MediaManager
 					!still_exists.include?(match['Hash'])
 				}
 			else
-			pp matches
-			pp scores
-			pp _scores
+				pp matches
+				pp scores
+				pp _scores
 
 				#what would cause the program to get here?
+				#Will get here if _scores is empty, but there are matches and scores != empty?
 				raise "WHATHUH??"
 			end
 			raise "Error, more than one match remains!" if matches.length > 1
