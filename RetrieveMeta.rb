@@ -257,7 +257,7 @@ module MediaManager
 			}
 			filename=pathToArray(fpath)
 
-			searchTerm=getSearchTerms( fpath, ['xvid'] )
+			searchTerm=getSearchTerms( fpath, ['xvid', 'eng', 'ac3', 'dvdrip'] )
 			results={}
 			searchResults=[]
 			if source==:tvdb
@@ -346,6 +346,10 @@ module MediaManager
 					clean_title=seriesHash[0].match(/^.+?[\d]{4}.*?\)/)
 					episode_info=seriesHash[0].match(/\{.+?\}$/)
 					is_tv_show=false
+					if clean_title.nil? or clean_title[0].match(/[\d]{4}.*?\).*?$/).nil?
+						puts 'wtf is this?'
+						pp seriesHash
+					end
 					year=clean_title[0].match(/[\d]{4}.*?\).*?$/)[0]
 					year=year.match(/[\d]{4}/)[0]
 					clean_title=clean_title[0].gsub(/\((([.]{1,4})?(\d){4}|(\d){4}([.]{1,4})?)\)$/, '').strip
@@ -624,6 +628,7 @@ module MediaManager
 #					pp movie_object unless source==:tvdb
 	#				raise 'XL' unless source==:tvdb
 #					puts "name: '#{name}',  is it this?    title: '#{movieInfo.Title}' is: '#{movieInfo['tv/movie']}'"
+					pp movieInfo if movieInfo['Title'].downcase.include? 'raider'
 					if MediaManager.name_match?(name, movieInfo['Title'])
 #						puts "db_include?():  Matched name_match?()"
 						matches << movieInfo.merge({ 'Matched'=>:name_match? })
@@ -642,11 +647,8 @@ module MediaManager
 
 #			pp matches
 #			puts "Path is : " ; printf movieData['Path']
-
 			if matches.length < 1
-				puts "No Results...?"
-				puts "CRITICAL ERROR, No Matches!"
-				pp matches
+				puts "db_include?():  No results using '#{source.to_s}'"
 				return []
 			end
 			#From this point forward, by process of elimination, there can only be more >1 match remaining
@@ -732,7 +734,6 @@ module MediaManager
 			if _scores.length != 1
 				#For each match, search through all other matches for an episode name that fits inside the first
 				#match's episodename.  If there are matches, they should be removed.
-				$it=matches
 				matches.each {|match|
 					matches.each {|othermatch|
 						next if match==othermatch
@@ -764,15 +765,15 @@ module MediaManager
 			_scores=scores.sort {|a,b| a[1]<=>b[1]}.delete_if {|hash, score| score == 0}
 			#Scores will either be of length 1, and you can return that, or
 			#it will have a list of matches with the highest-rated sorted to the top, and return that one.
+			#if _scores is > 1 and there is more than one match
 			if _scores.length > 1 and matches.length != 1
 				pp _scores.reverse
-				$it3=matches
 #				raise "false positive detected, sort matches and reduce!" 
 				question= "db_include?():  Could not reduce false positives further.\n"
 				question<<"User input required to select correct match for '#{fpath}'.\n"
-				question<<"choose, ignore, or quit?"
-				response=MediaManager::prompt( question, :ignore, [:choose, :ignore], [:yes, :no] )
-				return :ignore if response==:ignore
+				question<<"choose, ignore, skip, or quit?"
+				response=MediaManager::prompt( question, :ignore, [:choose, :ignore, :skip], [:yes, :no] )
+				return :ignore if response==:ignore or response==:skip
 				#response should be :choose from here on
 				raise "wtF?" if response!=:choose
 
@@ -804,7 +805,7 @@ module MediaManager
 					end
 				}
 			elsif _scores.length==1
-				#raise "HUH"
+				#r or response==:skipaise "HUH"
 				still_exists=[]
 				_scores.each {|popularity_score|
 					still_exists << popularity_score[0]
@@ -813,6 +814,8 @@ module MediaManager
 					!still_exists.include?(match['Hash'])
 				}
 			else
+				#Multiple matches, none of which could accumulate a score, so return nothing
+				return []
 				pp matches
 				pp scores
 				pp _scores

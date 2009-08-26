@@ -516,6 +516,7 @@ module MediaManager
 			clearTvdb_Episodes
 			clearTvdb_lastupdated
 		end
+		#extract search terms from string.  excludes must be an array of strings that you do not want to appear in the searchTerms, they must be lowercase
 		def getSearchTerms string, excludes=nil
 			raise "getSearchTerms():  Only takes strings" unless string.class==String
 			raise "getSearchTerms():  second argument must be nil or an array of strings to exclude from the search terms" unless excludes.nil? or excludes.class==Array
@@ -540,7 +541,7 @@ module MediaManager
 						
 						searchTerms[i]=match=queue.match(/[\w']*\b/i)
 						match=match[0]
-						if MediaManager::RetrieveMeta.get_episode_id(searchTerms[i][0]).nil?
+						if MediaManager::RetrieveMeta.get_episode_id(searchTerms[i][0]).nil? and !excludes.include?(match) and !excludes.include?(match.downcase)
 							searchTerms[i]=searchTerms[i][0]
 							searchTerms[i]= "#{searchTerms[i-1]} " << searchTerms[i] unless i==0
 						else

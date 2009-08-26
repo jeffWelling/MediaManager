@@ -151,6 +151,7 @@ module MediaManager
 						next if (current_line_index > movieblob_cache.length-2) or movieblob_cache[current_line_index].match(/^-*$/)
 						if movieblob_cache[current_line_index].gsub(/:$/, '')=='Title'
 							title=movieblob_cache[current_line_index+1].strip
+							pp movieblob_cache if movieblob_cache[current_line_index].match(/99:/)
 						end
 	
 						if movieblob_cache[current_line_index].match(/^\s/) or movieblob_cache[current_line_index].match(/^[a-zA-Z\s]*:/).nil?
