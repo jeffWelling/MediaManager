@@ -4,7 +4,7 @@
 #For testing purposes, the home directory must be dynamically determined
 #to allow for testing to be done on Apple computers who's users' home dirs
 #are in /Users/
-$mmconfig = "#{`cd ~;pwd`.chomp}/Documents/Projects/MediaManager/MediaManager.cfg"
+$mmconfig = "#{`cd ~;pwd`.chomp}/Documents/Projects/MediaManager/MediaManager.config"
 raise "Cannot read config file!!!" unless load $mmconfig
 
 #Initialize the cache and blacklist arrays
