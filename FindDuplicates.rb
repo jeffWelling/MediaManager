@@ -72,10 +72,18 @@ module MediaManager
 			read_so_far=0
 			open(file1, 'rb') do |file1_io|
 			open(file2, 'rb') do |file2_io|
-				while(!file1_io.eof and !file2_io.eof and file1_hasher.hexdigest==file2_hasher.hexdigest and bytes_to_hash!=0 and read_so_far<=bytes_to_hash)
-					file1_hasher.update(file1_io.readpartial(1024))
-					file2_hasher.update(file2_io.readpartial(1024))
-					read_so_far+=1024
+				if bytes_to_hash!=0
+					while(!file1_io.eof and !file2_io.eof and file1_hasher.hexdigest==file2_hasher.hexdigest and read_so_far<=bytes_to_hash)
+						file1_hasher.update(file1_io.readpartial(1024))
+						file2_hasher.update(file2_io.readpartial(1024))
+						read_so_far+=1024
+					end
+				else
+					while(!file1_io.eof and !file2_io.eof and file1_hasher.hexdigest==file2_hasher.hexdigest)
+						file1_hasher.update(file1_io.readpartial(1024))
+						file2_hasher.update(file2_io.readpartial(1024))
+						read_so_far+=1024
+					end
 				end
 			end end
 			
