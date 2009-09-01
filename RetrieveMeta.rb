@@ -5,6 +5,201 @@ load 'romanNumerals.rb'
 module MediaManager
 	module RetrieveMeta
 		extend MMCommon
+		#Tries to match the two strings using various methods.  Intended to be used to match a title or
+		#episode name to the filename (or one of it's parent dirs) on your disc.
+		#It will return FALSE if no match was found, or it will return one of the following return values
+		#which tells how it was matched.
+		#:oneToOne :name_match? :digits_bothSides :digits_partNumber :romanNumeral_str1 :romanNumeral_str2 :bothParts_str2 :str2_before_aka :str2_after_aka
+		#:wordBoundaries_str2 :numword_str1_ns :numword_str1_s
+		def fuzzyMatch(str1, str2, verbose=:no)
+			#name=str1 and epName=str2
+
+			##Begin attempting to match	
+			if str1==str2
+				puts "fuzzyMatch(): Matched one to one" unless verbose==:no
+				return :oneToOne
+			end
+
+			if (str2.length > 1 and MediaManager.name_match?(str1, str2))
+				puts "fuzzyMatch(): Matched name_match?()" unless verbose==:no
+				return :name_match?
+			end
+		
+			#Try to match 2 part (or more) episodes.  Sometimes these have the part number in the middle of the name with 
+			#another title on the other side, if thats the case try and match the titles.  Otherwise, try and match
+			#the part number.	
+			if str2.index(/\([\d]+\)/)
+				unless str1.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
+					str2_sans_stuff=str2.gsub(/[:;]/, '')
+					part2= str2_sans_stuff.slice( str2_sans_stuff.index(/\([\d]+\)/)+str2_sans_stuff.match(/\([\d]+\)/)[0].length,str2_sans_stuff.length ).downcase.stripi
+					#regex1 matches the first part of the string up to the (\d+) and regex2 matches the second part trailing it, if there is anything
+					regex1= Regexp.new( Regexp.escape(str2_sans_stuff.slice( 0,str2_sans_stuff.index(/\([\d]+\)/) ).downcase))
+					regex2= Regexp.new( Regexp.escape(part2) )
+					unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
+						if str1.downcase.match(regex1) and str1.downcase.match(regex2)
+							puts "fuzzyMatch(): Matched based on both sides of a digit thingy" 
+							return :digits_bothSides
+						end
+					end 
+				
+					#Should only get here if the string following ([\d]) is empty or the match above wasn't successful
+					#Use the first digit in the ( ) as the part number if it matches.
+					regex2= Regexp.new( Regexp.escape(str2.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
+					if part=str1.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
+						part=part[0].match(/[\d]+/)[0]
+						if part.match(regex2)  #Match
+							puts "fuzzyMatch(): Matched based on part number  (alternative digit thingy match)" unless verbose==:no
+							return :digits_partNumber
+						end
+					end
+				end #of unless str1.match(...)
+			end
+		
+			#FIXME See the NOTEs a few lines down	
+			#Attempt to deal with Roman Numerals
+			#The following regex was adapted from Example 7.8 of http://thehazeltree.org/diveintopython/7.html
+			numeralMatch=/\s[M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})]+\s/
+			romName= (((str1.reverse) + ' ').reverse) + ' ' # This allows us to use whitespace as delimiters for either side of a RN (Roman Numeral)
+			romEpName= ((str2 + ' ').reverse + ' ').reverse
+			if romEpName.match(numeralMatch) or romName.match(numeralMatch)
+				#NOTE We do not anticipate more than one Roman Numeral in the str
+				#NOTE We do not anticipate a roman numeral in both str1 and str1
+				if romName.match( numeralMatch )
+					romName=romName.gsub(Regexp.new(Regexp.escape(romName.match(numeralMatch)[0])), 
+						"#{toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romName.match(numeralMatch)[0].strip)==0
+					if romEpName.match(Regexp.new(Regexp.escape(romName), TRUE))
+						puts "fuzzyMatch():  Matched based on roman numeral in str1 and converted" unless verbose==:no
+						return :romanNumeral_str1
+					end
+				elsif romEpName.match(numeralMatch)
+					romEpName=romEpName.gsub(Regexp.new(Regexp.escape(romEpName.match(numeralMatch)[0])), 
+						" #{toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(romEpName.match(numeralMatch)[0].strip)==0
+					if romName.match(Regexp.new(Regexp.escape(romEpName), TRUE))
+						puts "fuzzyMatch(): Matched based on roman numeral found in str2 and converted" unless verbose==:no
+						return :romanNumerals_str2
+					end
+				end
+			end
+
+			#FIXME Should do the same for str1 as well
+			if str2.index(':') #May be split into parts, try and match each side of the :
+				str2=str2.gsub(/\([\d]+\)/, '')   #Strip out any (\d+) parts for easier matching
+				regex1= Regexp.new( Regexp.escape(str2.slice(0,str2.index(':')).downcase) )
+				regex2= Regexp.new( Regexp.escape(str2.slice(str2.index(':')+1,str2.length).downcase) )
+
+				if str1.downcase.match(regex1) and str1.downcase.match(regex2)
+					puts "fuzzyMatch():  Matched both sides of a ':'" unless verbose==:no
+					return :bothParts_str2
+				end
+			end
+			
+			#FIXME Should do this for str1 as well
+			#If str2 has 'a.k.a.' in it, check either side.  Just like any other delimiter
+			if str2.index('a.k.a.')
+				#For the purposes of matching the 'a.k.a.' it appears necessary to strip out parenthesis
+				#from str2, Regexp throws an error if it encounters unmatched parenthesis
+				str_sans_parenthesis=str2.gsub('(', '').gsub(')', '')
+				str2_upto_aka= str_sans_parenthesis.slice( 0,str_sans_parenthesis.index('a.k.a.')-1 )
+				str2_after_aka= str_sans_parenthesis.slice( str_sans_parenthesis.index('a.k.a.')+ 'a.k.a.'.length, str_sans_parenthesis.length)
+				if str1.match(Regexp.new(str2_upto_aka, TRUE))
+					puts "fuzzyMatch(): Matched the first part of the str2, up to 'a.k.a.'." unless verbose==:no
+					return :str2_before_aka
+				elsif str1.match(Regexp.new(str2_after_aka, TRUE))
+					puts "fuzzyMatch(): Matched the last part of the str2, after the 'a.k.a.'." unless verbose==:no
+					return :str2_after_aka
+				end
+			end
+
+			#Here I am trying to look for the str2 in str1 the same way that I would as a human
+			#I think the way to do this is to break the string into words, and look for a single 
+			#character from the beginning and end of each respective word in str2 and try
+			#match those beginnings and ends of words to beginnings and ends of words in str1.
+			#This can be further refined by looking for characters that stand out, like 't' or 'g'
+			#as opposed to ones that don't like 'a' or 'c'.  Looking for characters that stand out 
+			#in str1 that aren't in str2 can accomplish this.
+			#Note: Admittedly, this cannot catch spelling mistakes at the beginning or end of a word.
+			#FIXME This needs to be done for both str1 and str2, and could be cleaned up more
+			if str1.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').length > 2
+				str2_stripped=str2.strip
+				distance=3
+				str2_compare_results=[]
+
+				str2_words=[]
+				str1_words=[]
+				str2_stripped.split(' ').each {|word|
+					str2_words << word unless word.length <= 2
+				}
+				
+				str1.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').each {|word|
+					str1_words << word unless word.length <= 2
+				}
+				str2_words.each_index {|words2_i|
+					str1_words.each_index { |words1_i|
+						if str2_words[words2_i].slice(0,1)==str1_words[words1_i].slice(0,1) and
+								str2_words[words2_i].slice(str2_words[words2_i].length-1, 1)==str1_words[words1_i].slice(str1_words[words1_i].length-1, 1)
+
+							str2_compare_results[words2_i]=TRUE
+						else
+							str2_compare_results[words2_i]=FALSE
+						end
+					}
+				}
+				str2_compare_results= str2_compare_results.delete_if {|word_matched| word_matched == FALSE}
+				if str2_compare_results.length == str1_words.length
+					puts "fuzzyMatch(): Matched based solely on looking at word boundaries." unless verbose==:no
+					return :wordBoundaries_str2
+				end
+			end
+
+			#Convert integer to word and try to match
+			#FIXME This should be done for both str1 and str2
+			#FIXME Linguistics::EN.numwords returns in the format 'twenty-four'.  Should try replacing '-' with ' '
+			#		various other matches as well for better chance at matching
+			#FIXME This should probably be done in a sliding window fashion, like how getSearchTerms() works, so that
+			#		it can properly handle multiple integers in the strings, converting them into all into words in sequence
+			#		for a better match
+			if str1.match(/\d+/)
+				longName=str1.gsub(str1.match(/\d+/)[0], Linguistics::EN.numwords(str1.match(/\d+/)[0]))
+				if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
+					unless str2.empty?    #To prevent matching an empty episode name
+						puts "fuzzyMatch(): Matched after converting a number to a word in str1, no space." unless verbose==:no
+						return :numword_str1_ns
+					end
+				end
+
+				longName=str1.gsub(str1.match(/\d+/)[0], " #{Linguistics::EN.numwords(str1.match(/\d+/)[0])} ")
+				if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
+					unless str2.empty?
+						puts "fuzzyMatch():  Matched after converting the number to a word, with space."
+						return :numword_str1_s
+					end
+				end
+			end
+
+=begin
+			#FIXME Need to also match EpisodeID tags in the form of 1x08, and hopefully, 108
+			#TODO This section should match even if the str1 does not match the filename, but it should issue a warning that the only thing that indicates this name is the EpisodeID tag and the series title
+			#TODO Remember to use the variable we have stored the EpisodeID tag in, because it is stripped from str1
+			#If we already have the EpisodeID tag then we can look for that instead of trying to match the str1.
+			#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
+			#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
+			# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR name_match?
+			if seasonNum and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( str1,seriesHash[1]['Title'][0], :no))
+				episodes_seasonNum=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
+				episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
+				#printf "seasonNum: #{seasonNum}  episodes_seasonNum: #{episodes_seasonNum}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
+				if seasonNum.to_i==episodes_seasonNum.to_i and epNum.to_i==episodes_epNum.to_i
+					puts "db_include?(): Match based on title found in filename, and season and episode number match from filename."
+					matches << episode.merge('Matched'=>:epid)
+					next
+				end
+			end
+=end
+			
+			#Try joining words together to see if that helps matching
+			return FALSE
+		end		
+
 		def self.get_episode_id(random_string, reformat_to_standard=:no)
 			#Note that the order here matters, search for the most likely format first
 			tag=random_string.match(/s[\d]+e[\d]+/i)
@@ -414,207 +609,16 @@ module MediaManager
 						epName='' if epName.class==FalseClass  #convert no episode name into an empty string from it's usual 'false' state for the sake of matching
 						#If the episode name begins with 'the', strip it to ease matching.
 						#Required to match files that were named without 'the' at the beginning of the name
-	
 						epName=epName.gsub(/^the[\s]+/i, '') if epName.index(/^the[\s]+/i)
 
-						if name==epName
-							puts "db_include?(): Matched one to one"
-							matches << episode.merge('Matched'=>:oneToOne)
+						#Try and match episode to file
+						matched=fuzzyMatch(name, epName, :yes)
+						
+						unless matched.class==FalseClass
+							#match successfull
+							matches << episode.merge!({ 'Matched' => matched })
 							next
-						end
-
-						##Begin attempting to match	
-						if (epName.length > 1 and MediaManager.name_match?(name, epName))
-							puts "db_include?(): Matched name_match?()"
-							matches << episode.merge('Matched'=>:name_match?)
-							next
-						end
-						
-						if epName.index(/\([\d]+\)/)
-							unless name.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
-								temp_epName=episode['EpisodeName'].gsub(/[:;]/, '')
-#								puts epName.slice( 0,epName.index(/\([\d]+\)/) )
-#								puts epName.slice( (epName.index(/\([\d]+\)/) + epName.match(/\([\d]+\)/)[0].length),epName.length )
-								part2= temp_epName.slice( temp_epName.index(/\([\d]+\)/)+temp_epName.match(/\([\d]+\)/)[0].length,temp_epName.length ).downcase
-								regex1= Regexp.new( Regexp.escape(temp_epName.slice( 0,temp_epName.index(/\([\d]+\)/) ).downcase))
-								regex2= Regexp.new( Regexp.escape(part2) )
-								unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
-									if name.downcase.match(regex1) and name.downcase.match(regex2)
-										puts "db_include?(): Matched based on both sides of a digit thingy"
-										matches << episode.merge('Matched'=>:digits)
-										next
-									end
-								end 
-							
-								#Should only get here if the string following ([\d]) is empty or the match above wasn't successful
-								#Use the first digit in the ( ) as the part number if it matches.
-								regex2= Regexp.new( Regexp.escape(epName.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
-								if part=name.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
-									part=part[0].match(/[\d]+/)[0]
-									if part.match(regex2)  #Match
-										puts "db_include()?: Matched based on part number  (alternative digit thingy match)"
-										matches << episode.merge('Matched'=>:digits)
-										next
-									end
-								end
-							end #of unless name.match(...)
-						end
-						
-						#Attempt to deal with Roman Numerals
-						#The following regex was adapted from Example 7.8 of http://thehazeltree.org/diveintopython/7.html
-						numeralMatch=/\s[M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})]+\s/
-						romName= (((name.reverse) + ' ').reverse) + ' ' # This allows us to use whitespace as delimiters for either side of a RN (Roman Numeral)
-						romEpName= ((epName + ' ').reverse + ' ').reverse
-						if romEpName.match(numeralMatch) or romName.match(numeralMatch)
-							#NOTE To the reader
-							#This is my attempt at identifying a roman numeral in the filename
-							#and converting it to an integer for comparison with the digit
-							#in the episode name.  I whole heartedly believe there ^is^ a 
-							#better way to do this that I haven't found yet.
-							#NOTE We do not anticipate more than one Roman Numeral in the filename.
-							#printf "Episode name: "; puts romEpName
-							#printf "Filename: "; puts romName
-							if romName.match( numeralMatch )
-								#puts "Roman numeral found in filename, it is printed on the following line."
-								#pp romName.match(numeralMatch)[0].strip
-								romName=romName.gsub(Regexp.new(Regexp.escape(romName.match(numeralMatch)[0])), 
-									"#{toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romName.match(numeralMatch)[0].strip)==0
-								if romEpName.match(Regexp.new(Regexp.escape(romName), TRUE))
-									puts "db_include()?:  Matched based on roman numeral in filename and converted"
-									matches << episode.merge('Matched'=>:romanNumerals)
-									next
-								end
-							elsif romEpName.match(numeralMatch)
-								#puts "Roman numeral found in episode name, it is printed on the following line."
-								#printf "Matching: "; pp romEpName.match(numeralMatch)[0].strip
-								#printf "Replacing with: "; pp toArabic(romEpName.match(numeralMatch)[0].strip).to_s
-								romEpName=romEpName.gsub(Regexp.new(Regexp.escape(romEpName.match(numeralMatch)[0])), 
-									" #{toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(romEpName.match(numeralMatch)[0].strip)==0
-								#puts romName
-								if romName.match(Regexp.new(Regexp.escape(romEpName), TRUE))
-									puts "db_include()?: Matched based on roman numeral found in episodename and converted"
-									matches << episode.merge('Matched'=>:romanNumerals)
-									next
-								end
-							end
-						end
-
-
-						if epName.index(':') #May be split into parts, try and match each side of the :
-							epName=episode['EpisodeName'].gsub(/\([\d]+\)/, '')   #Strip out any () parts
-							regex1= Regexp.new( Regexp.escape(epName.slice(0,epName.index(':')).downcase) )
-							regex2= Regexp.new( Regexp.escape(epName.slice(epName.index(':')+1,epName.length).downcase) )
-
-							if name.downcase.match(regex1) and name.downcase.match(regex2)
-								matches << episode.merge('Matched'=>:parts)
-								puts "Dis one has : in it!"; pp episode
-								puts "db_include?(): Matched based on both sides of a ':'"
-								next
-							end
-						end
-						
-						#If an epName has 'a.k.a.' in it, check either side.  Just like any other delimiter
-						if epName.index('a.k.a.')
-							#For the purposes of matching the 'a.k.a.' it appears necessary to strip out parenthesis
-							#from the epName, Regexp throws an error if it encounters unmatched parenthesis
-							epName=epName.gsub('(', '').gsub(')', '')
-							firstPart= epName.slice( 0,epName.index('a.k.a.')-1 )
-							lastPart= epName.slice( epName.index('a.k.a.')+ 'a.k.a.'.length, epName.length)
-							if name.match(Regexp.new(firstPart, TRUE))
-								puts "db_include?(): Matched the first part of the name, up to 'a.k.a.'."
-								matches << episode.merge('Matched'=>:aka)
-								next
-							elsif name.match(Regexp.new(lastPart, TRUE))
-								puts "db_include?(): Matched the last part of the name, after the 'a.k.a.'."
-								matches << episode.merge('Matched'=>:aka)
-								next
-							end
-						end
-
-						#Here I am trying to look for the epName in name the same way that I would as a human
-						#I think the way to do this is to break the string into words, and look for a single 
-						#character from the beginning and end of each respective word in epName and try
-						#match those beginnings and ends of words to beginnings and ends of words in name.
-						#This can be further refined by looking for characters that stand out, like 't' or 'g'
-						#as opposed to ones that don't like 'a' or 'c'.  Looking for characters that stand out 
-						#in name that aren't in epName can accomplish this.  This may be further refined without 
-						#updating this little blurb.i
-						#Note: Admittedly, this cannot catch spelling mistakes at the beginning or end of a word.
-						if name.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').length > 2
-							epName=epName.strip
-							distance=3
-							epNameResult=[]
-
-							epNameAr=[]
-							nameAr=[]
-							epName.split(' ').each {|word|
-								epNameAr << word unless word.length <= 2
-							}
-							
-							name.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').each {|word|
-								nameAr << word unless word.length <= 2
-							}
-							epNameAr.each_index {|epNameI|
-								nameAr.each_index { |nameI|
-									if epNameAr[epNameI].slice(0,1)==nameAr[nameI].slice(0,1) and
-											epNameAr[epNameI].slice(epNameAr[epNameI].length-1, 1)==nameAr[nameI].slice(nameAr[nameI].length-1, 1)
-
-										epNameResult[epNameI]=TRUE
-									else
-										epNameResult[epNameI]=FALSE
-									end
-								}
-							}
-							#matched
-							epNameResult= epNameResult.delete_if {|wordMatched| wordMatched == FALSE}
-							if epNameResult.length == nameAr.length
-								puts "db_include?(): Matched based on blind comparison of characters at word boundaries, accurate?"
-								matches << episode.merge('Matched'=>:wordBoundaries)
-								next
-							end
-						end
-
-						#Convert integer to word and try to match
-						if name.match(/\d+/)
-							longName=name.gsub(name.match(/\d+/)[0], Linguistics::EN.numwords(name.match(/\d+/)[0]))
-							if longName.match(Regexp.new(Regexp.escape(epName), TRUE))
-								unless epName.empty?    #To prevent matching an empty episode name
-									puts "db_include?(): Matched after converting the number to a word, no space."
-									matches << episode.merge('Matched'=>:intWord)
-									next
-								end
-							end
-
-							longName=name.gsub(name.match(/\d+/)[0], " #{Linguistics::EN.numwords(name.match(/\d+/)[0])} ")
-							if longName.match(Regexp.new(Regexp.escape(epName), TRUE))
-								unless epName.empty?
-									puts "db_include?():  Matched after converting the number to a word, with space."
-									matches << episode.merge('Matched'=>:intWord)
-									next
-								end
-							end
-						end
-
-						#FIXME Need to also match EpisodeID tags in the form of 1x08, and hopefully, 108
-						#TODO This section should match even if the name does not match the filename, but it should issue a warning that the only thing that indicates this name is the EpisodeID tag and the series title
-						#TODO Remember to use the variable we have stored the EpisodeID tag in, because it is stripped from name
-						#If we already have the EpisodeID tag then we can look for that instead of trying to match the name.
-						#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
-						#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
-						# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR name_match?
-						if seasonNum and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( name,seriesHash[1]['Title'][0], :no))
-							episodes_seasonNum=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
-							episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
-							#printf "seasonNum: #{seasonNum}  episodes_seasonNum: #{episodes_seasonNum}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
-							if seasonNum.to_i==episodes_seasonNum.to_i and epNum.to_i==episodes_epNum.to_i
-								puts "db_include?(): Match based on title found in filename, and season and episode number match from filename."
-								matches << episode.merge('Matched'=>:epid)
-								next
-							end
-						end
-						
-						#Try joining words together to see if that helps matching
-						
+						end						
 
 						#Next before here if already matched
 						#
@@ -827,8 +831,6 @@ module MediaManager
 			raise "Error, more than one match remains!" if matches.length > 1
 			return matches
 		end
-
-		
 
 	end
 end

@@ -22,6 +22,7 @@ load 'MM_IMDB.rb'
 load 'RetrieveMeta.rb'
 load 'FindDuplicates.rb'
 load 'movieInfo_Specification.rb'
+load 'Internals.rb'
 
 module MediaManager
   extend MMCommon
