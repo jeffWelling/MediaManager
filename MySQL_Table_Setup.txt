@@ -4,15 +4,6 @@ and updated your config accordingly.
 Below is the Mysql command I copied from PhpMyAdmin, which is what I initially used to configure the table.
 Anyone familiar with MySQL database design who is able to help streamline the database would be welcome
 to contribute, I an a total NOOB when it comes to MySQL database design.
--- phpMyAdmin SQL Dump
--- version 2.9.1.1-Debian-10
--- http://www.phpmyadmin.net
--- 
--- Host: localhost
--- Generation Time: Jul 28, 2009 at 04:37 AM
--- Server version: 5.0.32
--- PHP Version: 5.2.0-8+etch13
--- 
 -- Database: `MediaManager`
 -- 
 
@@ -22,15 +13,14 @@ to contribute, I an a total NOOB when it comes to MySQL database design.
 -- Table structure for table `EpisodeCache`
 -- 
 
-DROP TABLE IF EXISTS `EpisodeCache`;
 CREATE TABLE `EpisodeCache` (
   `uid` bigint(20) NOT NULL auto_increment COMMENT 'Simple field, unique per entry',
   `Season` tinyint(3) NOT NULL COMMENT 'Season Number (Eg. 2)',
   `EpisodeNumber` tinyint(3) NOT NULL COMMENT 'Episode Number (Eg. 12',
   `EpisodeName` varchar(128) NOT NULL COMMENT 'Episode Name (Eg. ''Blackwatch Plaid'')',
   `SeriesID` mediumint(7) NOT NULL COMMENT 'TheTVDB.com SeriedID number',
-  `DateAdded` datetime NOT NULL,
-  `LastModified` datetime NOT NULL,
+  `DateAdded` varchar(30) NOT NULL,
+  `LastModified` varchar(30) NOT NULL,
   PRIMARY KEY  (`uid`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
@@ -40,11 +30,10 @@ CREATE TABLE `EpisodeCache` (
 -- Table structure for table `FileHashCache`
 -- 
 
-DROP TABLE IF EXISTS `FileHashCache`;
 CREATE TABLE `FileHashCache` (
   `PathSHA` varchar(40) NOT NULL,
   `FileSHA` varchar(40) NOT NULL,
-  `DateAdded` datetime NOT NULL,
+  `DateAdded` varchar(30) NOT NULL,
   PRIMARY KEY  (`PathSHA`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -54,9 +43,8 @@ CREATE TABLE `FileHashCache` (
 -- Table structure for table `TvdbSeriesEpisodeCache`
 -- 
 
-DROP TABLE IF EXISTS `TvdbSeriesEpisodeCache`;
 CREATE TABLE `TvdbSeriesEpisodeCache` (
-  `DateAdded` datetime NOT NULL,
+  `DateAdded` varchar(30) NOT NULL,
   `SeriesID` varchar(32) NOT NULL COMMENT 'tvdb seriesID',
   `allEpisodeURL` varchar(2048) NOT NULL COMMENT 'Scrape main seriesID page for this search string, and store.',
   PRIMARY KEY  (`SeriesID`)
@@ -68,7 +56,6 @@ CREATE TABLE `TvdbSeriesEpisodeCache` (
 -- Table structure for table `Tvdb_Episodes`
 -- 
 
-DROP TABLE IF EXISTS `Tvdb_Episodes`;
 CREATE TABLE `Tvdb_Episodes` (
   `uid` bigint(20) NOT NULL auto_increment,
   `id` bigint(20) NOT NULL COMMENT 'Thetvdb.com''s EpisodeID, unique per episode, used to update episodes',
@@ -77,7 +64,7 @@ CREATE TABLE `Tvdb_Episodes` (
   `Director` varchar(42) default NULL,
   `SeasonNumber` smallint(6) NOT NULL,
   `GuestStars` varchar(255) default NULL,
-  `FirstAired` datetime default NULL,
+  `FirstAired` varchar(30) default NULL,
   `EpisodeNumber` smallint(6) NOT NULL,
   `lastupdated` bigint(20) NOT NULL,
   `IMDB_ID` varchar(20) default NULL,
@@ -85,10 +72,10 @@ CREATE TABLE `Tvdb_Episodes` (
   `Overview` varchar(25000) default NULL,
   `Writer` varchar(42) default NULL,
   `EpisodeName` varchar(100) default NULL,
-  `DateAdded` datetime NOT NULL,
+  `DateAdded` varchar(30) NOT NULL,
   PRIMARY KEY  (`uid`),
   UNIQUE KEY `id` (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=456 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2152 ;
 
 -- --------------------------------------------------------
 
@@ -96,7 +83,6 @@ CREATE TABLE `Tvdb_Episodes` (
 -- Table structure for table `Tvdb_Search_Cache`
 -- 
 
-DROP TABLE IF EXISTS `Tvdb_Search_Cache`;
 CREATE TABLE `Tvdb_Search_Cache` (
   `SearchTerm` varchar(700) NOT NULL,
   `Results` varchar(10000) default NULL COMMENT 'results of search, compressed as string',
@@ -111,12 +97,11 @@ CREATE TABLE `Tvdb_Search_Cache` (
 -- Table structure for table `Tvdb_Series`
 -- 
 
-DROP TABLE IF EXISTS `Tvdb_Series`;
 CREATE TABLE `Tvdb_Series` (
   `uid` int(11) NOT NULL auto_increment,
   `Status` varchar(42) default NULL,
   `Runtime` varchar(5) default NULL,
-  `FirstAired` datetime default NULL,
+  `FirstAired` varchar(30) default NULL,
   `Genre` varchar(400) default NULL,
   `lastupdated` bigint(11) NOT NULL,
   `IMDB_ID` varchar(16) default NULL,
@@ -127,9 +112,9 @@ CREATE TABLE `Tvdb_Series` (
   `ContentRating` varchar(12) default NULL,
   `Actors` varchar(1000) default NULL,
   `thetvdb_id` bigint(12) NOT NULL,
-  `DateAdded` datetime NOT NULL,
+  `DateAdded` varchar(30) NOT NULL,
   PRIMARY KEY  (`uid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=17 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=198 ;
 
 -- --------------------------------------------------------
 
@@ -137,10 +122,9 @@ CREATE TABLE `Tvdb_Series` (
 -- Table structure for table `Tvdb_lastupdated`
 -- 
 
-DROP TABLE IF EXISTS `Tvdb_lastupdated`;
 CREATE TABLE `Tvdb_lastupdated` (
   `lastupdated` bigint(20) NOT NULL COMMENT 'This is the last time that an update was performed. (Yes, I really did create a table just for this one thing.)',
-  `DateAdded` datetime NOT NULL,
+  `DateAdded` varchar(30) NOT NULL,
   PRIMARY KEY  (`lastupdated`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -150,7 +134,6 @@ CREATE TABLE `Tvdb_lastupdated` (
 -- Table structure for table `mediaFiles`
 -- 
 
-DROP TABLE IF EXISTS `mediaFiles`;
 CREATE TABLE `mediaFiles` (
   `id` int(12) NOT NULL auto_increment,
   `Title` varchar(255) NOT NULL,
@@ -159,18 +142,19 @@ CREATE TABLE `mediaFiles` (
   `Season` int(24) NOT NULL COMMENT 'Eg. 2',
   `URL` varchar(512) NOT NULL,
   `Year` int(24) NOT NULL,
-  `Path` varchar(255) NOT NULL COMMENT 'Full Path relative to the local root',
+  `Path` varchar(1000) NOT NULL COMMENT 'Full Path relative to the local root',
   `Size` int(24) NOT NULL COMMENT 'In Bytes',
   `PlayCommand` varchar(512) NOT NULL default 'vlc',
-  `DateAdded` datetime NOT NULL,
-  `DateModified` datetime NOT NULL,
+  `DateAdded` varchar(30) NOT NULL,
+  `DateModified` varchar(30) NOT NULL,
   `FileSHA` varchar(40) default NULL,
   `Categorization` varchar(255) NOT NULL default 'Library:' COMMENT 'Categorization in the form of ''Library:TVShows:HarveyBirdman:Season2:X where X is ''epNum - epName''',
   `PathSHA` varchar(40) NOT NULL,
   `tvdbSeriesID` varchar(32) NOT NULL,
   `imdbID` varchar(32) NOT NULL,
   UNIQUE KEY `Index` (`id`),
+  UNIQUE KEY `Path` (`Path`),
+  UNIQUE KEY `PathSHA` (`PathSHA`),
   KEY `Title` (`Title`),
   FULLTEXT KEY `Title_2` (`Title`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
-
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
