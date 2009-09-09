@@ -5,226 +5,41 @@ load 'romanNumerals.rb'
 module MediaManager
 	module RetrieveMeta
 		extend MMCommon
-		#Tries to match the two strings using various methods.  Intended to be used to match a title or
-		#episode name to the filename (or one of it's parent dirs) on your disc.
-		#It will return FALSE if no match was found, or it will return one of the following return values
-		#which tells how it was matched.
-		#:oneToOne :name_match? :digits_bothSides :digits_partNumber :romanNumeral_str1 :romanNumeral_str2 :bothParts_str2 :str2_before_aka :str2_after_aka
-		#:wordBoundaries_str2 :numword_str1_ns :numword_str1_s
-		def fuzzyMatch(str1, str2, verbose=:no)
-			#name=str1 and epName=str2
 
-			##Begin attempting to match	
-			if str1==str2
-				puts "fuzzyMatch(): Matched one to one" unless verbose==:no
-				return :oneToOne
-			end
-
-			if (str2.length > 1 and MediaManager.name_match?(str1, str2))
-				puts "fuzzyMatch(): Matched name_match?()" unless verbose==:no
-				return :name_match?
-			end
-		
-			#Try to match 2 part (or more) episodes.  Sometimes these have the part number in the middle of the name with 
-			#another title on the other side, if thats the case try and match the titles.  Otherwise, try and match
-			#the part number.	
-			if str2.index(/\([\d]+\)/)
-				unless str1.match(/\(.*[\d]+.*\)/)    #No need to process this if the filename has no ([\d]+.*) in it
-					str2_sans_stuff=str2.gsub(/[:;]/, '')
-					part2= str2_sans_stuff.slice( str2_sans_stuff.index(/\([\d]+\)/)+str2_sans_stuff.match(/\([\d]+\)/)[0].length,str2_sans_stuff.length ).downcase.stripi
-					#regex1 matches the first part of the string up to the (\d+) and regex2 matches the second part trailing it, if there is anything
-					regex1= Regexp.new( Regexp.escape(str2_sans_stuff.slice( 0,str2_sans_stuff.index(/\([\d]+\)/) ).downcase))
-					regex2= Regexp.new( Regexp.escape(part2) )
-					unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
-						if str1.downcase.match(regex1) and str1.downcase.match(regex2)
-							puts "fuzzyMatch(): Matched based on both sides of a digit thingy" 
-							return :digits_bothSides
-						end
-					end 
+		#getEpisodeID will search for all of the episodeIDs in random_string, and will return them.
+		#If theres more than one, it will return them in an array, with the first episodeID as the first item.
+		#If the reformat argument is set to anything that is not :no, it will reformat the episodeID into 
+		#the standard 's2e22' format.
+		def self.getEpisodeID random_string, reformat=:no
+			#this regex is meant to match 's2e23' and '1x23' formats.
+			#NOTE Make sure to check that this does give you a resolution (make sure it is a sane series number and episode number)
+			episodeID_regex=/(s[\d]+e[\d]+|[\d]+x[\d]+)/i
+			return nil if ( episodeID=random_string.match(episodeID_regex) ).nil?
+			
+			#check that its a sane series and episode number
+			#series number = 1-99
+			#episode number= 1-700              700 should be enough for one season right?
+			seriesNumber=episodeID[0].match(/^(s)?[\d]+/i)[0]
+			seriesNumber=seriesNumber.reverse.chop.reverse if seriesNumber.include? 's' or seriesNumber.include? 'S'
+			seriesNumber=seriesNumber.to_i
+			episodeNumber=episodeID[0].match(/[\d]+$/)[0].to_i
+			if seriesNumber < 1 or seriesNumber > 99 or episodeNumber < 1 or episodeNumber > 700
+				#episodeID is bad
 				
-					#Should only get here if the string following ([\d]) is empty or the match above wasn't successful
-					#Use the first digit in the ( ) as the part number if it matches.
-					regex2= Regexp.new( Regexp.escape(str2.match(/\([\d]+\)/)[0].chop.reverse.chop.reverse) )
-					if part=str1.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
-						part=part[0].match(/[\d]+/)[0]
-						if part.match(regex2)  #Match
-							puts "fuzzyMatch(): Matched based on part number  (alternative digit thingy match)" unless verbose==:no
-							return :digits_partNumber
-						end
-					end
-				end #of unless str1.match(...)
-			end
-		
-			#FIXME See the NOTEs a few lines down	
-			#Attempt to deal with Roman Numerals
-			#The following regex was adapted from Example 7.8 of http://thehazeltree.org/diveintopython/7.html
-			numeralMatch=/\s[M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})]+\s/
-			romName= (((str1.reverse) + ' ').reverse) + ' ' # This allows us to use whitespace as delimiters for either side of a RN (Roman Numeral)
-			romEpName= ((str2 + ' ').reverse + ' ').reverse
-			if romEpName.match(numeralMatch) or romName.match(numeralMatch)
-				#NOTE We do not anticipate more than one Roman Numeral in the str
-				#NOTE We do not anticipate a roman numeral in both str1 and str1
-				if romName.match( numeralMatch )
-					romName=romName.gsub(Regexp.new(Regexp.escape(romName.match(numeralMatch)[0])), 
-						"#{toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romName.match(numeralMatch)[0].strip)==0
-					if romEpName.match(Regexp.new(Regexp.escape(romName), TRUE))
-						puts "fuzzyMatch():  Matched based on roman numeral in str1 and converted" unless verbose==:no
-						return :romanNumeral_str1
-					end
-				elsif romEpName.match(numeralMatch)
-					romEpName=romEpName.gsub(Regexp.new(Regexp.escape(romEpName.match(numeralMatch)[0])), 
-						" #{toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(romEpName.match(numeralMatch)[0].strip)==0
-					if romName.match(Regexp.new(Regexp.escape(romEpName), TRUE))
-						puts "fuzzyMatch(): Matched based on roman numeral found in str2 and converted" unless verbose==:no
-						return :romanNumerals_str2
-					end
-				end
+				#look for other episodeIDs, return nil
+				return getEpisodeID(random_string.gsub(episodeID[0],''),reformat) if getEpisodeID(random_string.gsub(episodeID[0],''))
+				return nil
 			end
 
-			#FIXME Should do the same for str1 as well
-			if str2.index(':') #May be split into parts, try and match each side of the :
-				str2=str2.gsub(/\([\d]+\)/, '')   #Strip out any (\d+) parts for easier matching
-				regex1= Regexp.new( Regexp.escape(str2.slice(0,str2.index(':')).downcase) )
-				regex2= Regexp.new( Regexp.escape(str2.slice(str2.index(':')+1,str2.length).downcase) )
-
-				if str1.downcase.match(regex1) and str1.downcase.match(regex2)
-					puts "fuzzyMatch():  Matched both sides of a ':'" unless verbose==:no
-					return :bothParts_str2
-				end
+			if reformat!=:no
+				#reformat to 's3e12'
+				return (["s#{seriesNumber}e#{episodeNumber}"]+[getEpisodeID(random_string.gsub(episodeID[0],''),reformat)]).flatten if getEpisodeID(random_string.gsub(episodeID[0],''),reformat)
+				return "s#{seriesNumber}e#{episodeNumber}"
 			end
 			
-			#FIXME Should do this for str1 as well
-			#If str2 has 'a.k.a.' in it, check either side.  Just like any other delimiter
-			if str2.index('a.k.a.')
-				#For the purposes of matching the 'a.k.a.' it appears necessary to strip out parenthesis
-				#from str2, Regexp throws an error if it encounters unmatched parenthesis
-				str_sans_parenthesis=str2.gsub('(', '').gsub(')', '')
-				str2_upto_aka= str_sans_parenthesis.slice( 0,str_sans_parenthesis.index('a.k.a.')-1 )
-				str2_after_aka= str_sans_parenthesis.slice( str_sans_parenthesis.index('a.k.a.')+ 'a.k.a.'.length, str_sans_parenthesis.length)
-				if str1.match(Regexp.new(str2_upto_aka, TRUE))
-					puts "fuzzyMatch(): Matched the first part of the str2, up to 'a.k.a.'." unless verbose==:no
-					return :str2_before_aka
-				elsif str1.match(Regexp.new(str2_after_aka, TRUE))
-					puts "fuzzyMatch(): Matched the last part of the str2, after the 'a.k.a.'." unless verbose==:no
-					return :str2_after_aka
-				end
-			end
-
-			#Here I am trying to look for the str2 in str1 the same way that I would as a human
-			#I think the way to do this is to break the string into words, and look for a single 
-			#character from the beginning and end of each respective word in str2 and try
-			#match those beginnings and ends of words to beginnings and ends of words in str1.
-			#This can be further refined by looking for characters that stand out, like 't' or 'g'
-			#as opposed to ones that don't like 'a' or 'c'.  Looking for characters that stand out 
-			#in str1 that aren't in str2 can accomplish this.
-			#Note: Admittedly, this cannot catch spelling mistakes at the beginning or end of a word.
-			#FIXME This needs to be done for both str1 and str2, and could be cleaned up more
-			if str1.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').length > 2
-				str2_stripped=str2.strip
-				distance=3
-				str2_compare_results=[]
-
-				str2_words=[]
-				str1_words=[]
-				str2_stripped.split(' ').each {|word|
-					str2_words << word unless word.length <= 2
-				}
-				
-				str1.gsub('-', ' ').gsub('_', ' ').gsub('.', ' ').split(' ').each {|word|
-					str1_words << word unless word.length <= 2
-				}
-				str2_words.each_index {|words2_i|
-					str1_words.each_index { |words1_i|
-						if str2_words[words2_i].slice(0,1)==str1_words[words1_i].slice(0,1) and
-								str2_words[words2_i].slice(str2_words[words2_i].length-1, 1)==str1_words[words1_i].slice(str1_words[words1_i].length-1, 1)
-
-							str2_compare_results[words2_i]=TRUE
-						else
-							str2_compare_results[words2_i]=FALSE
-						end
-					}
-				}
-				str2_compare_results= str2_compare_results.delete_if {|word_matched| word_matched == FALSE}
-				if str2_compare_results.length == str1_words.length
-					puts "fuzzyMatch(): Matched based solely on looking at word boundaries." unless verbose==:no
-					return :wordBoundaries_str2
-				end
-			end
-
-			#Convert integer to word and try to match
-			#FIXME This should be done for both str1 and str2
-			#FIXME Linguistics::EN.numwords returns in the format 'twenty-four'.  Should try replacing '-' with ' '
-			#		various other matches as well for better chance at matching
-			#FIXME This should probably be done in a sliding window fashion, like how getSearchTerms() works, so that
-			#		it can properly handle multiple integers in the strings, converting them into all into words in sequence
-			#		for a better match
-			if str1.match(/\d+/)
-				longName=str1.gsub(str1.match(/\d+/)[0], Linguistics::EN.numwords(str1.match(/\d+/)[0]))
-				if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
-					unless str2.empty?    #To prevent matching an empty episode name
-						puts "fuzzyMatch(): Matched after converting a number to a word in str1, no space." unless verbose==:no
-						return :numword_str1_ns
-					end
-				end
-
-				longName=str1.gsub(str1.match(/\d+/)[0], " #{Linguistics::EN.numwords(str1.match(/\d+/)[0])} ")
-				if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
-					unless str2.empty?
-						puts "fuzzyMatch():  Matched after converting the number to a word, with space."
-						return :numword_str1_s
-					end
-				end
-			end
-
-=begin
-			#FIXME Need to also match EpisodeID tags in the form of 1x08, and hopefully, 108
-			#TODO This section should match even if the str1 does not match the filename, but it should issue a warning that the only thing that indicates this name is the EpisodeID tag and the series title
-			#TODO Remember to use the variable we have stored the EpisodeID tag in, because it is stripped from str1
-			#If we already have the EpisodeID tag then we can look for that instead of trying to match the str1.
-			#Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
-			#This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
-			# if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR name_match?
-			if seasonNum and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( str1,seriesHash[1]['Title'][0], :no))
-				episodes_seasonNum=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
-				episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
-				#printf "seasonNum: #{seasonNum}  episodes_seasonNum: #{episodes_seasonNum}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
-				if seasonNum.to_i==episodes_seasonNum.to_i and epNum.to_i==episodes_epNum.to_i
-					puts "db_include?(): Match based on title found in filename, and season and episode number match from filename."
-					matches << episode.merge('Matched'=>:epid)
-					next
-				end
-			end
-=end
-			
-			#Try joining words together to see if that helps matching
-			return FALSE
-		end		
-
-		def self.get_episode_id(random_string, reformat_to_standard=:no)
-			#Note that the order here matters, search for the most likely format first
-			tag=random_string.match(/s[\d]+e[\d]+/i)
-			unless tag.nil?
-				return [tag[0]]
-			end
-
-			tag=random_string.match(/[\d]+x[\d]+/i)
-			unless tag.nil?
-				bad=:no
-				#verify that we aren't looking at a resolution
-				bad=:yes if tag[0].match(/^\d+/)[0].to_i > 59    #There shouldn't be any season number higher than this
-				bad=:yes if tag[0].match(/\d+$/)[0].to_i > 999		#There shouldn't be any episode number higher than this
-				
-				if bad==:yes
-					#Recurse, stripping out each resolution (if theres more than one?) until we get something good, or nothing at all
-					return get_episode_id(random_string.gsub(tag[0],' '))
-				else
-					reformat_to_standard==:no ? (return [tag[0]]) : (return ["s#{tag[0].match(/^\d+/)[0]}e#{tag[0].match(/\d+$/)[0]}"])
-				end
-
-				
-				#End of trying to match an episodeID, and we got nothing.
-			end
-			return nil
+			#look for more episodeIDs, return the one we already have
+			return ([episodeID[0]]+[getEpisodeID(random_string.gsub(episodeID[0],''),reformat)]).flatten if getEpisodeID(random_string.gsub(episodeID[0],''),reformat)
+			return episodeID[0]
 		end
 	
 		#Returns info in the form of a hash conforming to movieInfo_Specification.rb
@@ -289,7 +104,6 @@ module MediaManager
 				puts "filenameToInfo():  This file was just hashed for the first time, adding hash to file's db entry."
 				raise "filenameToInfo(): Failed updating sql?" unless sqlAddUpdate("UPDATE mediaFiles SET FileSHA='#{movieData['FileSHA']}' WHERE PathSHA='#{movieData['PathSHA']}'")==1
 			end
-			pp movieData
 			puts "File already in database, using info..." unless movieData['id'].nil?
 			return movieData unless movieData['id'].nil?
 
@@ -363,9 +177,9 @@ module MediaManager
 			#4.
 			#Does it have a series tag (S01E02)?
 			answers[4]=FALSE
-			id=MediaManager::RetrieveMeta.get_episode_id(movieData['Path'], :reformat_to_standard)
+			id=MediaManager::RetrieveMeta.getEpisodeID(movieData['Path'], :reformat_to_standard)
 			unless id.nil?
-				id=id[0]
+				id=id[0] if id.class==Array
 				puts "Found season tag #{id} (may have been reformatted), extracting Season and EpisodeID..."
 				movieData['Season'] = id.match(/\d+/)[0].to_i
 				movieData['EpisodeID'] = id.upcase
@@ -442,6 +256,7 @@ module MediaManager
 
 		#This function takes a source, either :tvdb or :imdb, and a filePath to search for within that DB
 		def self.db_include?( source, movieData )
+			clean_fpath=movieData['Path'].gsub($change_to_whitespace, ' ').squeeze(' ').strip
 			fpath = movieData['Path'] #FIXME  Just use movieData['Path'] everywhere instead of fpath
 
 			#remove any sourceDirs from fpath
@@ -526,7 +341,9 @@ module MediaManager
 				epNum=epNum[0] unless epNum.nil?
 			end
 			name=filename[1].gsub($change_to_whitespace, ' ').squeeze(' ')
-			name=name.gsub(MediaManager::RetrieveMeta.get_episode_id(name)[0], '').squeeze(' ') if MediaManager::RetrieveMeta.get_episode_id(name)
+			episodeID=MediaManager::RetrieveMeta.getEpisodeID(name)
+			episodeID=episodeID[0] if episodeID.class==Array
+			name=name.gsub(episodeID, '').squeeze(' ') if MediaManager::RetrieveMeta.getEpisodeID(name)
 			cleaned_path=movieData['Path'].gsub($change_to_whitespace, ' ').squeeze(' ')
 			series.each {|seriesHash|
 				#movie_object=nil
@@ -610,15 +427,48 @@ module MediaManager
 						#If the episode name begins with 'the', strip it to ease matching.
 						#Required to match files that were named without 'the' at the beginning of the name
 						epName=epName.gsub(/^the[\s]+/i, '') if epName.index(/^the[\s]+/i)
+=begin
+						#Try and match the episode tag in the filename to an episode from the series we're searching
+						#but only if the title of the series matches the filename or parent directory(ies)
+						if name_match?(name, episode['Title']) and getEpisodeID(fpath)
+							#episode's series title is found in the filename, if the episodeID found in the filename
+							#is a valid one, match.
+							filename_episodeID=getEpisodeID(clean_fpath)
+							filename_episodeID=filename_episodeID[0] if filename_episodeID.class==Array
+							pp episode
+							pp filename_episodeID	
+							if episode['EpisodeID'].downcase==filename_episodeID.downcase
+								matches << episode.merge!({ 'Matched' => :epid })
+								next
+							end
+						end
+=end
 
-						#Try and match episode to file
-						matched=fuzzyMatch(name, epName, :yes)
-						
+
+						#Try and match episode name to filename
+						matched=fuzzyMatch(clean_fpath, epName)
 						unless matched.class==FalseClass
 							#match successfull
 							matches << episode.merge!({ 'Matched' => matched })
 							next
-						end						
+						end
+
+=begin
+						#Try and match the episode tag in the filename to an episode from the series we're searching
+						#but only if the title of the series matches the filename or parent directory(ies)
+						if name_match?(name, episode['Title']) and getEpisodeID(fpath)
+							#episode's series title is found in the filename, if the episodeID found in the filename
+							#is a valid one, match.
+							filename_episodeID=getEpisodeID(clean_fpath)
+							filename_episodeID=filename_episodeID[0] if filename_episodeID.class==Array
+							pp episode
+							pp filename_episodeID	
+							if episode['EpisodeID'].downcase==filename_episodeID.downcase
+								matches << episode.merge!({ 'Matched' => :epid })
+								next
+							end
+						end
+=end
 
 						#Next before here if already matched
 						#
@@ -632,15 +482,14 @@ module MediaManager
 #					pp movie_object unless source==:tvdb
 	#				raise 'XL' unless source==:tvdb
 #					puts "name: '#{name}',  is it this?    title: '#{movieInfo.Title}' is: '#{movieInfo['tv/movie']}'"
-					pp movieInfo if movieInfo['Title'].downcase.include? 'raider'
 					if MediaManager.name_match?(name, movieInfo['Title'])
 #						puts "db_include?():  Matched name_match?()"
 						matches << movieInfo.merge({ 'Matched'=>:name_match? })
 						next
 					end
 					#This one matches the movie title to the name of the parent directory, to match if say the movie has the name sa.avi, the parent dir is Smokin' Aces, and the title is Smokin' Aces
-					if MediaManager.name_match?(File.basename(File.dirname(fpath)).gsub($change_to_whitespace, ' '), movieInfo['Title'])
-						puts "db_include?():  Matched name_match?() to parent directory"
+					if MediaManager.name_match?(clean_fpath, movieInfo['Title'])
+#						puts "db_include?():  Matched name_match?() to parent directory"
 						matches << movieInfo.merge({ 'Matched'=>:name_match? })
 						next
 					end
@@ -659,17 +508,20 @@ module MediaManager
 			puts "db_include?(): More than one match found for this file.  Trying to get rid of extaneous matches..."
 			scores={}
 			_scores=[]
+
+			#create the scores
 			matches.each_index {|ind|
 				hash_of_match=hash_filename(matches[ind].to_s)
 				matches[ind].merge!( { 'Hash' => hash_of_match })
 				match=matches[ind]
 				scores[hash_of_match]||=0
+
 				#If the title is found in the filename, add the length of the title to the score
-				if name_match?(name, match['Title'], :no )==TRUE
+				if name_match?(name, match['Title'])==TRUE
 					scores[hash_of_match]=scores[hash_of_match]+1
 					scores[hash_of_match]+= match['Title'].length
 
-				elsif name_match?(File.basename(File.dirname(fpath)).gsub($change_to_whitespace, ' '),match['Title'], :no)==TRUE
+				elsif name_match?(File.basename(File.dirname(fpath)).gsub($change_to_whitespace, ' '),match['Title'])==TRUE
 					scores[hash_of_match]=scores[hash_of_match]+1
 					scores[hash_of_match]+= match['Title'].length
 				end
@@ -680,10 +532,25 @@ module MediaManager
 					pp imdb_results
 					scores[hash_of_match]+=4
 				end
+
+				if name_match?(name, match['Title']) or name_match?(File.basename(File.dirname(fpath)).gsub($change_to_whitespace, ' '), match['Title'])
+					#try to match any episodeIDs in the filename to the match
+					already_matched=false
+					getEpisodeID(clean_fpath, :make_standard_format).each {|episodeID|
+						if episodeID[/^(s)?[\d]+/i][/\d+/].to_i == match['Season'].to_i and episodeID[/[\d]+$/].to_i==match['EpisodeNumber'].to_i
+							raise "wtf, TWO episodeIDs in the filename matched the episodeID in the match? CRAZIES!" if already_matched==true
+							name_match?(name, match['Title']) ? scores[hash_of_match]+=20 : scores[hash_of_match]+=7
+							puts "db_include?():  Incremented scores because title matched, season and epnum matched."
+							already_matched=true
+						end
+					}
+				end
 			}
 
+
+
 			matches.each_index {|ind|
-				#If this is a case of an episodeID not matching an episodeName
+				#If this is a case of an episodeID not matching an episodeName, prompt the user for help
 				matches.each_index {|other_index|
 					next if ind==other_index
 					if (matches[ind]['Matched']==:epid and matches[other_index]['Matched']==:name_match? and matches[ind]['Title']==matches[other_index]['Title'] and name_match?(cleaned_path, matches[ind]['Title']) )
@@ -789,7 +656,7 @@ module MediaManager
 					}
 					raise 'wtf' if the_match.nil?
 					pp the_match
-					question="Is this the one?\n############\nFile is:'#{name}',\nTitle: '#{the_match['Title']}',\nTv/Movie: '#{the_match['tv/movie'].to_s.capitalize}'\nEpisode Name:  '#{the_match['EpisodeName']}',\nEpisode Number: '#{the_match['EpisodeNumber']}',\nSeason: '#{the_match['Season']}'\nEpisodeID: '#{the_match['EpisodeID']}',\nYear: '#{the_match['Year']}'\n"
+					question="Is this the one?\n############\nFile is:'#{movieData['Path']}',\nTitle: '#{the_match['Title']}',\nTv/Movie: '#{the_match['tv/movie'].to_s.capitalize}'\nEpisode Name:  '#{the_match['EpisodeName']}',\nEpisode Number: '#{the_match['EpisodeNumber']}',\nSeason: '#{the_match['Season']}'\nEpisodeID: '#{the_match['EpisodeID']}',\nYear: '#{the_match['Year']}'\n"
 					response=MediaManager.prompt( question, :no )
 					next if response!=:yes
 					return [the_match]
