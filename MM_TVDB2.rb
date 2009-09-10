@@ -455,6 +455,7 @@ module MediaManager
 				end
 				
 				printf "populate_results('#{result['Title']}'): "
+				#FIXME  This should be in a begin/rescue so we can handle a timeout or two
 				raw_info= XmlSimple.xml_in(agent.get("#{$TVDB_Mirror}/api/#{$MMCONF_TVDB_APIKEY}/series/#{result['thetvdb_id']}/all/en.xml").body )			
 				puts "Gotcha!"
 

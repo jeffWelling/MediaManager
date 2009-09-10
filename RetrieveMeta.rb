@@ -204,8 +204,9 @@ module MediaManager
 				movieData['imdbID']= result[0]['IMDB_ID']
 				movieData['EpisodeName']= result[0]['EpisodeName']
 			end
-			unless imdb_results.empty?
-				imdb_results=imdb_results[0]
+			unless (imdb_results.empty? or imdb_results.nil?)
+				pp imdb_results
+				imdb_results=imdb_results[0] if imdb_results.class==Array and imdb_results.length==1
 				movieData['Title']=imdb_results['Title']
 				movieData['Year']=imdb_results['Year']
 				movieData['EpisodeName']=imdb_results['EpisodeName']
@@ -536,14 +537,15 @@ module MediaManager
 				if name_match?(name, match['Title']) or name_match?(File.basename(File.dirname(fpath)).gsub($change_to_whitespace, ' '), match['Title'])
 					#try to match any episodeIDs in the filename to the match
 					already_matched=false
+					unless getEpisodeID(clean_fpath, :ze_standard_format_they_must_be_in).nil?
 					getEpisodeID(clean_fpath, :make_standard_format).each {|episodeID|
 						if episodeID[/^(s)?[\d]+/i][/\d+/].to_i == match['Season'].to_i and episodeID[/[\d]+$/].to_i==match['EpisodeNumber'].to_i
 							raise "wtf, TWO episodeIDs in the filename matched the episodeID in the match? CRAZIES!" if already_matched==true
-							name_match?(name, match['Title']) ? scores[hash_of_match]+=20 : scores[hash_of_match]+=7
+							name_match?(name, match['Title']) ? scores[hash_of_match]+=(20+match['EpisodeName'].length) : scores[hash_of_match]+=(7+match['EpisodeName'].length)
 							puts "db_include?():  Incremented scores because title matched, season and epnum matched."
 							already_matched=true
 						end
-					}
+					} end
 				end
 			}
 
@@ -638,6 +640,13 @@ module MediaManager
 			#it will have a list of matches with the highest-rated sorted to the top, and return that one.
 			#if _scores is > 1 and there is more than one match
 			if _scores.length > 1 and matches.length != 1
+				#Try and return the top scored match, if the difference in score is more than 10
+				if (_scores.reverse[0][1] - _scores.reverse[1][1]) > 10
+					puts "db_include?():  One match scored above the others, returning that."
+					matches.each {|match|
+						return match if match['Hash']==_scores.reverse[0][0]
+					}
+				end
 				pp _scores.reverse
 #				raise "false positive detected, sort matches and reduce!" 
 				question= "db_include?():  Could not reduce false positives further.\n"
