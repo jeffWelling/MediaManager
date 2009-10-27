@@ -12,5 +12,8 @@ describe MMCommon do
     objects=Dir.glob(target+'/**', File::FNM_DOTMATCH).delete_if {|path| File.basename(path)=='.' || File.basename(path)=='..'}
     objects << target
     returned.length.should == objects.length
+    objects.each {|p|
+      returned.include?(p).should==true
+    }
   end
 end
