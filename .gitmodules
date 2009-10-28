@@ -1,0 +1,3 @@
+[submodule "libthetvdb"]
+	path = libthetvdb
+	url = git@github.com:jeffWelling/libthetvdb.git
