@@ -16,4 +16,18 @@ describe MMCommon do
       returned.include?(p).should==true
     }
   end
+  
+  it "returns true if str matches any of the exclusions" do
+    str="/home/user/christ_waffers.lol"
+    excluded?(str, [/christ/]).should== true
+    excluded?(str, [/waffers/]).should== true
+    excluded?(str, [/god/]).should== false
+    excluded?(str, [/jesus/, /boots/]).should== false
+    excluded?(str, [/does/, /god/, /exist\?/]).should== false
+    excluded?(str, [/does/, /microsoft/, /produce/, /quality/, /products/]).should== false
+    excluded?(str, [/problem/, /between/, /keyboard/, /and/, /chair/, /user/]).should== true
+    excluded?(str, [/scientology/, /is/, /a/, /scam/]).should== true
+    excluded?(str, [/religion/, /is/, /a/, /scam/]).should== true
+    excluded?(str, [/creationism/, / is /, /science/]).should== false
+  end
 end

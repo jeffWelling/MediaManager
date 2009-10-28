@@ -12,5 +12,14 @@ module MediaManager
       items
     end
 
+    #returns true if str matches any of the exclusion matches
+    #ar_of_excludes must be an array of regexes
+    def excluded? str, ar_of_excludes
+      ar_of_excludes.each {|exclude|
+        return true if str.match(exclude)
+      }
+      false
+    end
+
   end
 end
