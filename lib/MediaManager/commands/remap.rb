@@ -18,3 +18,17 @@
   
 =end
 #This file will hold the code for the part of the program that creates shortcuts from the media to the Library dir.
+module MediaManager
+  module Commands
+    #This module assists with the creation of a Library from your media database
+    module Remap
+      def parser(o)
+        o.banner= "Usage: mmanager remap"
+      end
+      
+      def execute
+        MMCommon.pprint "Finish me!"
+      end
+    end
+  end
+end

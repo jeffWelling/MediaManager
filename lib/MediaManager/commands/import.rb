@@ -18,3 +18,17 @@
   
 =end
 #This file will hold the code for the import part of  the program.
+module MediaManager
+  module Command
+    #The importing module
+    module Import
+      def parser(o)
+        o.banner= "Usage: mmanager import foo/bar/ foo/bar1\nAdds the dir foo/bar/ and the file foo/bar1"
+      end
+      
+      def execute
+        MMCommon.pprint "importing!"
+      end
+    end
+  end
+end

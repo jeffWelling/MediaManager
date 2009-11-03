@@ -17,3 +17,17 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
+module MediaManager
+  module Command
+    #Module to allow configuring via irb which saves to a config file
+    module Config
+      def parser(o)
+        o.banner= "Usage: mmanager config [doesnt do squat yet]"
+      end
+      
+      def execute
+        MMCommon.pprint 'The fuck!'
+      end
+    end
+  end
+end

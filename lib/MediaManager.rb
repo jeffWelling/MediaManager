@@ -17,10 +17,17 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
+current_dir=File.expand_path(File.dirname(__FILE__))
+unless $LOAD_PATH.first == (current_dir)
+  $LOAD_PATH.unshift(current_dir)
+end
 autoload :Find, 'find'
+autoload :OptionParser, 'optparse'
 
 module MediaManager
   autoload :VERSION, 'MediaManager/Version'
   autoload :MMCommon, 'MediaManager/MMCommon'
+  autoload :CLI, 'MediaManager/CLI'
+  autoload :Command, 'MediaManager/Command'
 
 end

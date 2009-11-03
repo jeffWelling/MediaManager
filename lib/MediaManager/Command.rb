@@ -20,15 +20,17 @@
 module MediaManager
   module Command
     COMMANDS={}
-    DOCS={}
+    DOC={}
 
     def self.register(mod_name, doc, *commands)
-      autoload(mod_name, "MediaManager/command/#{mod_name.downcase}")
+      autoload(mod_name, "MediaManager/commands/#{mod_name.downcase}")
       DOC[commands]=doc
       commands.each{|cmd| COMMANDS[cmd]= mod_name }
     end
     
     register 'Import', 'Imports a file or directory into the library', 'import'
+    register 'Config', 'Allows configuring via Irb, saving to the config file', 'config'
+    register 'Remap', 'Creates a Library directory from your media files', 'remap'
 
     def self.get(command)
       if mod_name= COMMANDS[command]
@@ -37,12 +39,48 @@ module MediaManager
     end
     
     def self.usage(action, args)
+      o= parser(action, &method(:default_usage))
+      o.parse!(args)
+      o
     end
     
     def self.default_usage(o)
+      o.banner= "Usage: mmanager COMMAND [FLAGS] [ARGS]"
+      o.top.append  ' ', nil, nil
+      o.top.append  'The developers have graced you with these available commands:', nil, nil
+
+      DOC.each {|commands, doc|
+        #Use the longest command for the example
+        command=commands.sort_by{|cmd| cmd.size}.last
+        o.top.append("    %-32s %s" % [command, doc], nil, nil)
+      }
     end
   
     def self.parser(action, &block)
+      OptionParser.new {|o|
+        o.banner= "Usage: mmanager #{action} [FLAGS] [ARGS]"
+        
+        o.base.append ' ', nil, nil
+        o.base.append 'Common options:', nil, nil
+        o.on_tail('-V', '--version', 'Show the version number'){
+          MMCommon.pprint MediaManager::VERSION
+          exit
+        }
+        o.on_tail('-h', '--help', 'Display ze help'){
+          MMCommon.pprint o
+          exit
+        }
+        
+        if block_given?
+          yield(o)
+          unless o.top.list.empty?
+            if action
+              o.top.prepend "Options for #{action} command:", nil, nil
+              o.top.prepend ' ', nil, nil
+            end
+          end
+        end
+      }
     end
   end
 end

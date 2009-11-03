@@ -18,6 +18,7 @@
   
 =end
 module MediaManager
+  #Assist with operation via the CLI
   class CLI
     #Run from the mmanager executable file
     def self.execute
@@ -32,12 +33,13 @@ module MediaManager
     def initialize(args)
       @args= args.dup
       if args.empty? 
-        MMCommon.pprint "Your supposed to actually tell me to do something,  gawsh napoleon.."
+        MMCommon.pprint "Your supposed to actually tell me to do something,  gawsh napoleon..\nTry the 'help' flag."
         exit 1
       end
       @action= args.shift
       #Combine both initialize, and parse_options! methods from ticgit
     end
+    attr_reader :action, :args
 
     def execute! 
       if mod= Command.get(action)
@@ -59,6 +61,15 @@ module MediaManager
           puts "#{action} is not a command, try the -h option to get a clue"
           exit 1
         end
+      end
+    end
+
+    def usage(args=nil)
+      old_args= args|| [action, *self.args].compact
+      if respond_to?(:parser)
+        Command.parser('COMMAND', &method(:parser))
+      else
+        Command.usage(old_args.first, old_args)
       end
     end
   end

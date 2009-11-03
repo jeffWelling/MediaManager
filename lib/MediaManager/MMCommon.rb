@@ -19,9 +19,9 @@
 =end
 module MediaManager
   #Functions/methods that are common to all of the MediaManager app
-  class MMCommon
+  module MMCommon
     #scans a target, returning the full path of every item found, in an array
-    def scan_target target
+    def self.scan_target target
       items=[]
       Find.find(target) do |it|
         items << it
@@ -31,11 +31,15 @@ module MediaManager
 
     #returns true if str matches any of the exclusion matches
     #ar_of_excludes must be an array of regexes
-    def excluded? str, ar_of_excludes
+    def self.excluded? str, ar_of_excludes
       ar_of_excludes.each {|exclude|
         return true if str.match(exclude)
       }
       false
+    end
+
+    def self.pprint str
+      puts str
     end
 
   end
