@@ -20,8 +20,6 @@
 module MediaManager
   #Functions/methods that are common to all of the MediaManager app
   class MMCommon
-    autoload :Find, 'find'
-
     #scans a target, returning the full path of every item found, in an array
     def scan_target target
       items=[]

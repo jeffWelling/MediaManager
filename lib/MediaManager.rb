@@ -17,7 +17,7 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
-require 'MediaManager/MMCommon'
+autoload :Find, 'find'
 
 module MediaManager
   autoload :VERSION, 'MediaManager/Version'
