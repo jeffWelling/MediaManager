@@ -1,4 +1,3 @@
-#!/usr/bin/env ruby
 =begin
   Copyright 2009, Jeff Welling
 
@@ -18,4 +17,8 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
-
+module MediaManager
+  class Base
+    
+  end
+end

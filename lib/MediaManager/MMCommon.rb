@@ -19,7 +19,7 @@
 =end
 module MediaManager
   #Functions/methods that are common to all of the MediaManager app
-  module MMCommon
+  class MMCommon
     autoload :Find, 'find'
 
     #scans a target, returning the full path of every item found, in an array

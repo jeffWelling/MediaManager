@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 =begin
   Copyright 2009, Jeff Welling
 
@@ -17,32 +18,7 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
-module MediaManager
-  module Command
-    COMMANDS={}
-    DOCS={}
-
-    def self.register(mod_name, doc, *commands)
-      autoload(mod_name, "MediaManager/command/#{mod_name.downcase}")
-      DOC[commands]=doc
-      commands.each{|cmd| COMMANDS[cmd]= mod_name }
-    end
-    
-    register 'Import', 'Imports a file or directory into the library', 'import'
-
-    def self.get(command)
-      if mod_name= COMMANDS[command]
-        const_get(mod_name)
-      end
-    end
-    
-    def self.usage(action, args)
-    end
-    
-    def self.default_usage(o)
-    end
-  
-    def self.parser(action, &block)
-    end
-  end
-end
+current_dir = File.expand_path(File.dirname(__FILE__))
+$LOAD_PATH.unshift(current_dir + "/../lib")
+autoload :MediaManager, 'MediaManager.rb'
+MediaManager::CLI.execute
