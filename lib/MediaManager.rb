@@ -17,6 +17,7 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
+$config_file="~/.mmanager.config.yaml"
 current_dir=File.expand_path(File.dirname(__FILE__))
 unless $LOAD_PATH.first == (current_dir)
   $LOAD_PATH.unshift(current_dir)
@@ -29,5 +30,4 @@ module MediaManager
   autoload :MMCommon, 'MediaManager/MMCommon'
   autoload :CLI, 'MediaManager/CLI'
   autoload :Command, 'MediaManager/Command'
-
 end
