@@ -19,38 +19,40 @@
 =end
 module MediaManager
   #Functions/methods that are common to all of the MediaManager app
-  module MMCommon
-    #scans a target, returning the full path of every item found, in an array
-    def self.scan_target target
-      items=[]
-      Find.find(target) do |it|
-        items << it
+  class MMCommon
+    class << self
+      #scans a target, returning the full path of every item found, in an array
+      def scan_target target
+        items=[]
+        Find.find(target) do |it|
+          items << it
+        end
+        items
       end
-      items
-    end
 
-    #returns true if str matches any of the exclusion matches
-    #ar_of_excludes must be an array of regexes
-    def self.excluded? str, ar_of_excludes
-      ar_of_excludes.each {|exclude|
-        return true if str.match(exclude)
-      }
-      false
-    end
+      #returns true if str matches any of the exclusion matches
+      #ar_of_excludes must be an array of regexes
+      def excluded? str, ar_of_excludes
+        ar_of_excludes.each {|exclude|
+          return true if str.match(exclude)
+        }
+        false
+      end
 
-    def self.pprint str
-      puts str
-    end
+      def pprint str
+        puts str
+      end
 
-    def self.readConfig filename=nil
-			filename||= $config_file
-      return {} unless File.exists?(filename)
-			YAML.load File.read(File.expand_path(filename)
-    end
+      def readConfig filename=nil
+        filename||= $config_file
+        return {} unless File.exists?(filename)
+        YAML.load File.read(File.expand_path(filename))
+      end
 
-    def self.saveConfig config, filename=nil
-		  filename||= $config_file
-			File.open( File.expand_path(filename), 'w') {|f| f.write config.to_yaml }
-    end  
+      def saveConfig config, filename=nil
+        filename||= $config_file
+        File.open( File.expand_path(filename), 'w') {|f| f.write YAML.dump(config) }
+      end
+    end
   end
 end

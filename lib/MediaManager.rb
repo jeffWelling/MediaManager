@@ -24,6 +24,7 @@ unless $LOAD_PATH.first == (current_dir)
 end
 autoload :Find, 'find'
 autoload :OptionParser, 'optparse'
+autoload :YAML, 'yaml'
 
 module MediaManager
   autoload :VERSION, 'MediaManager/Version'
