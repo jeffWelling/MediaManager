@@ -42,5 +42,15 @@ module MediaManager
       puts str
     end
 
+    def self.readConfig filename=nil
+			filename||= $config_file
+      return {} unless File.exists?(filename)
+			YAML.load File.read(File.expand_path(filename)
+    end
+
+    def self.saveConfig config, filename=nil
+		  filename||= $config_file
+			File.open( File.expand_path(filename), 'w') {|f| f.write config.to_yaml }
+    end  
   end
 end
