@@ -25,9 +25,14 @@ module MediaManager
       def parser(o)
         o.banner= "Usage: mmanager import foo/bar/ foo/bar1\nAdds the dir foo/bar/ and the file foo/bar1"
       end
-      
       def execute
         MMCommon.pprint "importing!"
+        import ARGV[0]
+      end
+
+      #Scan for files, import them into the db
+      def import path
+        Storage.importPaths MMCommon.scan_target(path)
       end
     end
   end

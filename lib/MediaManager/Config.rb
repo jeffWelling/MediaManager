@@ -17,21 +17,21 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
-$config_file="~/.mmanager.config.yaml"
-current_dir=File.expand_path(File.dirname(__FILE__))
-unless $LOAD_PATH.first == (current_dir)
-  $LOAD_PATH.unshift(current_dir)
-end
-autoload :Find, 'find'
-autoload :OptionParser, 'optparse'
-autoload :YAML, 'yaml'
-autoload :OpenStruct, 'ostruct'
-
 module MediaManager
-  autoload :VERSION, 'MediaManager/Version'
-  autoload :MMCommon, 'MediaManager/MMCommon'
-  autoload :CLI, 'MediaManager/CLI'
-  autoload :Command, 'MediaManager/Command'
-  autoload :Config, 'MediaManager/Config'
-  autoload :Storage, 'MediaManager/Storage'
+  module Config
+    class << self
+      def initialize
+        @config=OpenStruct.new
+      end
+      attr_reader :config
+      #Read the config file, and load it into the options class variable
+      def loadConfigs
+        @config=OpenStruct.new(MediaManager::MMCommon.readConfig)
+      end
+      #Save the @config openstruct
+      def saveConfigs
+        MediaManager::MMCommon.saveConfig @config
+      end
+    end
+  end
 end

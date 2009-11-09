@@ -22,7 +22,12 @@ module MediaManager
   class CLI
     #Run from the mmanager executable file
     def self.execute
-      parse(ARGV).execute!
+      MediaManager::Config.loadConfigs
+      begin
+        parse(ARGV).execute!
+      ensure
+        MediaManager::Config.saveConfigs
+      end
     end
 
     def self.parse(args)

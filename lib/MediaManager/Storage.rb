@@ -23,7 +23,10 @@ module MediaManager
   #This class will be used, which will decide wether to use sql or whatnot based on configs
   class Storage
     class << self
-      
+      #Take paths, an array of paths, and put it the backend
+      def importPaths paths
+        puts "Importing #{paths.length} things!"
+      end
     end
   end
 end
