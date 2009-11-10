@@ -17,7 +17,7 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
-$config_file="~/.mmanager.config.yaml"
+$config_file="~/.mmanager/mmanager.config.yaml"
 current_dir=File.expand_path(File.dirname(__FILE__))
 unless $LOAD_PATH.first == (current_dir)
   $LOAD_PATH.unshift(current_dir)
