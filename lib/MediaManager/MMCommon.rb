@@ -51,7 +51,11 @@ module MediaManager
 
       def saveConfig config, filename=nil
         filename||= $config_file
-        File.open( File.expand_path(filename), 'w') {|f| f.write YAML.dump(config) }
+        writeFile( YAML.dump(config), filename)
+      end
+
+      def writeFile contents, filename
+        File.open( File.expand_path(filename), 'w') {|f| f.write contents }
       end
     end
   end
