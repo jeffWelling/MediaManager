@@ -24,13 +24,16 @@ module MediaManager
   $yaml_import_list='~/.mmanager/import_list.yaml'
   class Storage
     class << self
-      #Take paths, an array of paths, and put it the backend
-      def importPaths paths
-        puts "Importing #{paths.length} things!"
-
-      end
       def saveToYaml paths
         MMCommon.writeFile YAML.dump(paths), $yaml_import_list
+      end 
+      #Take paths, an array of paths, and put it the backend
+      def importPaths paths
+        saveToYaml(paths)
+      end
+      #Sql method to import paths to sql database, swappable with the saveToYaml method
+      def savePathsToSql
+        
       end
     end
   end
