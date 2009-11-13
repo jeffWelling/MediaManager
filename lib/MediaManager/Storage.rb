@@ -42,7 +42,14 @@ module MediaManager
         
       end
       def sqlConnect
-        $using==:sqlite ? DBI.connect( ) : DBI.connect("dbi:Mysql:mmanager:#{$mysql_host}", $mysql_user, $mysql_pass)
+        FileUtils.makedirs(File.dirname(File.expand_path($sqlite_file))) if $using==:sqlite and !File.directory?(File.dirname(File.expand_path($sqlite_file)))
+        #requires the libdbd-sqlite3-ruby package if your getting "DBI::InterfaceError: Unable to load driver 'sqlite3'"
+        $using==:sqlite ? DBI.connect("dbi:sqlite3:#{File.expand_path($sqlite_file)}") : DBI.connect("dbi:Mysql:mmanager:#{$mysql_host}", $mysql_user, $mysql_pass)
+      end
+      def createImportPathsTable sql_handle=nil
+        sql_handle||=sqlConnect
+        sql_handle.do("create table paths(id integer primary key, path varchar)")
+        sql_handle.disconnect
       end
     end
   end

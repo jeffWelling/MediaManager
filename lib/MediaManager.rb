@@ -26,6 +26,8 @@ autoload :Find, 'find'
 autoload :OptionParser, 'optparse'
 autoload :YAML, 'yaml'
 autoload :OpenStruct, 'ostruct'
+autoload :DBI, 'dbi'
+autoload :FileUtils, 'fileutils'
 
 module MediaManager
   autoload :VERSION, 'MediaManager/Version'
