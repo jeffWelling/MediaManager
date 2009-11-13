@@ -21,7 +21,7 @@ module MediaManager
   #This class is meant to be the abstracted interface to the information storage system
   #Instead of coding specifically for a SQL database or YAML file as a database backend,
   #This class will be used, which will decide wether to use sql or whatnot based on configs
-  $using=:sqlite       #One of either :sqlite, :mysql, or :yaml
+  $using=:yaml       #One of either :sqlite, :mysql, or :yaml
   $yaml_import_list='~/.mmanager/import_list.yaml'
   $sqlite_file='~/.mmanager/mmanager.sqlite'
   $sql_database='mmanager'  #We will assume the database is already created, by jebus or someone.
@@ -30,13 +30,20 @@ module MediaManager
   $mysql_pass='omgwtfbbqsqlpass'
   class Storage
     class << self
+      def sqlConnect
+        FileUtils.makedirs(File.dirname(File.expand_path($sqlite_file))) if $using==:sqlite and !File.directory?(File.dirname(File.expand_path($sqlite_file)))
+        #requires the libdbd-sqlite3-ruby package if your getting "DBI::InterfaceError: Unable to load driver 'sqlite3'"
+        $using==:sqlite ? DBI.connect("dbi:sqlite3:#{File.expand_path($sqlite_file)}") : DBI.connect("dbi:Mysql:mmanager:#{$mysql_host}", $mysql_user, $mysql_pass)
+      end
+      def createImportPathsTable sql_handle=nil
+        sql_handle||=sqlConnect
+        sql_handle= sqlConnect if sql_handle.disconnected?
+        sql_handle.do("create table paths(id integer primary key, path varchar)")
+        sql_handle.disconnect
+      end
       def saveToYaml paths
         MMCommon.writeFile YAML.dump(paths), $yaml_import_list
       end 
-      #Take paths, an array of paths, and put it the backend
-      def importPaths paths
-        $using!=:sqlite ? saveToYaml(paths) : savePathsToSql(paths)
-      end
       #Sql method to import paths to sql database, swappable with the saveToYaml method
       def savePathsToSql paths
         begin
@@ -57,16 +64,9 @@ module MediaManager
           handle.disconnect
         end
       end
-      def sqlConnect
-        FileUtils.makedirs(File.dirname(File.expand_path($sqlite_file))) if $using==:sqlite and !File.directory?(File.dirname(File.expand_path($sqlite_file)))
-        #requires the libdbd-sqlite3-ruby package if your getting "DBI::InterfaceError: Unable to load driver 'sqlite3'"
-        $using==:sqlite ? DBI.connect("dbi:sqlite3:#{File.expand_path($sqlite_file)}") : DBI.connect("dbi:Mysql:mmanager:#{$mysql_host}", $mysql_user, $mysql_pass)
-      end
-      def createImportPathsTable sql_handle=nil
-        sql_handle||=sqlConnect
-        sql_handle= sqlConnect if sql_handle.disconnected?
-        sql_handle.do("create table paths(id integer primary key, path varchar)")
-        sql_handle.disconnect
+      #Take paths, an array of paths, and store it in the selected backend
+      def importPaths paths
+        $using!=:sqlite ? saveToYaml(paths) : savePathsToSql(paths)
       end
     end
   end
