@@ -24,7 +24,7 @@ module MediaManager
       #scans a target, returning the full path of every item found, in an array
       def scan_target target
         items=[]
-        Find.find(target) do |it|
+        Find.find(File.expand_path(target)) do |it|
           items << it
         end
         items
