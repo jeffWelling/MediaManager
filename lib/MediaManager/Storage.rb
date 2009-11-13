@@ -35,11 +35,27 @@ module MediaManager
       end 
       #Take paths, an array of paths, and put it the backend
       def importPaths paths
-        $using==:sqlite ? saveToYaml(paths) : savePathsToSql(paths)
+        $using!=:sqlite ? saveToYaml(paths) : savePathsToSql(paths)
       end
       #Sql method to import paths to sql database, swappable with the saveToYaml method
       def savePathsToSql paths
-        
+        begin
+          e=nil
+          s=nil
+          handle= sqlConnect
+          paths.each {|path|
+            #Feels like we should be escaping path before using it, but I can't find a sqlite3 escapeString method...?
+            e=path
+            handle.do( s="insert into paths (path) values (' #{path} ') " )
+          }
+        rescue DBI::ProgrammingError => er
+          (createImportPathsTable(handle) and retry) if er.to_s[/no such table/i]
+          puts e
+          puts s
+          raise er
+        ensure
+          handle.disconnect
+        end
       end
       def sqlConnect
         FileUtils.makedirs(File.dirname(File.expand_path($sqlite_file))) if $using==:sqlite and !File.directory?(File.dirname(File.expand_path($sqlite_file)))
@@ -48,6 +64,7 @@ module MediaManager
       end
       def createImportPathsTable sql_handle=nil
         sql_handle||=sqlConnect
+        sql_handle= sqlConnect if sql_handle.disconnected?
         sql_handle.do("create table paths(id integer primary key, path varchar)")
         sql_handle.disconnect
       end
