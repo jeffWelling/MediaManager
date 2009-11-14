@@ -17,24 +17,18 @@
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
   
 =end
-$config_file="~/.mmanager/mmanager.config.yaml"
-current_dir=File.expand_path(File.dirname(__FILE__))
-unless $LOAD_PATH.first == (current_dir)
-  $LOAD_PATH.unshift(current_dir)
-end
-autoload :Find, 'find'
-autoload :OptionParser, 'optparse'
-autoload :YAML, 'yaml'
-autoload :OpenStruct, 'ostruct'
-autoload :DBI, 'dbi'
-autoload :FileUtils, 'fileutils'
-
 module MediaManager
-  autoload :VERSION, 'MediaManager/Version'
-  autoload :MMCommon, 'MediaManager/MMCommon'
-  autoload :CLI, 'MediaManager/CLI'
-  autoload :Command, 'MediaManager/Command'
-  autoload :Config, 'MediaManager/Config'
-  autoload :Storage, 'MediaManager/Storage'
-  autoload :Media, 'MediaManager/Media'
+  module Media
+    #Ever file in the library will be represented by an object, this class defines those objects such as movies, tv shows, books, pictures...
+    class MediaFile
+    end
+
+    class Movie<MediaFile
+      def initialize
+        @title=''
+        @path=''
+      end
+      attr_reader :path, :title
+    end
+  end
 end
