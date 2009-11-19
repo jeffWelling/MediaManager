@@ -32,7 +32,13 @@ module MediaManager
 
       #Scan for files, import them into the db
       def import path
-        Storage.savePaths MMCommon.scan_target(path)
+        i=0
+        paths={}
+        MMCommon.scan_target(path).each {|file_found|
+          paths.merge!( {i=>file_found} )
+          i+=1
+        }
+        Storage.savePaths paths.sort
       end
     end
   end
