@@ -22,12 +22,14 @@ module MediaManager
   #Instead of coding specifically for a SQL database or YAML file as a database backend,
   #This class will be used, which will decide wether to use sql or whatnot based on configs
   $using=:yaml       #One of either :sqlite, :mysql, or :yaml
-  $yaml_import_list='~/.mmanager/import_list.yaml'
-  $sqlite_file='~/.mmanager/mmanager.sqlite'
+  $basedir='~/.mmanager/'
+  $yaml_import_list= $basedir + 'import_list.yaml'
+  $sqlite_file= $basedir + 'mmanager.sqlite'
   $sql_database='mmanager'  #We will assume the database is already created, by jebus or someone.
   $mysql_host='mysql'
   $mysql_user='omgwtfbbqsqluser'
   $mysql_pass='omgwtfbbqsqlpass'
+  $import_list= $basedir + 'import_list.yaml'
   class Storage
     class << self
       def sqlConnect
