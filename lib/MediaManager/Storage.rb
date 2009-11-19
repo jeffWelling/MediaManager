@@ -68,8 +68,10 @@ module MediaManager
         end
       end
       def readPathsFromYaml
+        YAML.load MMCommon.readFile($import_list).join
       end
       def readPathsFromSql
+        #TODO Complete me
       end
 
       #Take paths, an array of paths, and store it in the selected backend
