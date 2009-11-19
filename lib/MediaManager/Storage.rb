@@ -65,10 +65,17 @@ module MediaManager
           handle.disconnect
         end
       end
+      def readPathsFromYaml
+      end
+      def readPathsFromSql
+      end
 
       #Take paths, an array of paths, and store it in the selected backend
       def savePaths paths
         $using == :yaml ? savePathsToYaml(paths) : savePathsToSql(paths)
+      end
+      def readPaths
+        $using == :yaml ? readPathsFromYaml : readPathsFromSql
       end
     end
   end
