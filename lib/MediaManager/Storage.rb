@@ -67,7 +67,7 @@ module MediaManager
       end
 
       #Take paths, an array of paths, and store it in the selected backend
-      def importPaths paths
+      def savePaths paths
         $using!=:sqlite ? savePathsToYaml(paths) : savePathsToSql(paths)
       end
     end
