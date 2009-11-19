@@ -46,7 +46,7 @@ module MediaManager
       def readConfig filename=nil
         filename||= $config_file
         return OpenStruct.new unless File.exists?(File.expand_path(filename))
-        YAML.load File.read(File.expand_path(filename))
+        YAML.load readFile(filename).join
       end
 
       def saveConfig config, filename=nil
