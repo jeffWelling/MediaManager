@@ -57,6 +57,16 @@ module MediaManager
       def writeFile contents, filename
         File.open( File.expand_path(filename), 'w') {|f| f.write contents }
       end
+      def readFile filename, maxlines=0
+        i=0
+        read_so_far=[]
+        f=File.open(File.expand_path(filename), 'r')
+        while (line=f.gets)
+          break if maxlines!=0 and i >= maxlines
+          read_so_far << line and i+=1
+        end
+        read_so_far
+      end
     end
   end
 end
