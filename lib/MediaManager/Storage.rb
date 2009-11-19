@@ -41,7 +41,8 @@ module MediaManager
         sql_handle.do("create table paths(id integer primary key, path varchar)")
         sql_handle.disconnect
       end
-      def saveToYaml paths
+
+      def savePathsToYaml paths
         MMCommon.writeFile YAML.dump(paths), $yaml_import_list
       end 
       #Sql method to import paths to sql database, swappable with the saveToYaml method
@@ -64,9 +65,10 @@ module MediaManager
           handle.disconnect
         end
       end
+
       #Take paths, an array of paths, and store it in the selected backend
       def importPaths paths
-        $using!=:sqlite ? saveToYaml(paths) : savePathsToSql(paths)
+        $using!=:sqlite ? savePathsToYaml(paths) : savePathsToSql(paths)
       end
     end
   end
