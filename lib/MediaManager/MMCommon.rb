@@ -67,6 +67,32 @@ module MediaManager
         end
         read_so_far
       end
+
+      def sha1 stuff, is_file=false
+        digest=Digest::SHA1.new
+        if is_file.class == TrueClass
+          pprint "Hashing #{stuff}\n"
+          exp_stuff=File.expand_path(stuff)
+          so_far=0
+          size=File.size(exp_stuff)
+          current=size/50   #Reporting increment
+          open(exp_stuff, 'r') do |io|
+            while ( !io.eof )
+              read_buffer=io.readpartial(1025)
+              so_far+=1024
+              if so_far > current
+                pprint '.' unless size < 1024*50
+                current+=size/50
+              end
+              digest.update(read_buffer)
+            end
+          end
+          pprint "\n" unless size < 1024*50
+        else #Hash the string
+          digest.update(stuff)
+        end
+        digest.hexdigest
+      end
     end
   end
 end

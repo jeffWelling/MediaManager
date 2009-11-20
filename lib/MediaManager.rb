@@ -28,6 +28,7 @@ autoload :YAML, 'yaml'
 autoload :OpenStruct, 'ostruct'
 autoload :DBI, 'dbi'
 autoload :FileUtils, 'fileutils'
+autoload :Digest, 'digest/sha1'
 
 module MediaManager
   autoload :VERSION, 'MediaManager/Version'
