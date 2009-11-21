@@ -31,9 +31,9 @@ module MediaManager
         MMCommon.pprint "Hashing #{paths.length} items.  Turn the volcano on, this will take a while."
         paths.each {|p|
           #p[0] = it's ID, and p[1]= the path
-          hashes.merge!({ p[0] => MMCommon.sha1(p[1], true) })
+          hashes.merge!({ p[0] => [MMCommon.sha1(p[1], true), p[1]] })
         }
-        Storage.saveHashes hashes
+        Storage.saveHashes hashes.sort
       end
     end
   end
