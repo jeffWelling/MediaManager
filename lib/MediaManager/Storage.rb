@@ -30,6 +30,7 @@ module MediaManager
   $mysql_user='omgwtfbbqsqluser'
   $mysql_pass='omgwtfbbqsqlpass'
   $import_list= $basedir + 'import_list.yaml'
+  $hashes_list= $basedir + 'hashes.yaml'
   class Storage
     class << self
       def sqlConnect
@@ -80,6 +81,24 @@ module MediaManager
       end
       def readPaths
         $using == :yaml ? readPathsFromYaml : readPathsFromSql
+      end
+
+      def saveHashesToYaml hashes
+        MMCommon.writeFile YAML.dump(hashes), $hashes_list
+      end
+      def saveHashesToSql hashes
+        #TODO Code me!
+      end
+      def readHashesFromYaml
+        YAML.load MMCommon.readFile($hashes_list).join
+      end
+      def readHashesFromSql
+      end
+      def saveHashes hashes
+        $using == :yaml ? saveHashesToYaml(hashes) : saveHashesToSql(hashes)
+      end
+      def readHashes
+        $using == :yaml ? readHashesFromYaml : readHashesFromSql
       end
     end
   end

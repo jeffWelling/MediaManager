@@ -31,6 +31,7 @@ module MediaManager
     register 'Import', 'Imports a file or directory into the library', 'import'
     register 'Config', 'Allows configuring via Irb, saving to the config file', 'config'
     register 'Remap', 'Creates a Library directory from your media files', 'remap'
+    register 'Hasher', 'Reads the paths, and generates hashes for the files', 'hasher'
 
     def self.get(command)
       if mod_name= COMMANDS[command]
