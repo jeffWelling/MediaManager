@@ -40,7 +40,7 @@ module MediaManager
       end
 
       def pprint str
-        printf str
+        printf str.to_s
       end
 
       def readConfig filename=nil
