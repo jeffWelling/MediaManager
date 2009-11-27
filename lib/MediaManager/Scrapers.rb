@@ -18,16 +18,15 @@
   
 =end
 module MediaManager
-  module Media
-    #Ever file in the library will be represented by an object, this class defines those objects such as movies, tv shows, books, pictures...
-    class MediaFile
-    end
-    class Movie<MediaFile
-      def initialize
-        @title=''
-        @path=''
-      end
-      attr_reader :path, :title
+
+  module Scrapers
+    SCRAPERS={}
+    SCRAPER_DOCS={}
+
+    def self.register(plugin_name, doc, *commands)
+      autoload( plugin_name, "MediaManager/scrapers/#{plugin_name.downcase}")
+      SCRAPER_DOCS[commands]=doc
+      commands.each{|cmd| SCRAPERS[cmd]= plugin_name }
     end
   end
 end
