@@ -19,12 +19,11 @@
 =end
 module MediaManager
   module Scrapers
-    SCRAPERS=[]
-    class << self
-      def loadScrapers
-        Dir.glob(File.expand_path("lib/MediaManager/scrapers/*")).each {|scraper|
-          load scraper
-        }
+    module TestScraper
+      class << self
+        def doit
+          puts 'jesusfuck'
+        end
       end
     end
   end

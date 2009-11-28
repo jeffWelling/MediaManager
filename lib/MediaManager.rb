@@ -37,5 +37,7 @@ module MediaManager
   autoload :Command, 'MediaManager/Command'
   autoload :Config, 'MediaManager/Config'
   autoload :Storage, 'MediaManager/Storage'
+  autoload :Scrapers, 'MediaManager/Scrapers'
   autoload :Media, 'MediaManager/Media'
+  autoload :Metadata, 'MediaManager/Metadata'
 end
