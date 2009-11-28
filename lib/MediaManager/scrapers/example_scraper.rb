@@ -18,16 +18,16 @@
 =end
 
 #Example scraper module
-#module MediaManager
-#  module Scrapers
-#    module TestScraper
-#      class << self
-#        #Accessible in irb as MediaManager::Scrapers::TestScraper.doit
-#        def doit
-#          puts 'jesusfuck'
-#        end
-#      end
-#    end
-#  end
-#end
+module MediaManager
+  module Scrapers
+    module TestScraper
+      class << self
+        #Accessible in irb as MediaManager::Scrapers::TestScraper.doit
+        def doit
+          puts 'jesusfuck'
+        end
+      end
+    end
+  end
+end
 

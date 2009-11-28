@@ -27,5 +27,6 @@ module MediaManager
         }
       end
     end
+    loadScrapers
   end
 end
