@@ -23,6 +23,7 @@ module MediaManager
     class << self
       def loadScrapers
         Dir.glob(File.expand_path("lib/MediaManager/scrapers/*")).each {|scraper|
+          SCRAPERS<<File.basename(scraper, '.rb').capitalize
           load scraper
         }
       end
