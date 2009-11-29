@@ -18,14 +18,23 @@
   
 =end
 module MediaManager
+  #This module interfaces with the various scrapers.
+  #It will only return MediaFiles so you don't have to worry about dealing with various formats
+  #for each of the scrapers. 
   module Scrapers
     SCRAPERS=[]
     class << self
+      #Load the scrapers in the scrapers/ dir.
       def loadScrapers
         Dir.glob(File.expand_path("lib/MediaManager/scrapers/*")).each {|scraper|
-          SCRAPERS<<File.basename(scraper, '.rb').capitalize
+          SCRAPERS << File.basename(scraper, '.rb').capitalize
+          SCRAPERS.uniq!
           load scraper
         }
+      end
+      #search all available scrapers for str, returning all results (which will be MediaFiles or decendants of)
+      def search str
+        
       end
     end
     loadScrapers
