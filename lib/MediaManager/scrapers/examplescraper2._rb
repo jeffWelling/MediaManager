@@ -15,7 +15,6 @@
 
     You should have received a copy of the GNU General Public License
     along with MediaManager.  If not, see <http://www.gnu.org/licenses/>.
-=end
 
 #Example scraper module
 module MediaManager
@@ -37,4 +36,4 @@ module MediaManager
     end
   end
 end
-
+=end

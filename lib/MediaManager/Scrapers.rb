@@ -27,9 +27,11 @@ module MediaManager
       #Load the scrapers in the scrapers/ dir.
       def loadScrapers
         Dir.glob(File.expand_path("lib/MediaManager/scrapers/*")).each {|scraper|
-          load scraper
-          SCRAPERS << eval( "MediaManager::Scrapers::#{File.basename(scraper, '.rb').capitalize}" )
-          SCRAPERS.uniq!
+          if scraper[/\.rb\s?$/]
+            load scraper
+            SCRAPERS << eval( "MediaManager::Scrapers::#{File.basename(scraper, '.rb').capitalize}" )
+            SCRAPERS.uniq!
+          end
         }
       end
       def wrapper searchterm,  &block
