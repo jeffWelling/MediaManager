@@ -40,7 +40,7 @@ module MediaManager
         results=[]
         SCRAPERS.each {|scraper|
           extend(scraper)
-          (results += wrapper(str, &method(:search)) )
+          results += wrapper(str, &method(:search))
         }
         results
       end
