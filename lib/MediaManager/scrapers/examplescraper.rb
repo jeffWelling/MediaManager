@@ -27,6 +27,12 @@ module MediaManager
         def doit
           puts 'jesusfuck'
         end
+        #All scrapers should have a search() method
+        #This search method should return an array of MediaFiles (or decendants)
+        #MediaManager::Media::MediaFile
+        def search str
+          [str, str, str]
+        end
       end
     end
   end

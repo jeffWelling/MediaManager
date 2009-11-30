@@ -27,14 +27,25 @@ module MediaManager
       #Load the scrapers in the scrapers/ dir.
       def loadScrapers
         Dir.glob(File.expand_path("lib/MediaManager/scrapers/*")).each {|scraper|
-          SCRAPERS << File.basename(scraper, '.rb').capitalize
-          SCRAPERS.uniq!
           load scraper
+          SCRAPERS << eval( "MediaManager::Scrapers::#{File.basename(scraper, '.rb').capitalize}" )
+          SCRAPERS.uniq!
         }
       end
-      #search all available scrapers for str, returning all results (which will be MediaFiles or decendants of)
-      def search str
+      def wrapper searchterm, &block
+        yield(searchterm)
         
+      end
+      #search all available scrapers for str, returning all results (which will be MediaFiles or decendants of)
+      def searchFor str
+        results=[]
+        SCRAPERS.each {|scraper|
+          require 'pp'
+          pp SCRAPERS
+          extend(scraper)
+          (results << wrapper(str, &method(:search)) ) if respond_to?(:search)
+        }
+        results
       end
     end
     loadScrapers
