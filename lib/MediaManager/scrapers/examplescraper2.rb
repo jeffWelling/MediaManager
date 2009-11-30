@@ -21,18 +21,18 @@
 module MediaManager
   module Scrapers
     #Note that the name of the module is the same as the 
-    module Examplescraper
+    module Examplescraper2
       class << self
         #Accessible in irb as MediaManager::Scrapers::TestScraper.doit
         def doit
-          puts 'jesusfuck'
+          puts 'jesusfuckit'
         end
       end
       #All scrapers should have a search() method
       #This search method should return an array of MediaFiles (or decendants)
       #MediaManager::Media::MediaFile
       def search str
-        [str, str, str]
+        [str+'x', str+'y', str+'z']
       end
     end
   end

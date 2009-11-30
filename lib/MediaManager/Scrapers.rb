@@ -32,18 +32,15 @@ module MediaManager
           SCRAPERS.uniq!
         }
       end
-      def wrapper searchterm, &block
+      def wrapper searchterm,  &block
         yield(searchterm)
-        
       end
       #search all available scrapers for str, returning all results (which will be MediaFiles or decendants of)
       def searchFor str
         results=[]
         SCRAPERS.each {|scraper|
-          require 'pp'
-          pp SCRAPERS
           extend(scraper)
-          (results << wrapper(str, &method(:search)) ) if respond_to?(:search)
+          (results += wrapper(str, &method(:search)) )
         }
         results
       end
