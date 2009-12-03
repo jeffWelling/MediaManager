@@ -21,13 +21,25 @@ module MediaManager
   module Media
     #Ever file in the library will be represented by an object, this class defines those objects such as movies, tv shows, books, pictures...
     class MediaFile
+      @title=nil
+      @path=nil
+      attr_reader :path, :title
     end
     class Movie<MediaFile
-      def initialize
-        @title=''
-        @path=''
-      end
-      attr_reader :path, :title
+    end
+    class TVShow<MediaFile
+      @tvdb_series_ID=nil    #thetvdbSeriesID, id, seriesid
+      @episode_ID=nil         #episodeID
+      @episode_number=nil     #episodeNumber
+      @season=nil            #Season
+      @series_ID=nil          #seriesID
+      @series_first_aired=nil#FirstAired
+      @banners=[]            #banner
+      @series_overview=nil   #Overview
+      @language=nil          #lang
+      @title=nil             #SeriesName, Title
+      attr_reader :tvdb_series_ID, :episode_ID, :episode_number, :season, :series_ID, :series_first_aired, :banners,
+        :series_overview, :language, :title
     end
   end
 end
