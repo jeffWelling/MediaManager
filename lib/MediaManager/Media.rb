@@ -23,8 +23,9 @@ module MediaManager
     class MediaFile
       @title=nil
       @path=nil
-      attr_reader :path, :title
+      attr_accessor :path, :title
     end
+
     class Movie<MediaFile
     end
     class TVShow<MediaFile
@@ -38,7 +39,7 @@ module MediaManager
       @series_overview=nil   #Overview
       @language=nil          #lang
       @title=nil             #SeriesName, Title
-      attr_reader :tvdb_series_ID, :episode_ID, :episode_number, :season, :series_ID, :series_first_aired, :banners,
+      attr_accessor :tvdb_series_ID, :episode_ID, :episode_number, :season, :series_ID, :series_first_aired, :banners,
         :series_overview, :language, :title
     end
   end
