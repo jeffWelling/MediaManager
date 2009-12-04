@@ -21,9 +21,10 @@ module MediaManager
   module Media
     #Ever file in the library will be represented by an object, this class defines those objects such as movies, tv shows, books, pictures...
     class MediaFile
+      @categoryTags=nil
       @title=nil
       @path=nil
-      attr_accessor :path, :title
+      attr_accessor :path, :title, :categoryTags
     end
 
     class Movie<MediaFile

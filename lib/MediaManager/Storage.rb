@@ -100,6 +100,12 @@ module MediaManager
       def readHashes
         $using == :yaml ? readHashesFromYaml : readHashesFromSql
       end
+
+      #Lookup metadata by path.  Will return nil if path has not been processed.
+      #Returns a single populated MediaFile class (or child) if path has been processed. Nil otherwise.
+      def metaByPath  path
+        return nil
+      end
     end
   end
 end
