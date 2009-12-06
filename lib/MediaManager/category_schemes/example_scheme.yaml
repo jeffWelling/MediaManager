@@ -1,0 +1,11 @@
+--- 
+:_Library: 
+  :By_Genre:
+    :_Genre: 
+      :"__year - __title": []
+  :By_Tags:
+    :_Tag:
+      :"__year - __title": []
+  :Fresh_Items:
+    :"__year-__month-__day  __title": []
+
