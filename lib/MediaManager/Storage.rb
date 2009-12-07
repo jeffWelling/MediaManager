@@ -21,22 +21,22 @@ module MediaManager
   #This class is meant to be the abstracted interface to the information storage system
   #Instead of coding specifically for a SQL database or YAML file as a database backend,
   #This class will be used, which will decide wether to use sql or whatnot based on configs
-  $using=:yaml       #One of either :sqlite, :mysql, or :yaml
-  $basedir='~/.mmanager/'
-  $yaml_import_list= $basedir + 'import_list.yaml'
-  $sqlite_file= $basedir + 'mmanager.sqlite'
-  $sql_database='mmanager'  #We will assume the database is already created, by jebus or someone.
-  $mysql_host='mysql'
-  $mysql_user='omgwtfbbqsqluser'
-  $mysql_pass='omgwtfbbqsqlpass'
-  $import_list= $basedir + 'import_list.yaml'
-  $hashes_list= $basedir + 'hashes.yaml'
+  Using=:yaml       #One of either :sqlite, :mysql, or :yaml
+  Basedir='~/.mmanager/'
+  Yaml_import_list= Basedir + 'import_list.yaml'
+  Sqlite_file= Basedir + 'mmanager.sqlite'
+  Sql_database='mmanager'  #We will assume the database is already created, by jebus or someone.
+  Mysql_host='mysql'
+  Mysql_user='omgwtfbbqsqluser'
+  Mysql_pass='omgwtfbbqsqlpass'
+  Import_list= Basedir + 'import_list.yaml'
+  Hashes_list= Basedir + 'hashes.yaml'
   class Storage
     class << self
       def sqlConnect
-        FileUtils.makedirs(File.dirname(File.expand_path($sqlite_file))) if $using==:sqlite and !File.directory?(File.dirname(File.expand_path($sqlite_file)))
+        FileUtils.makedirs(File.dirname(File.expand_path(Sqlite_file))) if Using==:sqlite and !File.directory?(File.dirname(File.expand_path(Sqlite_file)))
         #requires the libdbd-sqlite3-ruby package if your getting "DBI::InterfaceError: Unable to load driver 'sqlite3'"
-        $using==:sqlite ? DBI.connect("dbi:sqlite3:#{File.expand_path($sqlite_file)}") : DBI.connect("dbi:Mysql:mmanager:#{$mysql_host}", $mysql_user, $mysql_pass)
+        Using==:sqlite ? DBI.connect("dbi:sqlite3:#{File.expand_path(Sqlite_file)}") : DBI.connect("dbi:Mysql:mmanager:#{Mysql_host}", Mysql_user, Mysql_pass)
       end
       def createImportPathsTable sql_handle=nil
         sql_handle||=sqlConnect
@@ -46,7 +46,7 @@ module MediaManager
       end
 
       def savePathsToYaml paths
-        MMCommon.writeFile YAML.dump(paths), $yaml_import_list
+        MMCommon.writeFile YAML.dump(paths), Yaml_import_list
       end 
       #Sql method to import paths to sql database, swappable with the saveToYaml method
       def savePathsToSql paths
@@ -69,7 +69,7 @@ module MediaManager
         end
       end
       def readPathsFromYaml
-        YAML.load MMCommon.readFile($import_list).join
+        YAML.load MMCommon.readFile(Import_list).join
       end
       def readPathsFromSql
         #TODO Complete me
@@ -77,28 +77,28 @@ module MediaManager
 
       #Take paths, an array of paths, and store it in the selected backend
       def savePaths paths
-        $using == :yaml ? savePathsToYaml(paths) : savePathsToSql(paths)
+        Using == :yaml ? savePathsToYaml(paths) : savePathsToSql(paths)
       end
       def readPaths
-        $using == :yaml ? readPathsFromYaml : readPathsFromSql
+        Using == :yaml ? readPathsFromYaml : readPathsFromSql
       end
 
       def saveHashesToYaml hashes
-        MMCommon.writeFile YAML.dump(hashes), $hashes_list
+        MMCommon.writeFile YAML.dump(hashes), Hashes_list
       end
       def saveHashesToSql hashes
         #TODO Code me!
       end
       def readHashesFromYaml
-        YAML.load MMCommon.readFile($hashes_list).join
+        YAML.load MMCommon.readFile(Hashes_list).join
       end
       def readHashesFromSql
       end
       def saveHashes hashes
-        $using == :yaml ? saveHashesToYaml(hashes) : saveHashesToSql(hashes)
+        Using == :yaml ? saveHashesToYaml(hashes) : saveHashesToSql(hashes)
       end
       def readHashes
-        $using == :yaml ? readHashesFromYaml : readHashesFromSql
+        Using == :yaml ? readHashesFromYaml : readHashesFromSql
       end
 
       #Lookup metadata by path.  Will return nil if path has not been processed.
