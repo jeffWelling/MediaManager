@@ -32,7 +32,7 @@ module MediaManager
       def loadSchemes
         Dir.glob(File.expand_path("lib/MediaManager/categorization_schemes/*")).each {|cat_scheme|
           if cat_scheme[/\.yaml\s?$/i]
-            SCHEMES << (scheme=YAML.load(cat_scheme)) if valid_scheme?(scheme)
+            SCHEMES << (scheme=YAML.load( MMCommon.readFile(cat_scheme).to_s )) if valid_scheme?(scheme)
           end
         }
       end
