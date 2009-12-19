@@ -37,7 +37,7 @@ module MediaManager
         def flatten hash
           x={}
           hash.each_pair {|k,v|
-            x.merge!({ k=>v[0] })
+            x.merge!({ k=> (v.class==Array and v.length == 1 ? (v[0]) : (v)) })
           }
           x
         end
