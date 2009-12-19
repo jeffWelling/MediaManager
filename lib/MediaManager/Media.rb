@@ -34,13 +34,12 @@ module MediaManager
       @episode_ID=nil         #episodeID
       @episode_number=nil     #episodeNumber
       @season=nil            #Season
-      @series_ID=nil          #seriesID
       @series_first_aired=nil#FirstAired
       @banners=[]            #banner
       @series_overview=nil   #Overview
       @language=nil          #lang
       @title=nil             #SeriesName, Title
-      attr_accessor :tvdb_series_ID, :episode_ID, :episode_number, :season, :series_ID, :series_first_aired, :banners,
+      attr_accessor :tvdb_series_ID, :episode_ID, :episode_number, :season, :series_first_aired, :banners,
         :series_overview, :language, :title
     end
   end
