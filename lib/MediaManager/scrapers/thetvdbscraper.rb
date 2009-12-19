@@ -32,6 +32,16 @@ module MediaManager
         
         results
       end
+      class << self
+        #Takes a hash, expecting the values stored to be in an array such as [x].  It returns a hash with the values taken out of the array
+        def flatten hash
+          x={}
+          hash.each_pair {|k,v|
+            x.merge!({ k=>v[0] })
+          }
+          x
+        end
+      end
     end
   end
 end
