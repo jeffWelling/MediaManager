@@ -28,8 +28,11 @@ autoload :YAML, 'yaml'
 autoload :OpenStruct, 'ostruct'
 autoload :DBI, 'dbi'
 autoload :FileUtils, 'fileutils'
+
 require 'digest/sha1'
 require 'libthetvdb/lib/libthetvdb.rb'
+
+autoload :TMDBParty, 'tmdb_party/lib/tmdb_party.rb'
 
 module MediaManager
   autoload :VERSION, 'MediaManager/Version'
