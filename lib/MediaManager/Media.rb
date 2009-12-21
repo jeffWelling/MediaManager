@@ -49,7 +49,7 @@ module MediaManager
       @budget=nil
       @score=nil
       @revenue=nil
-      attr_accessor :overveiw, :tmdb_id, :imdb_id, :movie_type, :tmdb_url, :tmdb_popularity,
+      attr_accessor :overview, :tmdb_id, :imdb_id, :movie_type, :tmdb_url, :tmdb_popularity,
         :alternative_title, :released, :posters, :homepage, :trailer, :runtime, :genres,
         :cast, :countries, :rating, :backdrops, :studios, :budget, :score, :revenue 
     end
