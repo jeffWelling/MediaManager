@@ -19,7 +19,7 @@
 #Example scraper module
 module MediaManager
   module Scrapers
-    #Note that the name of the module is the same as the 
+    #Note that the name of the module is the same as the capitalized filename 
     module Thetvdbscraper
       #All scrapers should have a search() method
       #This search method should return an array of MediaFiles (or decendants)
