@@ -4,3 +4,6 @@
 [submodule "moviedb"]
 	path = moviedb
 	url = git@github.com:jeffWelling/moviedb.git
+[submodule "tmdb_party"]
+	path = tmdb_party
+	url = git://github.com/jeffWelling/tmdb_party.git
