@@ -28,6 +28,20 @@ module MediaManager
     end
 
     class Movie<MediaFile
+      @overview=nil
+      @tmdb_id=nil
+      @imdb_id=nil
+      @movie_type=nil
+      @tmdb_url=nil
+      @tmdb_popularity=nil
+      @alternative_title=nil
+      @released=nil
+      @posters=nil
+      @homepage=nil
+      @trailer=nil
+      @runtime=nil
+      @genres=nil
+      @cast=nil
     end
     class TVShow<MediaFile
       @tvdb_series_ID=nil    #thetvdbSeriesID, id, seriesid
