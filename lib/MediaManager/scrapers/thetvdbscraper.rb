@@ -26,7 +26,6 @@ module MediaManager
       #MediaManager::Media::MediaFile
       class << self
         def search str
-          require 'pp'
           results= [Thetvdb.search(str)]
           return [] if results[0].class==Hash and results[0].empty?
           details= Thetvdb.formatTvdbResults results[0]
