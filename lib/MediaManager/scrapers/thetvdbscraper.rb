@@ -43,7 +43,8 @@ module MediaManager
           list_of_results=[] 
           series_details.each_pair {|k,h|
             $it=h
-            puts h.inspect
+            #If there is only one episode in the EpisodeList, then it may not be in an array.
+            h['EpisodeList']=[h['EpisodeList']] unless h['EpisodeList'].class==Array
             h['EpisodeList'].each {|episode|
               item=MediaManager::Media::TVShow.new
               item.tvdb_series_ID= h['tvdbSeriesID'] 
