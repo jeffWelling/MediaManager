@@ -26,6 +26,40 @@ module MediaManager
       #MediaManager::Media::MediaFile
       class << self
         def search str
+          tmdb= TMDBParty::Base.new MediaManager::MMCommon.readFile('tmdb_party/apikey.txt').first.strip
+          results= tmdb.search str
+
+          formatted_results=[]
+          results.each {|result|
+            formatted_results<< reformat(result)
+          }
+          formatted_results
+        end
+        def reformat result
+          m=MediaManager::Media::Movie.new
+          m.title= result.name
+          m.overview= result.attributes['overview']
+          m.tmdb_id= result.attributes['id']
+          m.imdb_id= result.attributes['imdb_id']
+          m.movie_type= result.attributes['movie_type']
+          m.tmdb_url= result.attributes['url']
+          m.tmdb_popularity= result.attributes['popularity']
+          m.alternative_title= result.attributes['alternative_name']
+          m.released= result.attributes['released'].to_s
+          m.posters= result.posters
+          m.homepage= result.homepage
+          m.trailer= result.trailer
+          m.runtime= result.runtime
+          m.genres= result.genres
+          m.cast= result.cast
+          m.countries= result.attributes['countries']
+          m.rating= result.attributes['rating']
+          m.backdrops= result.backdrops
+          m.studios= result.attributes['studios']
+          m.budget= result.attributes['budget']
+          m.score= result.score
+          m.revenue= result.attributes['revenue']
+          m
         end
       end
     end
