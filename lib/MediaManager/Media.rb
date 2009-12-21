@@ -42,6 +42,15 @@ module MediaManager
       @runtime=nil
       @genres=nil
       @cast=nil
+      @countries=nil
+      @rating=nil
+      @backdrops=nil
+      @studios=nil
+      @cast=nil
+      @genres=nil
+      @budget=nil
+      @score=nil
+      @revenue=nil
     end
     class TVShow<MediaFile
       @tvdb_series_ID=nil    #thetvdbSeriesID, id, seriesid
