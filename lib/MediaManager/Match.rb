@@ -27,73 +27,73 @@ module MediaManager
         puts "omgwtfbbq!"
       end
 
-      #name_match?(name, epName) searches for epName in name and returns true if found
+      #basic_match?(name, epName) searches for epName in name and returns true if found
       #Return true if they match, return false if they do not
       #If they do not match as is, try stripping various special characters
       #such as "'", ",", and ".". 
-      def name_match?(str1, str2, verbose=:no)
+      def basic_match?(str1, str2, verbose=:no)
         str1=str1.downcase.strip
         str2=str2.downcase.strip
         if str2.nil? or str2.length==0
-          puts "name_match?(): arg2 is empty??" unless verbose==:no
+          puts "basic_match?(): arg2 is empty??" unless verbose==:no
           return FALSE
         elsif str1.nil? or str1.length==0
-          puts "name_match?(): arg1 is empty??" unless verbose==:no
+          puts "basic_match?(): arg1 is empty??" unless verbose==:no
           return FALSE
         end
 
         #Extra verbose option
-        puts "name_match?():  (Extra Verbose)   str1: '#{str1}'\tstr2: '#{str2}'\n" if verbose.to_s.downcase.to_sym==:extra
+        puts "basic_match?():  (Extra Verbose)   str1: '#{str1}'\tstr2: '#{str2}'\n" if verbose.to_s.downcase.to_sym==:extra
 
         if str1==str2
-          puts "name_match?():  Matched one-to-one" unless verbose==:no
+          puts "basic_match?():  Matched one-to-one" unless verbose==:no
           return TRUE
         end
         
         if str1.match(Regexp.new(Regexp.escape(str2), TRUE))   #Basic match
-          puts "name_match?():  Regexp matched str2 to str1" unless verbose==:no
+          puts "basic_match?():  Regexp matched str2 to str1" unless verbose==:no
           return TRUE
         end
         if str2.match(Regexp.new(Regexp.escape(str1), TRUE))   #Basic match
-          puts "name_match?():  Regexp matched str1 to str2" unless verbose==:no
+          puts "basic_match?():  Regexp matched str1 to str2" unless verbose==:no
           return TRUE
         end
 
         if str1.include?("'")    #If the str1 includes as "'" then strip it out, it only makes trouble
           if str1.gsub("'", '').match(Regexp.new( Regexp.escape(str2), TRUE))
-            puts "name_match?():  Regexp matched str2 to str1 sans \"'\"." unless verbose==:no
+            puts "basic_match?():  Regexp matched str2 to str1 sans \"'\"." unless verbose==:no
             return TRUE
           end
         end
         if str2.include?("'")
           if str1.match(Regexp.new(Regexp.escape(str2.gsub("'", '')), TRUE))
-            puts "name_match?():  Regexp matched str1 to str2 sans \"'\"." unless verbose==:no
+            puts "basic_match?():  Regexp matched str1 to str2 sans \"'\"." unless verbose==:no
             return TRUE
           end
         end
 
         if str2.include?(',')
           if str1.match(Regexp.new(Regexp.escape(str2.gsub(",",'')), TRUE))
-            puts "name_match?():  Regexp matched str2 to str1 sans \",\"." unless verbose==:no
+            puts "basic_match?():  Regexp matched str2 to str1 sans \",\"." unless verbose==:no
             return TRUE
           end
         end
         if str1.include?(',')
           if str1.gsub(',', '').match(Regexp.new(Regexp.escape(str2), TRUE))
-            puts "name_match?():  Regexp matched str1 to str2 sans \",\"." unless verbose==:no
+            puts "basic_match?():  Regexp matched str1 to str2 sans \",\"." unless verbose==:no
             return TRUE
           end
         end
 
         if str2.include?('.')
           if str1.match(Regexp.new(Regexp.escape(str2.gsub('.', '')), TRUE))
-            puts "name_match?():  Regexp matched str2 to str1 sans \".\"" unless verbose==:no
+            puts "basic_match?():  Regexp matched str2 to str1 sans \".\"" unless verbose==:no
             return TRUE
           end
         end
         if str1.include?('.')
           if str2.match(Regexp.new(Regexp.escape(str1.gsub('.', '')), TRUE))
-            puts "name_match?():  Regexp matched str1 to str2 sans \".\"." unless verbose==:no
+            puts "basic_match?():  Regexp matched str1 to str2 sans \".\"." unless verbose==:no
             return TRUE
           end
         end
@@ -107,7 +107,7 @@ module MediaManager
       #episode name to the filename (or one of it's parent dirs) on your disc.
       #It will return FALSE if no match was found, or it will return one of the following return values
       #which tells how it was matched.
-      #:oneToOne :name_match? :digits_bothSides :digits_partNumber :romanNumeral_str1 :romanNumeral_str2 :bothParts_str2 :str2_before_aka :str2_after_aka
+      #:oneToOne :basic_match? :digits_bothSides :digits_partNumber :romanNumeral_str1 :romanNumeral_str2 :bothParts_str2 :str2_before_aka :str2_after_aka
       #:wordBoundaries_str2 :numword_str1_ns :numword_str1_s
       def fuzzy_match(str1, str2, verbose=:no)
         #name=str1 and epName=str2
@@ -118,9 +118,9 @@ module MediaManager
           return :oneToOne
         end
 
-        if (str2.length > 1 and name_match?(str1, str2))
-          puts "fuzzyMatch(): Matched name_match?()" unless verbose==:no
-          return :name_match?
+        if (str2.length > 1 and basic_match?(str1, str2))
+          puts "fuzzyMatch(): Matched basic_match?()" unless verbose==:no
+          return :basic_match?
         end
       
         #Try to match 2 part (or more) episodes.  Sometimes these have the part number in the middle of the name with 
@@ -281,8 +281,8 @@ module MediaManager
         #If we already have the EpisodeID tag then we can look for that instead of trying to match the str1.
         #Note, cannot account for filename giving inaccurate EpisodeID tag, simply will not match
         #This match still in development, not useful yet due to the high chance of being given a false positive EpisodeID tag
-        # if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR name_match?
-        if seasonNum and epNum and (occurance[0][0][0]==seriesHash[0][0] or name_match?( str1,seriesHash[1]['Title'][0], :no))
+        # if... the tvdb seriesID of the top ranking series in occurance[] matches the current seriesID in seriesHash OR basic_match?
+        if seasonNum and epNum and (occurance[0][0][0]==seriesHash[0][0] or basic_match?( str1,seriesHash[1]['Title'][0], :no))
           episodes_seasonNum=episode['EpisodeID'].match(/s[\d]+/i)[0].reverse.chop.reverse.to_i
           episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
           #printf "seasonNum: #{seasonNum}  episodes_seasonNum: #{episodes_seasonNum}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
