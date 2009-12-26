@@ -29,9 +29,13 @@ autoload :OpenStruct, 'ostruct'
 autoload :DBI, 'dbi'
 autoload :FileUtils, 'fileutils'
 
+require 'rubygems'
 require 'digest/sha1'
 require 'libthetvdb/lib/libthetvdb.rb'
 
+
+require 'linguistics'  #Linguistics (>=?)1.0.5
+#autoload :Linguistics, 'linguistics'      #Using this autoload instead of the require throws "no such file to load"
 autoload :TMDBParty, 'tmdb_party/lib/tmdb_party.rb'
 
 module MediaManager
