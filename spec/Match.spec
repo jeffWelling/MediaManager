@@ -23,6 +23,12 @@ load 'lib/MediaManager.rb'
 include MediaManager
 
 describe Match do
-  it "Matches 'abc' to 'abc'"
-
+  it "Matches various patterns" do
+    Match.fuzzy_match( 'abc', 'abc' ).should_not == false
+    Match.fuzzy_match( 'abc123', 'abc' ).should_not == false
+    Match.fuzzy_match( '1 to two', 'One').should_not == false
+    Match.fuzzy_match( '1 to two', 'one').should_not == false
+    #TODO Fix the match code to be insensitive to which side which string goes in so that
+    #     we can also do fuzzy_match('one', '1 to two') as well as those above.
+  end
 end
