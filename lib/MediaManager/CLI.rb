@@ -59,11 +59,11 @@ module MediaManager
         option_parser.parse!(args)
         execute if respond_to?(:execute)
       else
-        puts usage
+        MMCommon.pprint usage
         if args.empty? and !action
           exit
         else
-          puts "#{action} is not a command, try the -h option to get a clue"
+          MMCommon.pprint "\n\n#{action} is not a command, try the -h option to get a clue\n"
           exit 1
         end
       end

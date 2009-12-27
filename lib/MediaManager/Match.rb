@@ -31,65 +31,65 @@ module MediaManager
         str1=str1.downcase.strip
         str2=str2.downcase.strip
         if str2.nil? or str2.length==0
-          puts "basic_match?(): arg2 is empty??" unless verbose==:no
+          MMCommon.pprint "basic_match?(): arg2 is empty??" unless verbose==:no
           return FALSE
         elsif str1.nil? or str1.length==0
-          puts "basic_match?(): arg1 is empty??" unless verbose==:no
+          MMCommon.pprint "basic_match?(): arg1 is empty??" unless verbose==:no
           return FALSE
         end
 
         #Extra verbose option
-        puts "basic_match?():  (Extra Verbose)   str1: '#{str1}'\tstr2: '#{str2}'\n" if verbose.to_s.downcase.to_sym==:extra
+        MMCommon.pprint "basic_match?():  (Extra Verbose)   str1: '#{str1}'\tstr2: '#{str2}'\n" if verbose.to_s.downcase.to_sym==:extra
 
         if str1==str2
-          puts "basic_match?():  Matched one-to-one" unless verbose==:no
+          MMCommon.pprint "basic_match?():  Matched one-to-one" unless verbose==:no
           return TRUE
         end
         
         if str1.match(Regexp.new(Regexp.escape(str2), TRUE))   #Basic match
-          puts "basic_match?():  Regexp matched str2 to str1" unless verbose==:no
+          MMCommon.pprint "basic_match?():  Regexp matched str2 to str1" unless verbose==:no
           return TRUE
         end
         if str2.match(Regexp.new(Regexp.escape(str1), TRUE))   #Basic match
-          puts "basic_match?():  Regexp matched str1 to str2" unless verbose==:no
+          MMCommon.pprint "basic_match?():  Regexp matched str1 to str2" unless verbose==:no
           return TRUE
         end
 
         if str1.include?("'")    #If the str1 includes as "'" then strip it out, it only makes trouble
           if str1.gsub("'", '').match(Regexp.new( Regexp.escape(str2), TRUE))
-            puts "basic_match?():  Regexp matched str2 to str1 sans \"'\"." unless verbose==:no
+            MMCommon.pprint "basic_match?():  Regexp matched str2 to str1 sans \"'\"." unless verbose==:no
             return TRUE
           end
         end
         if str2.include?("'")
           if str1.match(Regexp.new(Regexp.escape(str2.gsub("'", '')), TRUE))
-            puts "basic_match?():  Regexp matched str1 to str2 sans \"'\"." unless verbose==:no
+            MMCommon.pprint "basic_match?():  Regexp matched str1 to str2 sans \"'\"." unless verbose==:no
             return TRUE
           end
         end
 
         if str2.include?(',')
           if str1.match(Regexp.new(Regexp.escape(str2.gsub(",",'')), TRUE))
-            puts "basic_match?():  Regexp matched str2 to str1 sans \",\"." unless verbose==:no
+            MMCommon.pprint "basic_match?():  Regexp matched str2 to str1 sans \",\"." unless verbose==:no
             return TRUE
           end
         end
         if str1.include?(',')
           if str1.gsub(',', '').match(Regexp.new(Regexp.escape(str2), TRUE))
-            puts "basic_match?():  Regexp matched str1 to str2 sans \",\"." unless verbose==:no
+            MMCommon.pprint "basic_match?():  Regexp matched str1 to str2 sans \",\"." unless verbose==:no
             return TRUE
           end
         end
 
         if str2.include?('.')
           if str1.match(Regexp.new(Regexp.escape(str2.gsub('.', '')), TRUE))
-            puts "basic_match?():  Regexp matched str2 to str1 sans \".\"" unless verbose==:no
+            MMCommon.pprint "basic_match?():  Regexp matched str2 to str1 sans \".\"" unless verbose==:no
             return TRUE
           end
         end
         if str1.include?('.')
           if str2.match(Regexp.new(Regexp.escape(str1.gsub('.', '')), TRUE))
-            puts "basic_match?():  Regexp matched str1 to str2 sans \".\"." unless verbose==:no
+            MMCommon.pprint "basic_match?():  Regexp matched str1 to str2 sans \".\"." unless verbose==:no
             return TRUE
           end
         end
@@ -110,12 +110,12 @@ module MediaManager
 
         ##Begin attempting to match	
         if str1==str2
-          puts "fuzzyMatch(): Matched one to one" unless verbose==:no
+          MMCommon.pprint "fuzzyMatch(): Matched one to one" unless verbose==:no
           return :oneToOne
         end
 
         if (str2.length > 1 and basic_match?(str1, str2))
-          puts "fuzzyMatch(): Matched basic_match?()" unless verbose==:no
+          MMCommon.pprint "fuzzyMatch(): Matched basic_match?()" unless verbose==:no
           return :basic_match?
         end
       
@@ -131,7 +131,7 @@ module MediaManager
             regex2= Regexp.new( Regexp.escape(part2) )
             unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
               if str1.downcase.match(regex1) and str1.downcase.match(regex2)
-                puts "fuzzyMatch(): Matched based on both sides of a digit thingy" 
+                MMCommon.pprint "fuzzyMatch(): Matched based on both sides of a digit thingy" 
                 return :digits_bothSides
               end
             end 
@@ -142,7 +142,7 @@ module MediaManager
             if part=str1.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
               part=part[0].match(/[\d]+/)[0]
               if part.match(regex2)  #Match
-                puts "fuzzyMatch(): Matched based on part number  (alternative digit thingy match)" unless verbose==:no
+                MMCommon.pprint "fuzzyMatch(): Matched based on part number  (alternative digit thingy match)" unless verbose==:no
                 return :digits_partNumber
               end
             end
@@ -162,14 +162,14 @@ module MediaManager
             romName=romName.gsub(Regexp.new(Regexp.escape(romName.match(numeralMatch)[0])), 
               "#{toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romName.match(numeralMatch)[0].strip)==0
             if romEpName.match(Regexp.new(Regexp.escape(romName), TRUE))
-              puts "fuzzyMatch():  Matched based on roman numeral in str1 and converted" unless verbose==:no
+              MMCommon.pprint "fuzzyMatch():  Matched based on roman numeral in str1 and converted" unless verbose==:no
               return :romanNumeral_str1
             end
           elsif romEpName.match(numeralMatch)
             romEpName=romEpName.gsub(Regexp.new(Regexp.escape(romEpName.match(numeralMatch)[0])), 
               " #{toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(romEpName.match(numeralMatch)[0].strip)==0
             if romName.match(Regexp.new(Regexp.escape(romEpName), TRUE))
-              puts "fuzzyMatch(): Matched based on roman numeral found in str2 and converted" unless verbose==:no
+              MMCommon.pprint "fuzzyMatch(): Matched based on roman numeral found in str2 and converted" unless verbose==:no
               return :romanNumerals_str2
             end
           end
@@ -182,7 +182,7 @@ module MediaManager
           regex2= Regexp.new( Regexp.escape(str2.slice(str2.index(':')+1,str2.length).downcase) )
 
           if str1.downcase.match(regex1) and str1.downcase.match(regex2)
-            puts "fuzzyMatch():  Matched both sides of a ':'" unless verbose==:no
+            MMCommon.pprint "fuzzyMatch():  Matched both sides of a ':'" unless verbose==:no
             return :bothParts_str2
           end
         end
@@ -196,10 +196,10 @@ module MediaManager
           str2_upto_aka= str_sans_parenthesis.slice( 0,str_sans_parenthesis.index('a.k.a.')-1 )
           str2_after_aka= str_sans_parenthesis.slice( str_sans_parenthesis.index('a.k.a.')+ 'a.k.a.'.length, str_sans_parenthesis.length)
           if str1.match(Regexp.new(str2_upto_aka, TRUE))
-            puts "fuzzyMatch(): Matched the first part of the str2, up to 'a.k.a.'." unless verbose==:no
+            MMCommon.pprint "fuzzyMatch(): Matched the first part of the str2, up to 'a.k.a.'." unless verbose==:no
             return :str2_before_aka
           elsif str1.match(Regexp.new(str2_after_aka, TRUE))
-            puts "fuzzyMatch(): Matched the last part of the str2, after the 'a.k.a.'." unless verbose==:no
+            MMCommon.pprint "fuzzyMatch(): Matched the last part of the str2, after the 'a.k.a.'." unless verbose==:no
             return :str2_after_aka
           end
         end
@@ -240,7 +240,7 @@ module MediaManager
           }
           str2_compare_results= str2_compare_results.delete_if {|word_matched| word_matched == FALSE}
           if str2_compare_results.length == str1_words.length
-            puts "fuzzyMatch(): Matched based solely on looking at word boundaries." unless verbose==:no
+            MMCommon.pprint "fuzzyMatch(): Matched based solely on looking at word boundaries." unless verbose==:no
             return :wordBoundaries_str2
           end
         end
@@ -256,7 +256,7 @@ module MediaManager
           longName=str1.gsub(str1.match(/\d+/)[0], Linguistics::EN.numwords(str1.match(/\d+/)[0]))
           if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
             unless str2.empty?    #To prevent matching an empty episode name
-              puts "fuzzyMatch(): Matched after converting a number to a word in str1, no space." unless verbose==:no
+              MMCommon.pprint "fuzzyMatch(): Matched after converting a number to a word in str1, no space." unless verbose==:no
               return :numword_str1_ns
             end
           end
@@ -264,7 +264,7 @@ module MediaManager
           longName=str1.gsub(str1.match(/\d+/)[0], " #{Linguistics::EN.numwords(str1.match(/\d+/)[0])} ")
           if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
             unless str2.empty?
-              puts "fuzzyMatch():  Matched after converting the number to a word, with space."
+              MMCommon.pprint "fuzzyMatch():  Matched after converting the number to a word, with space."
               return :numword_str1_s
             end
           end
@@ -283,7 +283,7 @@ module MediaManager
           episodes_epNum=episode['EpisodeID'].match(/[\d]+$/)[0]
           #printf "seasonNum: #{seasonNum}  episodes_seasonNum: #{episodes_seasonNum}  epNum: #{epNum}  episodes_epNum: #{episodes_epNum}      \n"
           if seasonNum.to_i==episodes_seasonNum.to_i and epNum.to_i==episodes_epNum.to_i
-            puts "db_include?(): Match based on title found in filename, and season and episode number match from filename."
+            MMCommon.pprint "db_include?(): Match based on title found in filename, and season and episode number match from filename."
             matches << episode.merge('Matched'=>:epid)
             next
           end

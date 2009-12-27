@@ -61,8 +61,8 @@ module MediaManager
           }
         rescue DBI::ProgrammingError => er
           (createImportPathsTable(handle) and retry) if er.to_s[/no such table/i]
-          puts e
-          puts s
+          MMCommon.pprint e
+          MMCommon.pprint s
           raise er
         ensure
           handle.disconnect
