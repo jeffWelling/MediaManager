@@ -38,7 +38,7 @@ module MediaManager
     def initialize(args)
       @args= args.dup
       if args.empty? 
-        MMCommon.pprint "Your supposed to actually tell me to do something,  gawsh napoleon..\nTry the 'help' flag."
+        MMCommon.pprint "Your supposed to actually tell me to do something,  gawsh napoleon..\nTry the 'help' flag.\n\n"
         exit 1
       end
       @action= args.shift
