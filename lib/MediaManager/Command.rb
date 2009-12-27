@@ -32,6 +32,7 @@ module MediaManager
     register 'Config', 'Allows configuring via Irb, saving to the config file', 'config'
     register 'Remap', 'Creates a Library directory from your media files', 'remap'
     register 'Hasher', 'Reads the paths, and generates hashes for the files', 'hasher'
+    register 'Analyze', "Tries to guess the imported media's metadata.", 'analyze'
 
     def self.get(command)
       if mod_name= COMMANDS[command]
