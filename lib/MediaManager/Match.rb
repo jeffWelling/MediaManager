@@ -301,7 +301,9 @@ module MediaManager
         
         #Remove source path from beginning of path?
 
-        path_segments=
+        path_segments=Metadata.pathToArray path
+
+        
         
         return true
       end
