@@ -50,6 +50,29 @@ module MediaManager
           return episodeID
         end
       end
+
+      #take a full file path and turn it into an array, including turning the extention into the first element.
+      def pathToArray fPath
+        return( [ fPath.match(/\..{3,4}$/)[0] , fPath.gsub(/\..{3,4}$/, '') ] ) unless fPath.include?('/')
+        first=TRUE
+        fPath = fPath.split('/').reverse.collect {|pathSeg|
+          unless first==FALSE then
+            first=FALSE
+            extBegins= pathSeg=~/\.([^\.]+)$/
+            if extBegins then pathSeg = { pathSeg.slice(0,extBegins) => pathSeg.slice(extBegins,pathSeg.length) } end
+          end
+          pathSeg
+        }
+        fPath.pop
+
+        #Flatten it out again; make first element extention and second the file's name
+        clipboard=fPath[0].select { TRUE }[0].reverse
+        fPath = fPath.insert( 0,clipboard[0])
+        fPath = fPath.insert( 1, clipboard[1])
+        fPath.delete( fPath[2] )
+
+        return fPath
+      end
     end
   end
 end

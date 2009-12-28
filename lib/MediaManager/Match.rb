@@ -22,6 +22,7 @@ module MediaManager
   #intended for use matching filenames to movie information to
   #id files.
   module Match
+    @change_to_whitespace=/[\._-]/
     class << self
       #basic_match?(name, epName) searches for epName in name and returns true if found
       #Return true if they match, return false if they do not
@@ -296,7 +297,12 @@ module MediaManager
       #compares path to media, returns true if positive match
       def compare path, media
         #media is a tv show or movie etc, populated with various fields to test against path
-        whitespaced_path=path.
+        whitespaced_path=path.gsub(@change_to_whitespace, ' ').squeeze(' ').strip
+        
+        #Remove source path from beginning of path?
+
+        path_segments=
+        
         return true
       end
     end
