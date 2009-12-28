@@ -292,7 +292,13 @@ module MediaManager
         
         #Try joining words together to see if that helps matching
         return FALSE
-      end		
+      end
+      #compares path to media, returns true if positive match
+      def compare path, media
+        #media is a tv show or movie etc, populated with various fields to test against path
+        whitespaced_path=path.
+        return true
+      end
     end
   end
 end
