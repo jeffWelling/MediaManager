@@ -296,12 +296,16 @@ module MediaManager
       end
       #compares path to media, returns true if positive match
       def compare path, media
+        results={}
+        searchResults=[]
         #media is a tv show or movie etc, populated with various fields to test against path
         whitespaced_path=path.gsub(@change_to_whitespace, ' ').squeeze(' ').strip
         
         #Remove source path from beginning of path?
 
         path_segments=Metadata.pathToArray path
+
+        searchTerms=Metadata.getSearchTerms(path, Metadata.searchTermExcludes)
 
         
         

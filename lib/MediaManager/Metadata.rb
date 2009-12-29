@@ -74,6 +74,10 @@ module MediaManager
         return fPath
       end
 
+      def searchTermExcludes
+        ['xvid', 'eng', 'ac3', 'dvdrip']
+      end
+
       def getSearchTerms string, excludes=nil
         raise "getSearchTerms():  Only takes strings" unless string.class==String
         raise "getSearchTerms():  second argument must be nil or an array of strings to exclude from the search terms" unless excludes.nil? or excludes.class==Array
