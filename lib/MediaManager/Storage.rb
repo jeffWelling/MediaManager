@@ -31,6 +31,7 @@ module MediaManager
   Mysql_pass='omgwtfbbqsqlpass'
   Import_list= Basedir + 'import_list.yaml'
   Hashes_list= Basedir + 'hashes.yaml'
+  Library_data_list= Basedir + 'library_data.yaml'
   class Storage
     class << self
       def sqlConnect
@@ -105,6 +106,24 @@ module MediaManager
       #Returns a single populated MediaFile class (or child) if path has been processed. Nil otherwise.
       def metaByPath  path
         return nil
+      end
+      def saveLibraryData data
+        Using==:yaml ? saveLibraryDataToYaml(data) : saveLibraryDataToSql(data)
+      end
+      def saveLibraryDataToYaml data
+        MMCommon.writeFile YAML.dump(data), Library_data_list
+      end
+      def saveLibraryDataToSql data
+        return true
+      end
+      def loadLibraryData
+        Using==:yaml ? loadLibraryDataFromYaml : loadLibraryDataFromSql
+      end
+      def loadLibraryDataFromYaml
+        YAML.load MMCommon.readFile(Library_data_list).join
+      end
+      def loadLibraryDataFromSql
+        return true
       end
     end
   end
