@@ -298,20 +298,13 @@ module MediaManager
       #By comparing path and media, we designate this method as the place to add extra code concerned with matching
       #ebooks, and other media which have fields other than title and those used to match tv and movies
       def compare path, media
-        results={}
-        searchResults=[]
-        #media is a tv show or movie etc, populated with various fields to test against path
-        whitespaced_path=path.gsub(@change_to_whitespace, ' ').squeeze(' ').strip
-        
-        #Remove source path from beginning of path?
+        compare_strings=media.get_compare_strings
+        compare_strings.length > 1 ? compare_strings=compare_strings.sort : compare_strings=[[0,compare_strings[0]]]
 
-        path_segments=Metadata.pathToArray path
-
-        searchTerms=Metadata.getSearchTerms(path, Metadata.searchTermExcludes)
-
-        
-        
-        return true
+        compare_strings.each {|str|
+          return true if fuzzy_match(path, str)
+        }
+        return false
       end
     end
   end

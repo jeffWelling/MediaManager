@@ -25,16 +25,18 @@ module MediaManager
       @title=nil
       @path=nil
       attr_accessor :path, :title, :categoryTags
-      #get_compare_strings is expected to return an array of strings to use in comparisons (strings such as title,  episode name, etc)
-      #called by Match.compare(path, MediaFile).
+      #get_compare_strings is expected to return a hash of (integer)importance=>string combinations to use in comparisons 
+      #(strings such as title,  episode name, etc).  Called by Match.compare(path, MediaFile).
+      #The higher the importance, the more weight a match with that string will have.  If there is only one i=>str pair returned,
+      #than importance is irrelevant.
       def get_compare_strings
-        [@title]
+        {0=>@title}
       end
     end
 
     class Movie<MediaFile
       def get_compare_strings
-        [@title, @alternative_title]
+        {10=>@title, 9=>@alternative_title}
       end
       @overview=nil
       @tmdb_id=nil
@@ -63,7 +65,7 @@ module MediaManager
     end
     class TVShow<MediaFile
       def get_compare_strings
-        [@title, @episode_name]
+        {10=>@title, 5=>@episode_name}
       end                    #Thetvdb API key map
       @tvdb_series_ID=nil    #thetvdbSeriesID, id, seriesid
       @episode_ID=nil         #episodeID
