@@ -51,6 +51,7 @@ module MediaManager
               item.title= h['Title']
               item.episode_ID= episode['EpisodeID']
               item.episode_number= episode['EpisodeNumber']
+              item.episode_name= episode['EpisodeName']
               item.season= episode['Season']
               item.series_first_aired= series[item.tvdb_series_ID]['FirstAired']
               item.banners= series[item.tvdb_series_ID]['banner']  if series[item.tvdb_series_ID].has_key?('banner')

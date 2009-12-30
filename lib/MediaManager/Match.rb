@@ -295,6 +295,8 @@ module MediaManager
         return FALSE
       end
       #compares path to media, returns true if positive match
+      #By comparing path and media, we designate this method as the place to add extra code concerned with matching
+      #ebooks, and other media which have fields other than title and those used to match tv and movies
       def compare path, media
         results={}
         searchResults=[]

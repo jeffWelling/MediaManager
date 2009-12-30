@@ -25,9 +25,17 @@ module MediaManager
       @title=nil
       @path=nil
       attr_accessor :path, :title, :categoryTags
+      #get_compare_strings is expected to return an array of strings to use in comparisons (strings such as title,  episode name, etc)
+      #called by Match.compare(path, MediaFile).
+      def get_compare_strings
+        [@title]
+      end
     end
 
     class Movie<MediaFile
+      def get_compare_strings
+        [@title, @alternative_title]
+      end
       @overview=nil
       @tmdb_id=nil
       @imdb_id=nil
@@ -54,9 +62,13 @@ module MediaManager
         :cast, :countries, :rating, :backdrops, :studios, :budget, :score, :revenue 
     end
     class TVShow<MediaFile
+      def get_compare_strings
+        [@title, @episode_name]
+      end                    #Thetvdb API key map
       @tvdb_series_ID=nil    #thetvdbSeriesID, id, seriesid
       @episode_ID=nil         #episodeID
-      @episode_number=nil     #episodeNumber
+      @episode_number=nil     #EpisodeNumber
+      @episode_name=nil       #EpisodeName
       @season=nil            #Season
       @series_first_aired=nil#FirstAired
       @banners=[]            #banner
