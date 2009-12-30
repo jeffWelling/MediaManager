@@ -75,7 +75,7 @@ module MediaManager
       @series_overview=nil   #Overview
       @language=nil          #lang
       @title=nil             #SeriesName, Title
-      attr_accessor :tvdb_series_ID, :episode_ID, :episode_number, :season, :series_first_aired, :banners,
+      attr_accessor :tvdb_series_ID, :episode_ID, :episode_number, :episode_name, :season, :series_first_aired, :banners,
         :series_overview, :language, :title
     end
   end
