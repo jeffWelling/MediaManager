@@ -35,23 +35,23 @@ module MediaManager
     class << self
       def loadLibraryData
         begin
-          @data= Storage.loadLibraryData
+          @@data= Storage.loadLibraryData
         rescue Errno::ENOENT => e
           LibraryData.new
         end
       end
       def saveLibraryData
-        Storage.saveLibraryData @data
+        Storage.saveLibraryData @@data
       end
       def eachUnmatchedItem
         res=[]
-        @data.each {|obj|
+        @@data.each {|obj|
           res << obj unless obj.title or obj.episodeName
-        } unless @data.nil?
+        } unless @@data.nil?
         res
       end
       def identifyFile path, mediaFile
-        @data[path]= mediaFile
+        @@data[path]= mediaFile
       end
       def importPathsToLibrary
         paths=Storage.readPaths
