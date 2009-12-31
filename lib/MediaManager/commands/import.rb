@@ -36,6 +36,7 @@ module MediaManager
         i=0
         paths={}
         MMCommon.scan_target(File.expand_path(path)).each {|file_found|
+          next if File.directory? file_found
           paths.merge!( {i=>file_found} )
           i+=1
         }

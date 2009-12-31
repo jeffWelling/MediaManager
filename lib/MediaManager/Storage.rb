@@ -34,6 +34,9 @@ module MediaManager
   Library_data_list= Basedir + 'library_data.yaml'
   class Storage
     class << self
+      def basedir
+        Basedir
+      end
       def sqlConnect
         FileUtils.makedirs(File.dirname(File.expand_path(Sqlite_file))) if Using==:sqlite and !File.directory?(File.dirname(File.expand_path(Sqlite_file)))
         #requires the libdbd-sqlite3-ruby package if your getting "DBI::InterfaceError: Unable to load driver 'sqlite3'"

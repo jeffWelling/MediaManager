@@ -56,7 +56,8 @@ module MediaManager
       end
 
       def writeFile contents, filename
-        File.open( File.expand_path(filename), 'w') {|f| f.write contents }
+        FileUtils.mkdir(File.expand_path(Storage.basedir)) unless File.exist?(File.expand_path(Storage.basedir))
+        File.open( File.expand_path(filename), File::WRONLY|File::TRUNC|File::CREAT) {|f| f.write contents }
       end
       def readFile filename, maxlines=0
         i=0
