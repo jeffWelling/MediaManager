@@ -28,6 +28,7 @@ module MediaManager
       def execute
         MMCommon.pprint "holycrap! dont use me yet!"
         paths=Storage.readPaths
+        LibraryData.loadLibraryData
         
         #read path_key to metadata list
         #for each un_id'd file, attempt to id

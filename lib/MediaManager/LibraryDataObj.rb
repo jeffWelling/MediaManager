@@ -23,12 +23,27 @@ module MediaManager
     @path_key=nil
     @MediaFile=nil
     @data=nil
+    #return true if the object has not yet been positively identified as a movie, tvshow, etc.
+    def unmatched?
+      return false
+    end
     class << self
       def loadLibraryData
-        @data= Storage.loadLibraryData
+        begin
+          @data= Storage.loadLibraryData
+        rescue Errno::ENOENT => e
+          LibraryData.new
+        end
       end
       def saveLibraryData
         Storage.saveLibraryData @data
+      end
+      def eachUnmatchedItem
+        res=[]
+        @data.each {|obj|
+          res << obj unless obj.title or obj.episodeName
+        }
+        res
       end
     end
   end
