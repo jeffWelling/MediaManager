@@ -22,7 +22,7 @@ module MediaManager
     @path=nil
     @path_key=nil
     @MediaFile=nil
-    @data=nil
+    @data={}
     #return true if the object has not yet been positively identified as a movie, tvshow, etc.
     def unmatched?
       return false
@@ -44,6 +44,9 @@ module MediaManager
           res << obj unless obj.title or obj.episodeName
         } unless @data.nil?
         res
+      end
+      def identifyFile mediaFile, path
+        @data[path]= mediaFile
       end
     end
   end
