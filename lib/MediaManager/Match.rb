@@ -111,12 +111,12 @@ module MediaManager
 
         ##Begin attempting to match	
         if str1==str2
-          MMCommon.pprint "fuzzyMatch(): Matched one to one" unless verbose==:no
+          MMCommon.pprint "fuzzyMatch(): Matched one to one\n" unless verbose==:no
           return :oneToOne
         end
 
         if (str2.length > 1 and basic_match?(str1, str2))
-          MMCommon.pprint "fuzzyMatch(): Matched basic_match?()" unless verbose==:no
+          MMCommon.pprint "fuzzyMatch(): Matched basic_match?()\n" unless verbose==:no
           return :basic_match?
         end
       
@@ -132,7 +132,7 @@ module MediaManager
             regex2= Regexp.new( Regexp.escape(part2) )
             unless part2.empty?   #If there are strings on both side of the digit, use that.  Otherwise, attempt to use the [\d] provided
               if str1.downcase.match(regex1) and str1.downcase.match(regex2)
-                MMCommon.pprint "fuzzyMatch(): Matched based on both sides of a digit thingy" 
+                MMCommon.pprint "fuzzyMatch(): Matched based on both sides of a digit thingy\n" 
                 return :digits_bothSides
               end
             end 
@@ -143,7 +143,7 @@ module MediaManager
             if part=str1.match(/\(.*[\d]+.*\)/)    #If the filename has ([\d]) in it
               part=part[0].match(/[\d]+/)[0]
               if part.match(regex2)  #Match
-                MMCommon.pprint "fuzzyMatch(): Matched based on part number  (alternative digit thingy match)" unless verbose==:no
+                MMCommon.pprint "fuzzyMatch(): Matched based on part number  (alternative digit thingy match)\n" unless verbose==:no
                 return :digits_partNumber
               end
             end
@@ -163,14 +163,14 @@ module MediaManager
             romName=romName.gsub(Regexp.new(Regexp.escape(romName.match(numeralMatch)[0])), 
               "#{toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romName.match(numeralMatch)[0].strip)==0
             if romEpName.match(Regexp.new(Regexp.escape(romName), TRUE))
-              MMCommon.pprint "fuzzyMatch():  Matched based on roman numeral in str1 and converted" unless verbose==:no
+              MMCommon.pprint "fuzzyMatch():  Matched based on roman numeral in str1 and converted\n" unless verbose==:no
               return :romanNumeral_str1
             end
           elsif romEpName.match(numeralMatch)
             romEpName=romEpName.gsub(Regexp.new(Regexp.escape(romEpName.match(numeralMatch)[0])), 
               " #{toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(romEpName.match(numeralMatch)[0].strip)==0
             if romName.match(Regexp.new(Regexp.escape(romEpName), TRUE))
-              MMCommon.pprint "fuzzyMatch(): Matched based on roman numeral found in str2 and converted" unless verbose==:no
+              MMCommon.pprint "fuzzyMatch(): Matched based on roman numeral found in str2 and converted\n" unless verbose==:no
               return :romanNumerals_str2
             end
           end
@@ -183,7 +183,7 @@ module MediaManager
           regex2= Regexp.new( Regexp.escape(str2.slice(str2.index(':')+1,str2.length).downcase) )
 
           if str1.downcase.match(regex1) and str1.downcase.match(regex2)
-            MMCommon.pprint "fuzzyMatch():  Matched both sides of a ':'" unless verbose==:no
+            MMCommon.pprint "fuzzyMatch():  Matched both sides of a ':'\n" unless verbose==:no
             return :bothParts_str2
           end
         end
@@ -197,10 +197,10 @@ module MediaManager
           str2_upto_aka= str_sans_parenthesis.slice( 0,str_sans_parenthesis.index('a.k.a.')-1 )
           str2_after_aka= str_sans_parenthesis.slice( str_sans_parenthesis.index('a.k.a.')+ 'a.k.a.'.length, str_sans_parenthesis.length)
           if str1.match(Regexp.new(str2_upto_aka, TRUE))
-            MMCommon.pprint "fuzzyMatch(): Matched the first part of the str2, up to 'a.k.a.'." unless verbose==:no
+            MMCommon.pprint "fuzzyMatch(): Matched the first part of the str2, up to 'a.k.a.'.\n" unless verbose==:no
             return :str2_before_aka
           elsif str1.match(Regexp.new(str2_after_aka, TRUE))
-            MMCommon.pprint "fuzzyMatch(): Matched the last part of the str2, after the 'a.k.a.'." unless verbose==:no
+            MMCommon.pprint "fuzzyMatch(): Matched the last part of the str2, after the 'a.k.a.'.\n" unless verbose==:no
             return :str2_after_aka
           end
         end
@@ -241,7 +241,7 @@ module MediaManager
           }
           str2_compare_results= str2_compare_results.delete_if {|word_matched| word_matched == FALSE}
           if str2_compare_results.length == str1_words.length
-            MMCommon.pprint "fuzzyMatch(): Matched based solely on looking at word boundaries." unless verbose==:no
+            MMCommon.pprint "fuzzyMatch(): Matched based solely on looking at word boundaries.\n" unless verbose==:no
             return :wordBoundaries_str2
           end
         end
@@ -257,7 +257,7 @@ module MediaManager
           longName=str1.gsub(str1.match(/\d+/)[0], Linguistics::EN.numwords(str1.match(/\d+/)[0]))
           if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
             unless str2.empty?    #To prevent matching an empty episode name
-              MMCommon.pprint "fuzzyMatch(): Matched after converting a number to a word in str1, no space." unless verbose==:no
+              MMCommon.pprint "fuzzyMatch(): Matched after converting a number to a word in str1, no space.\n" unless verbose==:no
               return :numword_str1_ns
             end
           end
@@ -265,7 +265,7 @@ module MediaManager
           longName=str1.gsub(str1.match(/\d+/)[0], " #{Linguistics::EN.numwords(str1.match(/\d+/)[0])} ")
           if longName.match(Regexp.new(Regexp.escape(str2), TRUE))
             unless str2.empty?
-              MMCommon.pprint "fuzzyMatch():  Matched after converting the number to a word, with space."
+              MMCommon.pprint "fuzzyMatch():  Matched after converting the number to a word, with space.\n"
               return :numword_str1_s
             end
           end
