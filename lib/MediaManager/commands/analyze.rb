@@ -35,7 +35,7 @@ module MediaManager
           #paths needs to be added to LibraryData before here
           LibraryData.eachUnmatchedItem.each {|unmatched|
             results=[]
-            search_terms=Metadata.getSearchTerms(unmatched)
+            search_terms=Metadata.getSearchTerms(unmatched.path)
             search_terms.each {|search_term|
               results += Scrapers.searchFor search_term
             }

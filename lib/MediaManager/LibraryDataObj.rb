@@ -49,8 +49,8 @@ module MediaManager
       #return an array of every object that has yet to be positively identified
       def eachUnmatchedItem
         res=[]
-        @@data.each {|obj|
-          res << obj unless obj.title or obj.episodeName
+        @@data.each_value {|obj|
+          res << obj unless (obj.respond_to?(:title) and obj.title) or (obj.respond_to?(:episodeName) and obj.episodeName)
         } unless @@data.nil?
         res
       end
