@@ -42,7 +42,7 @@ module MediaManager
         res=[]
         @data.each {|obj|
           res << obj unless obj.title or obj.episodeName
-        }
+        } unless @data.nil?
         res
       end
     end
