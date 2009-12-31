@@ -26,6 +26,11 @@ module MediaManager
         o.banner= "Usage: mmanager analyze\nThis will analyze every file that you have imported."
       end
       def execute
+        MMCommon.pprint "Analyzing...\n"
+        analyze
+        MMCommon.pprint "Done!\n"
+      end
+      def analyze
         MMCommon.pprint "holycrap! dont use me yet!\n"
         paths=Storage.readPaths
         pp paths.length
