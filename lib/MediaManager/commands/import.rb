@@ -26,8 +26,9 @@ module MediaManager
         o.banner= "Usage: mmanager import foo/bar/ foo/bar1\nAdds the dir foo/bar/ and the file foo/bar1"
       end
       def execute
-        MMCommon.pprint "importing!\n"
+        MMCommon.pprint "Importing!\n"
         import ARGV[0]
+        MMCommon.pprint "Done!\n"
       end
 
       #Scan for files, import them into the db

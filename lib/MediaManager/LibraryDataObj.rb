@@ -19,13 +19,18 @@
 =end
 module MediaManager
   class LibraryData
-    @path=nil
-    @path_key=nil
-    @MediaFile=nil
-    @data={}
+    @@data={}
+    def initialize(p)
+
+      @path=p
+      @path_key=nil
+      @MediaFile=nil
+      @matched=false
+      @@data.merge!({p=>self}) unless @@data.has_key? p
+    end
     #return true if the object has not yet been positively identified as a movie, tvshow, etc.
     def unmatched?
-      return false
+      !@matched
     end
     class << self
       def loadLibraryData
@@ -47,6 +52,10 @@ module MediaManager
       end
       def identifyFile path, mediaFile
         @data[path]= mediaFile
+      end
+      def importPathsToLibrary
+        paths=Storage.readPaths
+        
       end
     end
   end

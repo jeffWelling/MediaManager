@@ -26,10 +26,12 @@ module MediaManager
         o.banner= "Usage: mmanager analyze\nThis will analyze every file that you have imported."
       end
       def execute
-        MMCommon.pprint "holycrap! dont use me yet!"
+        MMCommon.pprint "holycrap! dont use me yet!\n"
         paths=Storage.readPaths
+        pp paths.length
+        LibraryData.loadLibraryData
         paths.each {|path|
-          LibraryData.loadLibraryData
+          #paths needs to be added to LibraryData before here
           LibraryData.eachUnmatchedItem.each {|unmatched|
             results=[]
             search_terms=Metadata.getSearchTerms(unmatched)
