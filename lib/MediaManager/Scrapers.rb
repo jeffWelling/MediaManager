@@ -41,8 +41,10 @@ module MediaManager
       def searchFor str
         results=[]
         SCRAPERS.each {|scraper|
+          pp scraper
           extend(scraper)
-          results += wrapper(str, &method(:search))
+          results += scraper.search(str)
+#          results += wrapper(str, &method(:search))
         }
         results
       end
