@@ -45,7 +45,7 @@ module MediaManager
         } unless @data.nil?
         res
       end
-      def identifyFile mediaFile, path
+      def identifyFile path, mediaFile
         @data[path]= mediaFile
       end
     end
