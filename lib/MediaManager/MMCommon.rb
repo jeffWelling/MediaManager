@@ -62,10 +62,13 @@ module MediaManager
       def readFile filename, maxlines=0
         i=0
         read_so_far=[]
-        f=File.open(File.expand_path(filename), 'r')
-        while (line=f.gets)
-          break if maxlines!=0 and i >= maxlines
-          read_so_far << line and i+=1
+        begin
+          f=File.open(File.expand_path(filename), 'r')
+          while (line=f.gets)
+            break if maxlines!=0 and i >= maxlines
+            read_so_far << line and i+=1
+          end
+        rescue Errno::ENOENT
         end
         read_so_far
       end

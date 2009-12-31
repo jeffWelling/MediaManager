@@ -33,6 +33,10 @@ module MediaManager
 
       #Scan for files, import them into the db
       def import path
+        if path.nil?
+          MMCommon.pprint "import must be passed a directory or file, but it appears you didn't give it anything.\n\n"
+          exit
+        end
         i=0
         paths={}
         MMCommon.scan_target(File.expand_path(path)).each {|file_found|

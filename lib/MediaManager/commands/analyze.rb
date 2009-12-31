@@ -33,7 +33,10 @@ module MediaManager
       def analyze
         MMCommon.pprint "holycrap! dont use me yet!\n"
         paths=Storage.readPaths
-        pp paths.length
+        if paths.class==FalseClass
+          MMCommon.pprint("Are you sure you've already imported a directory or file? Storage.readPaths returned false o.O\n\n")
+          exit
+        end
         LibraryData.loadLibraryData
         LibraryData.importPathsToLibrary
         paths.each {|path|
