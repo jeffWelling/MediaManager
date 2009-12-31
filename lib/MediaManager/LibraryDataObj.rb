@@ -34,7 +34,7 @@ module MediaManager
     end
     class << self
       def has_path p
-        @@data.has_key? p
+        @@data.has_key? p rescue false
       end
       def loadLibraryData
         begin
