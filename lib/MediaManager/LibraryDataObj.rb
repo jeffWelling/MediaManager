@@ -33,6 +33,9 @@ module MediaManager
       !@matched
     end
     class << self
+      def has_path p
+        @@data.has_key? p
+      end
       def loadLibraryData
         begin
           @@data= Storage.loadLibraryData
@@ -55,12 +58,12 @@ module MediaManager
       end
       #Update @@data's instance of libr_obj
       def updateWith libr_obj
-        @@data.has_key?(libr_obj.path) ? @@data[p]=libr_obj : @@data.merge!({libr_obj.path=>libr_obj})
+        @@data.has_key?(libr_obj.path) ? @@data[libr_obj.path]=libr_obj : @@data.merge!({libr_obj.path=>libr_obj})
       end
       def importPathsToLibrary
         paths=Storage.readPaths
         paths.each {|path|
-          
+          unless 
         }
       end
     end
