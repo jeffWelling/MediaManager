@@ -1,0 +1,1 @@
+Improve searching - don't pile on more search terms if results.length==0 already

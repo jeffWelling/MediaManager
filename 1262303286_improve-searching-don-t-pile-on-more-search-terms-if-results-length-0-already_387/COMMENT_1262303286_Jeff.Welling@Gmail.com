@@ -1,0 +1,1 @@
+Currently, when searching, it continues to add search terms to the query even if the number of results returned is already zero.  This is silly, adding more search terms will not increase the number of results, this should be fixed.
