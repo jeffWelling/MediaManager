@@ -21,13 +21,13 @@ module MediaManager
   class LibraryData
     @@data={}
     def initialize(p)
-
       @path=p
       @path_key=nil
       @MediaFile=nil
       @matched=false
       @@data.merge!({p=>self}) unless @@data.has_key? p
     end
+    attr_accessor :matched
     #return true if the object has not yet been positively identified as a movie, tvshow, etc.
     def unmatched?
       !@matched
@@ -51,7 +51,11 @@ module MediaManager
         res
       end
       def identifyFile path, mediaFile
-        @@data[path]= mediaFile
+        @@data[path]= mediaFile.matched=(true)
+      end
+      #Update @@data's instance of libr_obj
+      def updateWith libr_obj
+        @@data[p]=libr_obj
       end
       def importPathsToLibrary
         paths=Storage.readPaths
