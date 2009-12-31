@@ -24,7 +24,7 @@ module MediaManager
     @MediaFile=nil
     @data=nil
     class << self
-      def readLibraryData
+      def loadLibraryData
         @data= Storage.loadLibraryData
       end
       def saveLibraryData
