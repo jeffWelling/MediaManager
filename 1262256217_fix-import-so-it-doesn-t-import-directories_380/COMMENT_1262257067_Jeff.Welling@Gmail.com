@@ -1,0 +1,1 @@
+As of commit f1e12b4e663608e65b4bcc26ac36756d33631d33, the analyze command fails as a result of directories being in the import list.  Well, because they don't have a file extention and it's expected that every media object will, in getSearchTerms().
