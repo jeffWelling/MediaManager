@@ -29,7 +29,11 @@ module MediaManager
         MMCommon.pprint "holycrap! dont use me yet!"
         paths=Storage.readPaths
         LibraryData.loadLibraryData
-        
+        LibraryData.eachUnmatchedItem.each {|unmatched|
+          #search for keywords found in path
+          #for each search result, compare
+          #set ID if compare
+        }
         #read path_key to metadata list
         #for each un_id'd file, attempt to id
         #save all lists
