@@ -27,7 +27,7 @@ module MediaManager
       @matched=false
       @@data.merge!({p=>self}) unless @@data.has_key? p
     end
-    attr_accessor :matched
+    attr_accessor :path, :path_key, :matched
     #return true if the object has not yet been positively identified as a movie, tvshow, etc.
     def unmatched?
       !@matched
@@ -55,11 +55,13 @@ module MediaManager
       end
       #Update @@data's instance of libr_obj
       def updateWith libr_obj
-        @@data[p]=libr_obj
+        @@data.has_key?(libr_obj.path) ? @@data[p]=libr_obj : @@data.merge!({libr_obj.path=>libr_obj})
       end
       def importPathsToLibrary
         paths=Storage.readPaths
-        
+        paths.each {|path|
+          
+        }
       end
     end
   end
