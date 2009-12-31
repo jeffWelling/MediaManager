@@ -39,13 +39,15 @@ module MediaManager
       end
       #search all available scrapers for str, returning all results (which will be MediaFiles or decendants of)
       def searchFor str
+        MMCommon.pprint "Scrapers.searchFor('#{str}')...\n"
         results=[]
         SCRAPERS.each {|scraper|
-          pp scraper
+          MMCommon.pprint "Searching #{ "#{scraper}"[/[^:]+?$/] }...\n"
           extend(scraper)
           results += scraper.search(str)
 #          results += wrapper(str, &method(:search))
         }
+        MMCommon.pprint "Search finished.\n"
         results
       end
     end
