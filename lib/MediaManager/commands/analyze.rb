@@ -30,6 +30,7 @@ module MediaManager
         paths=Storage.readPaths
         pp paths.length
         LibraryData.loadLibraryData
+        LibraryData.importPathsToLibrary
         paths.each {|path|
           #paths needs to be added to LibraryData before here
           LibraryData.eachUnmatchedItem.each {|unmatched|

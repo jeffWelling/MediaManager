@@ -46,6 +46,7 @@ module MediaManager
       def saveLibraryData
         Storage.saveLibraryData @@data
       end
+      #return an array of every object that has yet to be positively identified
       def eachUnmatchedItem
         res=[]
         @@data.each {|obj|
