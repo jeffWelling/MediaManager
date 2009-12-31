@@ -37,7 +37,7 @@ module MediaManager
         begin
           @@data= Storage.loadLibraryData
         rescue Errno::ENOENT => e
-          LibraryData.new
+          {}
         end
       end
       def saveLibraryData
