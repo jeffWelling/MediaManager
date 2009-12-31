@@ -26,7 +26,8 @@ module MediaManager
         items=[]
         Find.find(File.expand_path(target)) do |it|
           items << it
-        end
+        end unless target.nil? or !File.exist?(target)
+        raise "\n You are supposed to pass me a valid dir or file.\n\n" unless !target.nil? or File.exist?(target)
         items
       end
 

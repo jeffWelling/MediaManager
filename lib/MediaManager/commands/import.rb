@@ -26,7 +26,7 @@ module MediaManager
         o.banner= "Usage: mmanager import foo/bar/ foo/bar1\nAdds the dir foo/bar/ and the file foo/bar1"
       end
       def execute
-        MMCommon.pprint "importing!"
+        MMCommon.pprint "importing!\n"
         import ARGV[0]
       end
 
@@ -34,11 +34,12 @@ module MediaManager
       def import path
         i=0
         paths={}
-        MMCommon.scan_target(path).each {|file_found|
+        MMCommon.scan_target(File.expand_path(path)).each {|file_found|
           paths.merge!( {i=>file_found} )
           i+=1
         }
         Storage.savePaths paths.sort
+        return nil
       end
     end
   end
