@@ -103,7 +103,7 @@ module MediaManager
               
               searchTerms[i]=match=queue.match(/[\w']*\b/i)
               match=match[0]
-              if MediaManager::RetrieveMeta.getEpisodeID(searchTerms[i][0]).nil? and !excludes.include?(match) and !excludes.include?(match.downcase)
+              if getEpisodeID(searchTerms[i][0]).nil? and !excludes.include?(match) and !excludes.include?(match.downcase)
                 searchTerms[i]=searchTerms[i][0]
                 searchTerms[i]= "#{searchTerms[i-1]} " << searchTerms[i] unless i==0
               else

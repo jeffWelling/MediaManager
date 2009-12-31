@@ -19,10 +19,10 @@
 =end
 module MediaManager
   class LibraryData
-    @@data={}
     def initialize(p, k)
       @path=p
       @path_key=k
+      @@data={} unless @@data.class==Hash
       @MediaFile=nil
       @matched=false
       @@data.merge!({p=>self}) unless @@data.has_key? p
