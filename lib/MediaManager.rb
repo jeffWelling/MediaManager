@@ -39,6 +39,7 @@ require 'linguistics'  #Linguistics (>=?)1.0.5
 autoload :TMDBParty, 'tmdb_party/lib/tmdb_party.rb'
 
 module MediaManager
+  autoload :LibraryData, 'MediaManager/LibraryDataObj'
   autoload :VERSION, 'MediaManager/Version'
   autoload :MMCommon, 'MediaManager/MMCommon'
   autoload :CLI, 'MediaManager/CLI'
