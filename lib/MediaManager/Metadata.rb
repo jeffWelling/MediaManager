@@ -86,6 +86,7 @@ module MediaManager
 
         i=0
         searchTerms=[]
+        string=string[/(\/[^\/]+){3}$/]   #Chop off the last 3 file and dir names, and only use those instead of the entire path
         filename=string.split('/')
         file_extention=string.match(/\..{3,4}$/)[0]
         filename.each_index {|filename_index|
