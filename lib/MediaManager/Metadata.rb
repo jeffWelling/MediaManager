@@ -79,6 +79,7 @@ module MediaManager
       end
 
       def getSearchTerms string, excludes=nil
+        excludes=searchTermExcludes if excludes.nil?
         raise "getSearchTerms():  Only takes strings" unless string.class==String
         raise "getSearchTerms():  second argument must be nil or an array of strings to exclude from the search terms" unless excludes.nil? or excludes.class==Array
         return [] if string.strip.empty?

@@ -28,12 +28,24 @@ module MediaManager
       def execute
         MMCommon.pprint "holycrap! dont use me yet!"
         paths=Storage.readPaths
-        LibraryData.loadLibraryData
-        LibraryData.eachUnmatchedItem.each {|unmatched|
-          #search for keywords found in path
-          #for each search result, compare
-          #set ID if compare
+        paths.each {|path|
+          LibraryData.loadLibraryData
+          LibraryData.eachUnmatchedItem.each {|unmatched|
+            results=[]
+            search_terms=Metadata.getSearchTerms(unmatched)
+            search_terms.each {|search_term|
+              results += Scrapers.searchFor search_term
+            }
+            results.each {|result|
+              LibraryData.identifyFile(path, result) if compare(path, result) 
+            }
+            
+            #search for keywords found in path
+            #for each search result, compare
+            #set ID if compare
+          }
         }
+        LibraryData.saveLibraryData
         #read path_key to metadata list
         #for each un_id'd file, attempt to id
         #save all lists
