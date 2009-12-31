@@ -118,12 +118,47 @@ module MediaManager
           end
         }
 
-        searchTerms=searchTerms.delete_if {|search_term| TRUE if (search_term.nil? or name_match?( search_term,file_extention,:no ) or search_term.strip.length <= 3)}.each_index {|line_number| searchTerms[line_number]=searchTerms[line_number].strip}
+        searchTerms=searchTerms.delete_if {|search_term| TRUE if (search_term.nil? or Match.basic_match?( search_term,file_extention,:no ) or search_term.strip.length <= 3)}.each_index {|line_number| searchTerms[line_number]=searchTerms[line_number].strip}
 
         unless excludes.nil?
           searchTerms=searchTerms.delete_if {|search_term| TRUE if excludes.include?(search_term)}
         end
         searchTerms
+      end
+      #getEpisodeID will search for all of the episodeIDs in random_string, and will return them.
+      #If theres more than one, it will return them in an array, with the first episodeID as the first item.
+      #If the reformat argument is set to anything that is not :no, it will reformat the episodeID into 
+      #the standard 's2e22' format.
+      def getEpisodeID random_string, reformat=:no
+        #this regex is meant to match 's2e23' and '1x23' formats.
+        #NOTE Make sure to check that this does give you a resolution (make sure it is a sane series number and episode number)
+        episodeID_regex=/(s[\d]+e[\d]+|[\d]+x[\d]+)/i
+        return nil if ( episodeID=random_string.match(episodeID_regex) ).nil?
+        
+        #check that its a sane series and episode number
+        #series number = 1-99
+        #episode number= 1-700              700 should be enough for one season right?
+        seriesNumber=episodeID[0].match(/^(s)?[\d]+/i)[0]
+        seriesNumber=seriesNumber.reverse.chop.reverse if seriesNumber.include? 's' or seriesNumber.include? 'S'
+        seriesNumber=seriesNumber.to_i
+        episodeNumber=episodeID[0].match(/[\d]+$/)[0].to_i
+        if seriesNumber < 1 or seriesNumber > 99 or episodeNumber < 1 or episodeNumber > 700
+          #episodeID is bad
+          
+          #look for other episodeIDs, return nil
+          return getEpisodeID(random_string.gsub(episodeID[0],''),reformat) if getEpisodeID(random_string.gsub(episodeID[0],''))
+          return nil
+        end
+
+        if reformat!=:no
+          #reformat to 's3e12'
+          return (["s#{seriesNumber}e#{episodeNumber}"]+[getEpisodeID(random_string.gsub(episodeID[0],''),reformat)]).flatten if getEpisodeID(random_string.gsub(episodeID[0],''),reformat)
+          return "s#{seriesNumber}e#{episodeNumber}"
+        end
+        
+        #look for more episodeIDs, return the one we already have
+        return ([episodeID[0]]+[getEpisodeID(random_string.gsub(episodeID[0],''),reformat)]).flatten if getEpisodeID(random_string.gsub(episodeID[0],''),reformat)
+        return episodeID[0]
       end
     end
   end
