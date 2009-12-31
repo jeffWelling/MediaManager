@@ -20,9 +20,9 @@
 module MediaManager
   class LibraryData
     @@data={}
-    def initialize(p)
+    def initialize(p, k)
       @path=p
-      @path_key=nil
+      @path_key=k
       @MediaFile=nil
       @matched=false
       @@data.merge!({p=>self}) unless @@data.has_key? p
@@ -63,7 +63,10 @@ module MediaManager
       def importPathsToLibrary
         paths=Storage.readPaths
         paths.each {|path|
-          unless 
+          unless has_path(path[1])
+            lib_obj=LibraryData.new(path[1], path[0])
+            LibraryData.updateWith lib_obj
+          end
         }
       end
     end
