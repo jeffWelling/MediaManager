@@ -78,6 +78,35 @@ module MediaManager
         ['xvid', 'eng', 'ac3', 'dvdrip']
       end
 
+      def sliding_window str
+        excludes=searchTermExcludes if excludes.nil?
+        window=str.gsub(/(\.|_)/, ' ')
+        i=0
+        searchTerms=[]
+        until window.strip.empty?
+          queue=window
+          loop do
+            searchTerms[i]||=''
+            break if queue.empty? or queue.match(/[\w']*\b/i).nil?
+            
+            searchTerms[i]=match=queue.match(/[\w']*\b/i)
+            match=match[0]
+            if getEpisodeID(searchTerms[i][0]).nil? and !excludes.include?(match) and !excludes.include?(match.downcase)
+              searchTerms[i]=searchTerms[i][0]
+              searchTerms[i]= "#{searchTerms[i-1]} " << searchTerms[i] unless i==0
+            else
+              searchTerms[i]=''
+            end
+            queue=queue.slice( queue.index(match)+match.length, queue.length ).strip
+            i+=1 #unless searchTerms[i].strip.empty?
+          end
+          i+=1 #unless searchTerms[i].strip.empty?
+          break if window.match(/^[\w']*\b/i).nil?
+          window=window.gsub(/^[\w']*\b/i, '').strip
+        end
+        searchTerms
+      end
+
       def getSearchTerms string, excludes=nil
         excludes=searchTermExcludes if excludes.nil?
         raise "getSearchTerms():  Only takes strings" unless string.class==String
@@ -86,40 +115,15 @@ module MediaManager
 
         i=0
         searchTerms=[]
-        string=string[/(\/[^\/]+){3}$/]   #Chop off the last 3 file and dir names, and only use those instead of the entire path
-        filename=string.split('/')
         file_extention=string.match(/\..{3,4}$/)[0]
-        filename.each_index {|filename_index|
+        filename=string.split('/').last 3
+        searchTerms=filename.collect {|str| sliding_window str }.inject {|a,b| a + b }
 
-          #This implements the sliding window
-          window=filename[filename_index].gsub(/(\.|_)/, ' ')
-          until window.strip.empty?
-
-            queue=window
-            ignore=FALSE
-            loop do
-              searchTerms[i]||=''
-              ignore=FALSE
-              break if queue.empty? or queue.match(/[\w']*\b/i).nil?
-              
-              searchTerms[i]=match=queue.match(/[\w']*\b/i)
-              match=match[0]
-              if getEpisodeID(searchTerms[i][0]).nil? and !excludes.include?(match) and !excludes.include?(match.downcase)
-                searchTerms[i]=searchTerms[i][0]
-                searchTerms[i]= "#{searchTerms[i-1]} " << searchTerms[i] unless i==0
-              else
-                searchTerms[i]=''
-              end
-              queue=queue.slice( queue.index(match)+match.length, queue.length ).strip
-              i+=1 #unless searchTerms[i].strip.empty?
-            end
-            i+=1 #unless searchTerms[i].strip.empty?
-            break if window.match(/^[\w']*\b/i).nil?
-            window=window.gsub(/^[\w']*\b/i, '').strip
-          end
-        }
-
-        searchTerms=searchTerms.delete_if {|search_term| TRUE if (search_term.nil? or Match.basic_match?( search_term,file_extention,:no ) or search_term.strip.length <= 3)}.each_index {|line_number| searchTerms[line_number]=searchTerms[line_number].strip}
+        searchTerms=searchTerms.delete_if {|search_term|
+          search_term.nil? ||
+          Match.basic_match?( search_term,file_extention,:no ) ||
+          search_term.strip.length <= 3
+        }.collect(&:strip)
 
         unless excludes.nil?
           searchTerms=searchTerms.delete_if {|search_term| TRUE if excludes.include?(search_term)}
