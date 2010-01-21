@@ -161,14 +161,14 @@ module MediaManager
           #NOTE We do not anticipate a roman numeral in both str1 and str1
           if romName.match( numeralMatch )
             romName=romName.gsub(Regexp.new(Regexp.escape(romName.match(numeralMatch)[0])), 
-              "#{toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless toArabic(romName.match(numeralMatch)[0].strip)==0
+              "#{MMCommon.toArabic( romName.match(numeralMatch)[0].strip ).to_s} " ) unless MMCommon.toArabic(romName.match(numeralMatch)[0].strip)==0
             if romEpName.match(Regexp.new(Regexp.escape(romName), TRUE))
               MMCommon.pprint "fuzzyMatch():  Matched based on roman numeral in str1 and converted\n" unless verbose==:no
               return :romanNumeral_str1
             end
           elsif romEpName.match(numeralMatch)
             romEpName=romEpName.gsub(Regexp.new(Regexp.escape(romEpName.match(numeralMatch)[0])), 
-              " #{toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless toArabic(romEpName.match(numeralMatch)[0].strip)==0
+              " #{MMCommon.toArabic(romEpName.match(numeralMatch)[0].strip).to_s} " ) unless MMCommon.toArabic(romEpName.match(numeralMatch)[0].strip)==0
             if romName.match(Regexp.new(Regexp.escape(romEpName), TRUE))
               MMCommon.pprint "fuzzyMatch(): Matched based on roman numeral found in str2 and converted\n" unless verbose==:no
               return :romanNumerals_str2
@@ -302,7 +302,7 @@ module MediaManager
         compare_strings.length > 1 ? compare_strings=compare_strings.sort : compare_strings=[[0,compare_strings[0]]]
 
         compare_strings.each {|str|
-          return true if fuzzy_match(path, str)
+          return true if fuzzy_match(path, str[1]) unless str[1].nil?
         }
         return false
       end

@@ -59,7 +59,7 @@ module MediaManager
               last_search_term=search_term
             }
             results.each {|result|
-              LibraryData.identifyFile(path, result) if compare(path, result) 
+              LibraryData.identifyFile(path, result) if Match.compare(path[1], result) 
             }
             
             #search for keywords found in path
