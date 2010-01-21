@@ -44,8 +44,19 @@ module MediaManager
           LibraryData.eachUnmatchedItem.each {|unmatched|
             results=[]
             search_terms=Metadata.getSearchTerms(unmatched.path)
+            previous_results=1
+            last_search_term=""
             search_terms.each {|search_term|
-              results += Scrapers.searchFor search_term
+              #If the previous search term is prefixed to search_term and it returned no results, don't bother searching
+              if previous_results==0 and !last_search_term.empty? and search_term.include?(last_search_term)
+                previous_results=0
+                last_search_term=search_term
+                next
+              end
+              previous_results = Scrapers.searchFor search_term
+              results += previous_results unless previous_results.length==0
+              previous_results= previous_results.length
+              last_search_term=search_term
             }
             results.each {|result|
               LibraryData.identifyFile(path, result) if compare(path, result) 
