@@ -32,6 +32,10 @@ module MediaManager
       def get_compare_strings
         {0=>@title}
       end
+      def matched= thing
+        pp thing
+        puts "\n\n\n"
+      end
     end
 
     class Movie<MediaFile

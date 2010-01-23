@@ -115,7 +115,15 @@ module MediaManager
 
         i=0
         searchTerms=[]
-        file_extention=string.match(/\..{3,4}$/)[0]
+        file_extention=string[/\..{2,4}$/]
+        if file_extention.nil?
+          #The string we were passed has no file extention
+          puts "The fuck man??"
+          require 'pp'
+          pp string
+          sleep 20
+          raise 'panix'
+        end
         filename=string.split('/').last 3
         searchTerms=filename.collect {|str| sliding_window str }.inject {|a,b| a + b }
 
