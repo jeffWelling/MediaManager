@@ -54,6 +54,7 @@ module MediaManager
                 next
               end
               previous_results = Scrapers.searchFor search_term
+              MMCommon.pprint "#{previous_results.length} found.\n"
               results += previous_results unless previous_results.length==0
               previous_results= previous_results.length
               last_search_term=search_term

@@ -50,7 +50,6 @@ module MediaManager
       end
 
       def sliding_window str
-        excludes=searchTermExcludes if excludes.nil?
         window=str.gsub(/(\.|_)/, ' ')
         i=0
         searchTerms=[]
@@ -62,7 +61,7 @@ module MediaManager
             
             searchTerms[i]=match=queue.match(/[\w']*\b/i)
             match=match[0]
-            if getEpisodeID(searchTerms[i][0]).nil? and !excludes.include?(match) and !excludes.include?(match.downcase)
+            if getEpisodeID(searchTerms[i][0]).nil?
               searchTerms[i]=searchTerms[i][0]
               searchTerms[i]= "#{searchTerms[i-1]} " << searchTerms[i] unless i==0
             else
@@ -80,6 +79,7 @@ module MediaManager
 
       def getSearchTerms string, excludes=nil
         excludes=searchTermExcludes if excludes.nil?
+        excludes.each {|bad_str| string=string.gsub(" #{bad_str} ", ' ')}
         raise "getSearchTerms():  Only takes strings" unless string.class==String
         raise "getSearchTerms():  second argument must be nil or an array of strings to exclude from the search terms" unless excludes.nil? or excludes.class==Array
         return [] if string.strip.empty?
