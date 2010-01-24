@@ -106,7 +106,8 @@ module MediaManager
       #which tells how it was matched.
       #:oneToOne :basic_match? :digits_bothSides :digits_partNumber :romanNumeral_str1 :romanNumeral_str2 :bothParts_str2 :str2_before_aka :str2_after_aka
       #:wordBoundaries_str2 :numword_str1_ns :numword_str1_s
-      def fuzzy_match(str1, str2, verbose=:no)
+      def fuzzy_match(str1, str2, verbose=:yes)
+        MMCommon.pprint "str1:(#{str1}) to str2:(#{str2})\n"
         #name=str1 and epName=str2
 
         ##Begin attempting to match	
@@ -300,7 +301,7 @@ module MediaManager
       def compare path, media
         compare_strings=media.get_compare_strings
         compare_strings.length > 1 ? compare_strings=compare_strings.sort : compare_strings=[[0,compare_strings[0]]]
-
+        MMCommon.pprint "str1:(#{path}) to \n#{media.inspect})\n"
         compare_strings.each {|str|
           return true if fuzzy_match(path, str[1]) unless str[1].nil?
         }

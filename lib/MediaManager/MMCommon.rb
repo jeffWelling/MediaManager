@@ -41,6 +41,7 @@ module MediaManager
       end
 
       def pprint str
+        writeFile( Time.now.to_s + ":#{caller.first.match(/in `(.*)'/)[1]}():  " + str, 'mmanager.log', :append )
         printf str.to_s
       end
 
