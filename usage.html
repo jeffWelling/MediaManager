@@ -1,0 +1,45 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><title>jeffWelling/MediaManager @ GitHub</title>
+
+<style type="text/css">
+body {
+margin-top: 1.0em;
+background-color: #2A2A2A;
+font-family: "Helvetica,Arial,FreeSans"; color: #ffffff;
+}
+#container {
+margin: 0 auto;
+width: 700px;
+}
+h1 { font-size: 3.8em; color: #878787; margin-bottom: 3px; }
+h1 .small { font-size: 0.4em; }
+h1 a { text-decoration: none }
+h2 { font-size: 1.5em; color: #878787; }
+h3 { text-align: center; color: #878787; }
+a { color: #878787; }
+.description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
+.download { float: right; }
+pre { background: #000; color: #fff; padding: 15px;}
+hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
+.footer { text-align:center; padding-top:30px; font-style: italic; }
+</style>
+</head>
+<body>
+<a href="http://github.com/jeffWelling/MediaManager"><img style="border: 0pt none ; position: absolute; top: 0pt; right: 0pt;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+<div id="container"><br />
+<h1>Usage&nbsp;<span class="small"></span></h1>
+<div class="description">How to use MediaManager </div>
+After downloading the source code for MediaManager, you can cd into the
+MediaManager directory and do<br />
+<pre>$ bin/mmanager -h</pre>
+for a list of available commands and a brief description about what
+each command does.<br />
+<br />
+<pre>$ bin/mmanager -h<br />Usage: mmanager COMMAND [FLAGS] [ARGS]<br /> <br />Options for -h command:<br /> <br />The developers have graced you with these available commands:<br />    config                           Allows configuring via Irb, saving to the config file<br />    analyze                          Tries to guess the imported media's metadata.<br />    remap                            Creates a Library directory from your media files<br />    import                           Imports a file or directory into the library<br />    hasher                           Reads the paths, and generates hashes for the files<br /> <br />Common options:<br />    -V, --version                    Show the version number<br />    -h, --help                       Display ze help<br /><br /></pre>
+<br />
+<h2><a href="usage_config.html">config</a></h2><h2><a href="usage_remap.html"><span style="text-decoration: underline;">remap</span></a> <span class="small"></span></h2><h2><a href="usage_hasher.html">hasher</a></h2><h2><a href="usage_analyze.html">analyze</a></h2><h2><a href="usage_import.html">import</a> <span class="small"></span></h2><h4><br /></h4><h2>Example Usage 1</h2>In this example we will import a single episode of Doctor Who, and then analyze it.<pre>$ bin/mmanager import ~/Downloads/Doctor_Who_2005.The_End_Of_Time_Part_One_2009_Special.avi <br />Importing!<br />Done!<br /><br />$ bin/mmanager analyze<br />Analyzing...<br />holycrap! dont use me yet!<br />Scrapers.searchFor('Doctor')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />84430 has no episodes?<br />74588 has no episodes?<br />77808 has no episodes?<br />134631 has no episodes?<br />Search finished.<br />1307 found.<br />Scrapers.searchFor('Doctor Who')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />Search finished.<br />1001 found.<br />Scrapers.searchFor('Doctor Who 2005')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />Search finished.<br />83 found.<br />Scrapers.searchFor('Doctor Who 2005 The')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />Search finished.<br />0 found.<br /><br />[...]<br /><br />Scrapers.searchFor('End Of')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />Search finished.<br />25 found.<br />Scrapers.searchFor('End Of Time')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />Search finished.<br />2 found.<br />Scrapers.searchFor('Of Time')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />Search finished.<br />25 found.<br />Scrapers.searchFor('Time')...<br />Searching Tmdb_party_scraper...<br />Searching Thetvdbscraper...<br />74749 has no episodes?<br />74377 has no episodes?<br />72387 has no episodes?<br />102301 has no episodes?<br />70739 has no episodes?<br />70611 has no episodes?<br />74815 has no episodes?<br />77685 has no episodes?<br />78348 has no episodes?<br />71892 has no episodes?<br />72320 has no episodes?<br />83154 has no episodes?<br />71334 has no episodes?<br />73234 has no episodes?<br />73023 has no episodes?<br />71186 has no episodes?<br />77531 has no episodes?<br />Search finished.<br />2335 found.<br />true<br /><br /><br /><br />$<br /></pre><h4>&nbsp;The&nbsp;true at the bottom of the output indicates it found a positive match. &nbsp;</h4>
+<div class="footer"> get the source code on GitHub : <a href="http://github.com/jeffWelling/MediaManager">jeffWelling/MediaManager</a>
+</div>
+</div>
+</body></html>
