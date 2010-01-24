@@ -37,7 +37,7 @@ module MediaManager
         puts "\n\n\n"
       end
       def sha1
-        MMCommon.sha1( self.inspect.gsub(/^#\<[^ ]+/,'') )
+        MMCommon.sha1( self.inspect.gsub(/#\<[^ ]+/,'') )
       end
     end
 
