@@ -19,7 +19,7 @@
 =end
 #This file will hold the code for the part of the program that creates shortcuts from the media to the Library dir.
 module MediaManager
-  module Commands
+  module Command
     #This module assists with the creation of a Library from your media database
     module Remap
       def parser(o)
