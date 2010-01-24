@@ -21,6 +21,7 @@ module MediaManager
   #Metadata is a class to assist with working with, extracting and manipulating of, media metadata.
   class Metadata
     class << self
+=begin
       #take a full file path and turn it into an array, including turning the extention into the first element.
       def pathToArray fPath
         return( [ fPath.match(/\..{3,4}$/)[0] , fPath.gsub(/\..{3,4}$/, '') ] ) unless fPath.include?('/')
@@ -43,7 +44,7 @@ module MediaManager
 
         return fPath
       end
-
+=end
       def searchTermExcludes
         ['xvid', 'eng', 'ac3', 'dvdrip']
       end
