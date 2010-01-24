@@ -59,6 +59,9 @@ module MediaManager
               previous_results= previous_results.length
               last_search_term=search_term
             }
+            #remove duplicate results
+            added=[]
+            results=results.flatten.delete_if {|result| added.include?(result.sha1) ? TRUE : (added << result.sha1 and FALSE) }
             results.each {|result|
               LibraryData.identifyFile(path, result) if Match.compare(path[1], result) 
             }
