@@ -301,7 +301,7 @@ module MediaManager
       def compare path, media
         compare_strings=media.get_compare_strings
         compare_strings.length > 1 ? compare_strings=compare_strings.sort : compare_strings=[[0,compare_strings[0]]]
-        MMCommon.pprint "str1:(#{path}) to #{media.getInfo})\n"
+        MMCommon.pprint "str1:(#{path}) to #{media.getInfo})       #{media.inspect}\n"
         compare_strings.each {|str|
           return true if fuzzy_match(path, str[1]) unless str[1].nil?
         }
