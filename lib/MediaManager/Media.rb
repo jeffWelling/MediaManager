@@ -36,6 +36,9 @@ module MediaManager
         pp thing
         puts "\n\n\n"
       end
+      def sha1
+        MMCommon.sha1( self.inspect.gsub(/^#\<[^ ]+/,'') )
+      end
     end
 
     class Movie<MediaFile
@@ -66,6 +69,9 @@ module MediaManager
       attr_accessor :overview, :tmdb_id, :imdb_id, :movie_type, :tmdb_url, :tmdb_popularity,
         :alternative_title, :released, :posters, :homepage, :trailer, :runtime, :genres,
         :cast, :countries, :rating, :backdrops, :studios, :budget, :score, :revenue 
+      def getInfo
+        "Title: #{@title}, Alt_Title: #{@alternative_title}"
+      end
     end
     class TVShow<MediaFile
       def get_compare_strings
@@ -83,6 +89,9 @@ module MediaManager
       @title=nil             #SeriesName, Title
       attr_accessor :tvdb_series_ID, :episode_ID, :episode_number, :episode_name, :season, :series_first_aired, :banners,
         :series_overview, :language, :title
+      def getInfo
+        "Title: #{@title},  EpisodeID: #{@episode_ID}, EpisodeName: #{@episode_name}"
+      end
     end
   end
 end
