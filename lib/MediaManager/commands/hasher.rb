@@ -28,7 +28,7 @@ module MediaManager
       def execute
         paths=Storage.readPaths
         hashes={}
-        MMCommon.pprint "Hashing #{paths.length} items.  Turn the volcano on, this will take a while."
+        MMCommon.pprint "Hashing #{paths.length} items.  Turn the volcano on, this will take a while.\n"
         paths.each {|p|
           #p[0] = it's ID, and p[1]= the path
           hashes.merge!({ p[0] => [MMCommon.sha1(p[1], true), p[1]] })
