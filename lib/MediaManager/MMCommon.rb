@@ -55,9 +55,9 @@ module MediaManager
         writeFile( YAML.dump(config), filename)
       end
 
-      def writeFile contents, filename
+      def writeFile contents, filename, append=nil
         FileUtils.mkdir(File.expand_path(Storage.basedir)) unless File.exist?(File.expand_path(Storage.basedir))
-        File.open( File.expand_path(filename), File::WRONLY|File::TRUNC|File::CREAT) {|f| f.write contents }
+        File.open( File.expand_path(filename), (append.nil? ? (File::WRONLY|File::TRUNC|File::CREAT) : ("a"))) {|f| f.write contents }
       end
       def readFile filename, maxlines=0
         i=0
