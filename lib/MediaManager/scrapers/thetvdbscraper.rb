@@ -27,7 +27,7 @@ module MediaManager
       class << self
         def search str
           results= [Thetvdb.search(str)]
-          return [] if results[0].class==Hash and results[0].empty?
+          return [] if results[0].class==Hash and results[0].empty? or results[0].class==Array and results[0].empty?
           details= Thetvdb.formatTvdbResults results[0]
           results= results[0]  #Should now be a hash
 
