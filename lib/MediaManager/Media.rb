@@ -37,7 +37,8 @@ module MediaManager
         puts "\n\n\n"
       end
       def sha1
-        s=self.clone.cast=[]
+        s=self.clone
+        s=s.cast=[] if s.respond_to? :cast=
         MMCommon.sha1( s.inspect.gsub(/#\<[^ ]+/,'') )
       end
     end
