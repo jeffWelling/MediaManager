@@ -7,3 +7,6 @@
 [submodule "tmdb_party"]
 	path = tmdb_party
 	url = git://github.com/jeffWelling/tmdb_party.git
+[submodule "memoizable"]
+	path = memoizable
+	url = git://github.com/jeffWelling/memoizable.git
