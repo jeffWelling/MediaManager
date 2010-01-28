@@ -73,6 +73,7 @@ module MediaManager
           }
         }
         LibraryData.saveLibraryData
+        Memoizable.writeCache
         #read path_key to metadata list
         #for each un_id'd file, attempt to id
         #save all lists
