@@ -73,7 +73,9 @@ module MediaManager
           }
         }
         LibraryData.saveLibraryData
+        MMCommon.pprint "Saving cache..."
         Memoizable.writeCache
+        MMCommon.pprint "Done."
         #read path_key to metadata list
         #for each un_id'd file, attempt to id
         #save all lists
