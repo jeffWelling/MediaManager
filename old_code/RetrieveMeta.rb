@@ -454,22 +454,6 @@ module MediaManager
 							next
 						end
 
-=begin
-						#Try and match the episode tag in the filename to an episode from the series we're searching
-						#but only if the title of the series matches the filename or parent directory(ies)
-						if name_match?(name, episode['Title']) and getEpisodeID(fpath)
-							#episode's series title is found in the filename, if the episodeID found in the filename
-							#is a valid one, match.
-							filename_episodeID=getEpisodeID(clean_fpath)
-							filename_episodeID=filename_episodeID[0] if filename_episodeID.class==Array
-							pp episode
-							pp filename_episodeID	
-							if episode['EpisodeID'].downcase==filename_episodeID.downcase
-								matches << episode.merge!({ 'Matched' => :epid })
-								next
-							end
-						end
-=end
 
 						#Next before here if already matched
 						#
