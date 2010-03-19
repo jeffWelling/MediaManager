@@ -92,7 +92,7 @@ module MediaManager
         #TODO Code me!
       end
       def readHashesFromYaml
-        YAML.load MMCommon.readFile(Hashes_list).join
+        YAML.load(MMCommon.readFile(Hashes_list).join) || []
       end
       def readHashesFromSql
       end
