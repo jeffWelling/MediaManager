@@ -27,13 +27,18 @@ module MediaManager
       end
       def execute
         paths=Storage.readPaths
-        hashes={}
+        hashes=Storage.readHashes
         MMCommon.pprint "Hashing #{paths.length} items.  Turn the volcano on, this will take a while.\n"
-        paths.each {|p|
-          #p[0] = it's ID, and p[1]= the path
-          hashes.merge!({ p[0] => [MMCommon.sha1(p[1], true), p[1]] })
-        }
-        Storage.saveHashes hashes.sort
+        begin
+          paths.each {|p|
+            #p[0] = it's ID, and p[1]= the path
+            next if hashes[p[0]]
+            hashes << [ p[0], [MMCommon.sha1(p[1], true), p[1]]]  if (File.exist?(p[1]) and !File.socket?(p[1]) and !File.pipe?(p[1]) and !File.chardev?(p[1]))
+          }
+        ensure
+          MMCommon.pprint "Storing hashes..."
+          Storage.saveHashes hashes.sort
+        end
       end
     end
   end
