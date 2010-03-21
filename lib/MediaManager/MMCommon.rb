@@ -41,7 +41,7 @@ module MediaManager
       end
 
       def pprint str
-        printf str.to_s
+        printf str.to_s.gsub('%', '%%')     #The Gsub is to escape '%'s, which if unescaped, cause errors because printf expects more than one argument in that scenario
       end
 
       def readConfig filename=nil
