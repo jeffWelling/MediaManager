@@ -127,6 +127,37 @@ module MediaManager
         end
         reply
       end
+      def ask question, default=nil
+        print "\n#{question} "
+        answer = STDIN.gets.strip.downcase
+        throw :quit if 'q' == answer
+        return default if symbolize(answer)==:empty
+        answer
+      end
+      def ask_symbol question, default
+        answer = symbolize ask(question)
+        throw :quit if :quit == answer
+        return default if :empty == answer
+        answer
+      end
+      def prompt question, default = :yes, add_options = nil, delete_options = nil
+        options = ([default] + [:yes,:no] + [add_options] + [:quit]).flatten.uniq
+        if delete_options.class == Array
+          delete_options.each {|del_option|
+          options -= [del_option]
+        }
+        else
+          options -= [delete_options]
+        end
+        option_string = options.collect {|x| x.to_s.capitalize}.join('/')
+        answer = nil
+        loop {
+          answer = MediaManager.ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
+          (answer=default if answer==:nil) unless default.nil?
+          break if options.member? answer
+        }
+        answer
+      end
     end
   end
 end
