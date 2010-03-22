@@ -126,6 +126,14 @@ module MediaManager
       def loadLibraryDataFromSql
         return true
       end
+      def createIndexByHash hashes
+        index={}
+        hashes.each {|h|
+          index.merge!({h[1][0]=>[]}) unless index.has_key? h[1][0]
+          index[h[1][0]] << [h[1][1],h[0]]
+        }
+        index
+      end
     end
   end
 end
