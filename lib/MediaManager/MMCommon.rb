@@ -152,12 +152,21 @@ module MediaManager
         option_string = options.collect {|x| x.to_s.capitalize}.join('/')
         answer = nil
         loop {
-          answer = MediaManager.ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
+          answer = ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
           (answer=default if answer==:nil) unless default.nil?
           break if options.member? answer
         }
         answer
       end
+      def symbolize text
+        return :nil if text.nil?
+        return :empty if text.empty?
+        return :quit if text =~ /^(q|quit)$/i
+        return :edit if text =~ /^(e|edit)$/i
+        return :yes if text =~ /^(y|yes)$/i
+        return :no if text =~ /^(n|no)$/i
+        text.to_sym
+      end 
     end
   end
 end
