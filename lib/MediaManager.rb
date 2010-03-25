@@ -32,6 +32,7 @@ autoload :FileUtils, 'fileutils'
 require 'rubygems'
 require 'digest/sha1'
 require 'libthetvdb/lib/libthetvdb.rb'
+require 'ftools'
 
 
 require 'linguistics'  #Linguistics (>=?)1.0.5
