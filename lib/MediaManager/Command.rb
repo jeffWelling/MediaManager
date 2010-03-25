@@ -33,6 +33,7 @@ module MediaManager
     register 'Remap', 'Creates a Library directory from your media files', 'remap'
     register 'Hasher', 'Reads the paths, and generates hashes for the files', 'hasher'
     register 'Analyze', "Tries to guess the imported media's metadata.", 'analyze'
+    register 'Remove_duplicates', "Does what it say", 'remove_duplicates'
 
     def self.get(command)
       if mod_name= COMMANDS[command]
