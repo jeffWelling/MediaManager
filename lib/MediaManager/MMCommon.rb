@@ -154,7 +154,7 @@ module MediaManager
         loop {
           answer = ask_symbol "#{question} (#{option_string.gsub('//', '/')}):", default
           (answer=default if answer==:nil) unless default.nil?
-          break if options.member? answer
+          break if options.member? MMCommon.expand_answers(answer)
         }
         answer
       end
@@ -167,6 +167,19 @@ module MediaManager
         return :no if text =~ /^(n|no)$/i
         text.to_sym
       end 
+      def expand_answers answer
+        answer=answer.to_s.downcase
+
+        case 
+        when answer=='k'
+          return :keep_both
+        when answer=='m'
+          return :multi_delete
+        when answer=='d'
+          return :delete_both
+        end
+        answer
+      end
     end
   end
 end
