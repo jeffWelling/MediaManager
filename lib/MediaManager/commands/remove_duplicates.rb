@@ -32,6 +32,7 @@ module MediaManager
       end
       def duplicate_prompt hash, array_of_filenames
         added_options=[]
+        array_of_filenames=array_of_filenames.sort {|a, b| a[0].length <=> b[0].length }
         array_of_filenames.each_index {|array_index|
           MMCommon.pprint "#{array_index}) #{array_of_filenames[array_index][0]}\n"
           added_options << :"#{array_index}"
