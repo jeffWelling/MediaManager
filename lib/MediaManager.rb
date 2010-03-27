@@ -35,7 +35,7 @@ require 'libthetvdb/lib/libthetvdb.rb'
 require 'ftools'
 
 
-require 'linguistics'  #Linguistics (>=?)1.0.5
+#require 'linguistics'  #Linguistics (>=?)1.0.5
 #autoload :Linguistics, 'linguistics'      #Using this autoload instead of the require throws "no such file to load"
 autoload :TMDBParty, 'tmdb_party/lib/tmdb_party.rb'
 
