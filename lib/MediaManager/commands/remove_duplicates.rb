@@ -67,6 +67,7 @@ module MediaManager
         trash_directory= trash_directory.strip.match(/\/$/) ? trash_directory.strip : (trash_directory.strip + '/')
         
         puts "\n\n\n\ntrash_duplicates():  For each set presented, please enter the single digit that represents the file."
+        begin
         duplicates.each {|d|
           sha1=d[0]
           array_of_duplicates=d[1]
@@ -91,9 +92,33 @@ module MediaManager
             array_of_duplicates.delete_at index
           }
         }
+        ensure
+        require 'pp'
         #This function only creates a directory called .by_hash, under which directories are created with the hashes of the duplicates (or however much of the file was processed)
         #and in those directories symlinks are created which point to the original file.
         duplicates_by_hash(trash_directory + '.by_hash', duplicates)
+        end
+      end
+
+      def duplicates_by_hash(directory, duplicates)
+        require 'pp'
+        pp duplicates
+        raise "duplicates_by_hash(): second argument must be formatted like the hash returned from collect_duplicates()" unless duplicates.class==Array
+        File.makedirs(directory) unless File.exist?(directory)
+
+        directory= directory.match(/\/$/) ? directory.strip : directory.strip + '/'
+        
+        duplicates.each {|dup|
+          sha1= dup[0]
+          array_of_dupes= dup[1]
+          File.makedirs(directory + sha1) unless File.exist?(directory + sha1)
+          symlink_path=''
+          array_of_dupes.each {|path_of_dupe|
+            trashdir_with_sha=directory + sha1 + '/' + File.basename(path_of_dupe[0])
+            trashdir_sans_toplevel=directory.gsub(/\/[^\/]+\/?$/,'/') + File.basename(path_of_dupe[0])
+            File.symlink(path_of_dupe[0], trashdir_with_sha) unless (File.exist?(trashdir_with_sha) or File.symlink?(trashdir_with_sha))
+          }
+        }
       end
     end
   end
