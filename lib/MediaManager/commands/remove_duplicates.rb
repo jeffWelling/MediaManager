@@ -37,7 +37,8 @@ module MediaManager
           MMCommon.pprint "#{array_index}) #{array_of_filenames[array_index][0]}\n"
           added_options << :"#{array_index}"
         }
-        answer=MMCommon.prompt( "Which would you like to keep?" , nil, added_options + [:multi_delete, :keep_both, :delete_both], [:yes, :no])
+        answer=MMCommon.prompt( "Which would you like to keep?" , nil, added_options + [:multi_delete, :keep_both, :delete_both], [:yes, :no] )
+        answer=MMCommon.expand_answers answer
         added_options.each_index {|i|
           added_options[i]=added_options[i].to_s
         }
