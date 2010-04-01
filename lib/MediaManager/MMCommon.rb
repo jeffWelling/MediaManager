@@ -167,8 +167,8 @@ module MediaManager
         return :no if text =~ /^(n|no)$/i
         text.to_sym
       end 
-      def expand_answers answer
-        answer=answer.to_s.downcase
+      def expand_answers answer_
+        answer=answer_.to_s.downcase
 
         case 
         when answer=='k'
@@ -178,7 +178,12 @@ module MediaManager
         when answer=='d'
           return :delete_both
         end
-        answer
+        answer_
+      end
+      def add_videots path
+        @thing||=[]
+        @thing << path unless @thing.include? path
+        @thing
       end
     end
   end
