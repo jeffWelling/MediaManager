@@ -29,6 +29,13 @@ module MediaManager
         sorted_index= index.sort {|a,b| a[1].length <=> b[1].length }
         sorted_index= sorted_index.delete_if {|it| it[1].length == 1 }
         trash_duplicates( "~/.mmanager/trash", sorted_index)
+
+        hashes=Storage.readPaths
+        hashes.each {|path|
+          #path[0] = id
+          #path[1] = path
+
+        }
       end
       def duplicate_prompt hash, array_of_filenames
         added_options=[]
@@ -57,6 +64,52 @@ module MediaManager
           added_options.each {|index_ofa_dupe| to_delete << index_ofa_dupe unless index_ofa_dupe==answer.to_s }
           return to_delete
         end
+      end
+
+      def collect_duplicates(array_of_files, verbose=:no, bytes_to_hash=0)
+        raise "collect_duplicates():  Your supposed to pass me an array of files you silly christian." unless array_of_files.class==Array
+        return {} if array_of_files.empty?
+        size_of_array=array_of_files.length
+        total=0
+        puts "collect_duplicates():  Calculating total number of comparisons..." if verbose!=:no
+        array_of_files.each_index {|index|
+          total+=index
+        }
+        if verbose!=:no
+          puts "collect_duplicates():  Processing #{total} comparisons (This is NOT the total number of files)...\n"
+          puts    "0--------------------------------------------------100%"
+          printf  ">"
+        end
+        so_far=0
+        progress_update_due=total/50
+        duplicates={}
+        array_of_files.each_index {|first_index|
+          second_index=first_index
+          while (second_index<size_of_array)
+            (second_index+=1 and next) if array_of_files[second_index] == array_of_files[first_index]
+            so_far+=1
+            if so_far > progress_update_due
+              printf '-' if verbose!=:no
+              progress_update_due+=total/50
+            end
+            if array_of_files[second_index].nil?
+              puts "wtf"
+              pp second_index
+            end
+            result=MediaManager::FindDuplicates.same_file?(array_of_files[first_index], array_of_files[second_index], bytes_to_hash)
+            if result[0].class==TrueClass
+              if duplicates.has_key? result[1]
+                duplicates[result[1]] << array_of_files[first_index] unless duplicates[result[1]].include?(array_of_files[first_index])
+                duplicates[result[1]] << array_of_files[second_index] unless duplicates[result[1]].include?(array_of_files[second_index])
+              else
+                duplicates.merge!( {result[1]=>[array_of_files[first_index], array_of_files[second_index]]} )
+              end
+            end
+            second_index+=1
+          end
+        }
+        puts "100%\ncollect_duplicates():  Done."
+        return duplicates
       end
 
       def trash_duplicates(trash_directory, dupes, move_to_trash=:no)
