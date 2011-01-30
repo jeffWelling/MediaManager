@@ -34,7 +34,7 @@ end
 #If __FILE__ is "(eval)", we are likely bring run through
 #the interactive_editor gem.
 if __FILE__ == "(eval)"
-  MMSpecUtils.scanDir( "./*" )
+  MMSpecUtils.scanDir( "lib" )
 else
   MMSpecUtils.scanDir( $* )
 end
