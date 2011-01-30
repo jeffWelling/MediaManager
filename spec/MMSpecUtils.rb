@@ -9,8 +9,20 @@ module MMSpecUtils
   #Intended use is for taking a snapshot of existing raw,
   #freshly downloaded file names, for use match testing
   def self.scanDir to_scan, output_file='scanned_list.txt'
-    puts "Searching for #{to_scan}"
-    Dir.glob( to_scan ) {|path| puts path}
+    raise "MMSpecUtils.scanDir()'s to_scan argument must be a string or array of strings" unless
+      to_scan.class==String or to_scan.class==Array
+    raise "MMSpecUtils.scanDir()'s output_file argument must be a string" unless
+      output_file.class==String
+
+    glob=Array.new
+    puts "Scanning #{to_scan}"
+    to_scan=[to_scan] unless to_scan.class==Array
+    to_scan.each {|path_to_scan|
+      Dir.glob( path_to_scan ) {|path| 
+        puts path
+        glob.push path unless glob.include? path
+      }
+    }
   end
 end
 
