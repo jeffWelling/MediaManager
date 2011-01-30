@@ -3,6 +3,7 @@
 require 'fileutils'
 require 'lib/MediaManager.rb'
 require 'pp'
+require 'find'
 
 module MMSpecUtils
   #scans a dir, and saves all of the path names to a file
@@ -18,8 +19,9 @@ module MMSpecUtils
     puts "Scanning #{to_scan}"
     to_scan=[to_scan] unless to_scan.class==Array
     to_scan.each {|path_to_scan|
-      Dir.glob( path_to_scan ) {|path| 
-        puts path
+      Find.find( path_to_scan ) {|path| 
+        puts File.expand_path path
+        path= path + "\n"
         glob.push path unless glob.include? path
       }
     }
