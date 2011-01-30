@@ -26,8 +26,13 @@ module MMSpecUtils
   end
 end
 
-#If there are arguments, pass them, otherwise don't.
-$*==[] ? MMSpecUtils.scanDir : MMSpecUtils.scanDir($*)
+#If __FILE__ is "(eval)", we are likely bring run through
+#the interactive_editor gem.
+if __FILE__ == "(eval)"
+  MMSpecUtils.scanDir( "./*" )
+else
+  MMSpecUtils.scanDir( $* )
+end
 
 #If MMSpecUtils is being run, not simply loaded
 if $0 == __FILE__
