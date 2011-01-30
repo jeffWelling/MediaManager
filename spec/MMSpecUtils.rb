@@ -25,6 +25,9 @@ module MMSpecUtils
         glob.push path unless glob.include? path
       }
     }
+
+    MediaManager::MMCommon.writeFile( glob, output_file )
+    glob
   end
 end
 
