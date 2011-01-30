@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
+#You're expected to be in the MediaManager project base dir
 require 'fileutils'
+require 'lib/MediaManager.rb'
+require 'pp'
 
 module MMSpecUtils
   #scans a dir, and saves all of the path names to a file
