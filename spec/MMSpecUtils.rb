@@ -36,9 +36,9 @@ end
 #If __FILE__ is "(eval)", we are likely bring run through
 #the interactive_editor gem.
 if __FILE__ == "(eval)"
-  MMSpecUtils.scanDir( "lib" )
+  MMSpecUtils.makeFakeFiles "/tmp/fakefiles"
 else
-  MMSpecUtils.scanDir( $* )
+  MMSpecUtils.makeFakeFiles $*[0]
 end
 
 #If MMSpecUtils is being run, not simply loaded
