@@ -17,6 +17,7 @@ module MMSpecUtils
     raise "MMSpecUtils.scanDir()'s output_file argument must be a string" unless
       output_file.class==String
 
+    File.delete output_file
     glob=Array.new
     puts "Scanning #{to_scan}"
     to_scan=[to_scan] unless to_scan.class==Array
