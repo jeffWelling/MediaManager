@@ -22,7 +22,7 @@ module MMSpecUtils
     to_scan=[to_scan] unless to_scan.class==Array
     to_scan.each {|path_to_scan|
       Find.find( path_to_scan ) {|path| 
-        puts File.expand_path path
+        puts path
         path= path + "\n"
         glob.push path unless glob.include? path
       }
