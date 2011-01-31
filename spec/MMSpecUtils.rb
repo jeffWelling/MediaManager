@@ -34,6 +34,31 @@ module MMSpecUtils
     MediaManager::MMCommon.writeFile( glob, output_file )
     glob
   end
+
+  #Using the output file of scanDir(), recreate that tree
+  #touching each file.
+  #Intended use is to assist match testing on real downloaded
+  #filenames
+  def self.makeFakeFiles basedir, filename=@@filename
+    raise "MMSpecUtils.makeFakeFiles()'s argument must be a string" unless
+      basedir.class==String
+    raise "MMSpecUtils.makeFakeFiles()'s second argument must be a string" unless
+      filename.class==String
+
+    basedir= File.expand_path(basedir) + "/"
+
+    scanned_list= MediaManager::MMCommon.readFile(filename).
+      collect {|p| p.strip} #To remove the trailing "\n"
+
+    scanned_list.each {|path|
+      path= basedir+path
+
+      #If it's a directory
+      (FileUtils.mkdir_p(path) and next) if path =~ /\/$/
+
+      FileUtils.touch(path)
+    }
+  end
 end
 
 #If __FILE__ is "(eval)", we are likely bring run through
