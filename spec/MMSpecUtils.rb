@@ -6,10 +6,12 @@ require 'pp'
 require 'find'
 
 module MMSpecUtils
+  @@filename='scanned_list.txt'
+
   #scans a dir, and saves all of the path names to a file
   #Intended use is for taking a snapshot of existing raw,
   #freshly downloaded file names, for use match testing
-  def self.scanDir to_scan, output_file='scanned_list.txt'
+  def self.scanDir to_scan, output_file=@@filename
     raise "MMSpecUtils.scanDir()'s to_scan argument must be a string or array of strings" unless
       to_scan.class==String or to_scan.class==Array
     raise "MMSpecUtils.scanDir()'s output_file argument must be a string" unless
